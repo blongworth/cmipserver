@@ -168,7 +168,8 @@ def iter_entries(root: str, shard: str | None) -> Iterator[tuple]:
     ``("error", op, path, exc)`` for each OS failure.
 
     ``shard=None`` walks everything; a directory name walks that top-level
-    directory; ``_root_files`` yields only non-directory entries of root.
+    directory (or a nested directory, e.g. ``CMIP/NCAR/CESM2``, for small test
+    scans; paths stay relative to ``root``); ``_root_files`` yields only non-directory entries of root.
     """
     if shard == ROOT_FILES_SHARD:
         try:
@@ -186,7 +187,9 @@ def iter_entries(root: str, shard: str | None) -> Iterator[tuple]:
                 yield ("error", "stat", e.path, exc)
         return
 
-    start = root if shard is None else os.path.join(root, shard)
+    if shard is not None and (os.path.isabs(shard) or ".." in shard.split("/")):
+        raise ValueError(f"shard {shard!r} must be a relative path under {root}")
+    start = root if shard is None else os.path.join(root, shard.strip("/"))
     if shard is not None and (os.path.islink(start) or not os.path.isdir(start)):
         raise ValueError(f"shard {shard!r} is not a directory under {root}")
 
@@ -278,7 +281,7 @@ def scan(
     root = _norm_root(root)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    tag = shard or "all"
+    tag = shard.strip("/").replace("/", "__") if shard else "all"
     holdings_path = out_dir / f"holdings_{tag}.parquet"
     errors_path = out_dir / f"errors_{tag}.parquet"
 

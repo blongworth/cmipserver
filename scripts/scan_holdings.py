@@ -8,6 +8,10 @@ Examples:
     uv run scripts/scan_holdings.py --root /proj/cmip6 --out scan/ --shard CMIP
     uv run scripts/scan_holdings.py --root /proj/cmip6 --out scan/ --shard-index 3
 
+    # small test: a nested directory (paths stay relative to --root)
+    uv run scripts/scan_holdings.py --root /proj/cmip6 --out scan/ \
+        --shard CMIP/NCAR/CESM2/historical
+
     # no shard and no $SLURM_ARRAY_TASK_ID: scan the whole tree as shard "all"
     uv run scripts/scan_holdings.py --root tests/fixture --out scan/
 """
@@ -28,7 +32,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", help="output directory for parquet files")
     ap.add_argument("--list-shards", action="store_true", help="print shards and exit")
     g = ap.add_mutually_exclusive_group()
-    g.add_argument("--shard", help="top-level directory name (or _root_files)")
+    g.add_argument(
+        "--shard",
+        help="top-level directory name, _root_files, or a nested dir like CMIP/NCAR",
+    )
     g.add_argument(
         "--shard-index",
         type=int,
@@ -53,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         if not 0 <= idx < len(shards):
             ap.error(f"shard index {idx} out of range (0-{len(shards) - 1})")
         shard = shards[idx]
-    elif shard is not None and shard not in shards:
+    elif shard is not None and "/" not in shard.strip("/") and shard not in shards:
         ap.error(f"unknown shard {shard!r}; see --list-shards")
 
     t0 = time.monotonic()

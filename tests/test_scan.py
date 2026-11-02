@@ -166,3 +166,23 @@ def test_cli_and_summary(tree, tmp_path, monkeypatch, capsys):
     assert unp.filter(pl.col("dir") == "misc")["n"].item() == 4
     for f in ["multi_version", "conformance_samples", "unparsed_samples", "errors"]:
         assert (inv / f"{f}.parquet").exists()
+
+
+def test_scan_nested_shard(tree, tmp_path):
+    res = scan(tree, tmp_path / "out", shard="CMIP/NCAR/CESM2/")
+    assert res["holdings"].name == "holdings_CMIP__NCAR__CESM2.parquet"
+    df = pl.read_parquet(res["holdings"])
+    # rel_path stays relative to the root, so the DRS check still works
+    assert df["rel_path"].to_list() == [f"{DRS_DIR}/{FN}"]
+    assert df["drs_status"].to_list() == ["ok"]
+    assert df["top_dir"].to_list() == ["CMIP"]
+    for bad in ["../x", "/abs", "CMIP/NCAR/nope"]:
+        with pytest.raises(ValueError):
+            scan(tree, tmp_path / "out", shard=bad)
+
+
+def test_cli_nested_shard(tree, tmp_path):
+    out = tmp_path / "out"
+    args = ["--root", str(tree), "--out", str(out), "--shard", "CMIP/NCAR"]
+    assert scan_holdings.main(args) == 0
+    assert (out / "holdings_CMIP__NCAR.parquet").exists()
