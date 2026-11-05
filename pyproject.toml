@@ -9,7 +9,6 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "intake-esm>=2025.7.9",
-    "lychee>=0.2.2",
     "polars>=2.0.0",
 ]
 
@@ -34,6 +33,10 @@ site = [
     "plotly>=7.1.0",
     "pyyaml>=6.0.3",
 ]
+
+[tool.uv]
+# Keep the site group installed through uv add/remove/sync.
+default-groups = ["dev", "site"]
 
 [tool.pytest.ini_options]
 pythonpath = ["scripts"]
