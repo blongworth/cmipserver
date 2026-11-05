@@ -1,0 +1,86 @@
+{
+  "esmcat_version": "0.1.0",
+  "id": "sample_catalog",
+  "description": "SAMPLE WHOI CMIP catalog for development and tests. Synthetic: paths do not exist except for one dataset in sample_data/.",
+  "catalog_file": "sample_catalog.csv",
+  "attributes": [
+    {
+      "column_name": "collection",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "activity_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "institution_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "source_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "experiment_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "member_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "table_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "variable_id",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "grid_label",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "product",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "frequency",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "version",
+      "vocabulary": ""
+    },
+    {
+      "column_name": "time_range",
+      "vocabulary": ""
+    }
+  ],
+  "assets": {
+    "column_name": "path",
+    "format": "netcdf"
+  },
+  "aggregation_control": {
+    "variable_column_name": "variable_id",
+    "groupby_attrs": [
+      "master_id",
+      "version"
+    ],
+    "aggregations": [
+      {
+        "type": "union",
+        "attribute_name": "variable_id"
+      },
+      {
+        "type": "join_existing",
+        "attribute_name": "time_range",
+        "options": {
+          "dim": "time",
+          "coords": "minimal",
+          "compat": "override"
+        }
+      }
+    ]
+  }
+}
