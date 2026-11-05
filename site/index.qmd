@@ -1,0 +1,28 @@
+---
+title: "WHOI CMIP Data Server"
+toc: false
+---
+
+::: {.callout-warning}
+## Preview
+
+This site is under construction and currently runs on a **sample catalog**.
+Dataset counts, paths, and download links are not real yet.
+:::
+
+The WHOI CMIP data server holds CMIP6 model output and reanalysis products
+(ERA5 first) on WHOI's VAST storage at `{{< var vast_prefix >}}`, organized in
+the standard CMIP directory layout and indexed by an
+[intake-esm](https://intake-esm.readthedocs.io/) catalog.
+
+- **[Browse the holdings](browse.qmd)**: filter by model, experiment, variable,
+  and more, then copy paths, URLs, or a Python snippet.
+- **[Use the catalog from Python](catalog.qmd)**, or start with the
+  [quickstart notebook](notebooks/quickstart.ipynb).
+- **[Get access](access.qmd)**: on HPC, over the SMB share, or by HTTPS
+  download.
+- **[Report a problem or request data](report.qmd).**
+- **[Cite the server](cite.qmd)** in your publications.
+
+News about the server, catalog releases, and maintenance windows is on the
+[blog](blog/index.qmd).

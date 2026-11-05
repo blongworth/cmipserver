@@ -1,0 +1,44 @@
+# Site configuration. Shortcodes read these as {{< var key >}}; the dataset
+# browser reads them from data/site_config.json, which the pre-render step
+# (scripts/write_site_config.py) generates from this file.
+#
+# Values ending in _TBD are placeholders for open questions. Do not replace
+# them with guesses; see docs/site-handoff.md.
+
+site_url: https://cmip.whoi.edu
+site_title: WHOI CMIP Data Server
+
+# GitHub repository for issue forms (TBD: which org/repo hosts issues).
+github_repo: OWNER/REPO
+# Shared help address for users without GitHub accounts (TBD).
+help_email: HELP_EMAIL_TBD
+
+# Production intake-esm catalog location on VAST (C-4).
+catalog_path: CATALOG_PATH_TBD
+# Version shown on the site. "sample" until the production catalog exists (C-12).
+catalog_version: sample
+
+# Data root on HPC and the SMB share. Paths in the catalog start with this.
+vast_prefix: /proj/cmip6
+# SMB share name/path for Windows and macOS users (TBD, IT).
+smb_path: SMB_PATH_TBD
+# HTTPS download prefix, e.g. <site_url>/data if the VM alias is approved (IT-8..IT-10, C-17).
+https_prefix: HTTPS_PREFIX_TBD
+# Globus collection link; empty until Globus exists (task 6.1, S-4).
+globus_url: ""
+
+# "internal" shows VAST paths in the browser; "external" hides them (PI-4, PI-5).
+audience: internal
+# Maximum files in a generated download list.
+wget_max_files: 500
+
+# Old site, shown as a temporary link. Remove this key at retirement (task 6.3)
+# and the navbar/footer/about links disappear with it.
+old_site_url: http://cmip6.whoi.edu
+
+# Acknowledgment text (Appendix A.4; URL updated to cmip.whoi.edu per Brett,
+# 2026-11-05; PIs still to confirm wording).
+acknowledgment: >-
+  CMIP6 model output data provided by the WHOI CMIP6 Community Storage Server,
+  Woods Hole Oceanographic Institution, Woods Hole, MA, USA from their website
+  at https://cmip.whoi.edu/.

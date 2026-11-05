@@ -8,6 +8,8 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "intake-esm>=2025.7.9",
+    "lychee>=0.2.2",
     "polars>=2.0.0",
 ]
 
@@ -22,6 +24,15 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.3",
+]
+site = [
+    "ipykernel>=7.4.0",
+    "jupyter-core>=5.9.1",
+    "nbclient>=0.11.0",
+    "nbformat>=5.11.1",
+    "netcdf4>=1.7.5.1.post1",
+    "plotly>=7.1.0",
+    "pyyaml>=6.0.3",
 ]
 
 [tool.pytest.ini_options]

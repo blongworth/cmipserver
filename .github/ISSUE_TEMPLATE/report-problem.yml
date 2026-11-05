@@ -1,0 +1,43 @@
+name: Report a problem
+description: A corrupted file, wrong metadata, missing time steps, or another problem with a dataset.
+title: "[Problem]: "
+labels: ["data-problem"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Issues are public: do not include passwords or private information.
+        The site's **Report** links fill in the dataset id and path for you.
+  - type: input
+    id: dataset_id
+    attributes:
+      label: Dataset id
+      description: From the browser or catalog, e.g. CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn.v20190308
+    validations:
+      required: true
+  - type: input
+    id: path
+    attributes:
+      label: File path or catalog row
+      description: The file (or dataset directory) involved, if you know it.
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got. Paste error messages as text.
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool and version
+      description: e.g. xarray 2026.9 / netCDF4 1.7, ncview, MATLAB R2026a, wget
+  - type: dropdown
+    id: access
+    attributes:
+      label: How did you access the data?
+      options:
+        - HPC cluster
+        - SMB share
+        - HTTPS download
+        - Other

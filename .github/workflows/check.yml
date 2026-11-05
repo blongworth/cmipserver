@@ -1,0 +1,51 @@
+# Checks only. This workflow never deploys (deploy runs from HPC).
+name: check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --all-groups --locked
+
+      - name: Lint
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Validate YAML
+        run: >
+          uv run python -c "import sys, yaml, pathlib;
+          files = [*pathlib.Path('.github').rglob('*.yml'), *pathlib.Path('site').glob('_*.yml')];
+          [yaml.safe_load(f.read_text()) for f in files];
+          print(f'{len(files)} YAML files OK')"
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.10.19
+
+      # Renders from committed _freeze/ output; notebooks are not executed.
+      - name: Render site
+        run: uv run quarto render site
+
+      - name: Link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress --root-dir "${{ github.workspace }}/site/_site" "site/_site/**/*.html"
+          fail: true

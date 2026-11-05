@@ -25,6 +25,19 @@ followed): stats, link info, CMIP6 facets parsed from the filename/path
 of `not_nc` → `bad_filename` → `wrong_depth` → `bad_version_dir` →
 `path_filename_mismatch` → `ok`.
 
+## Site
+
+Quarto site for `cmip.whoi.edu` in `site/` (see `site/README.md`,
+`docs/static-site-plan.md`, `docs/site-handoff.md`). Develops against a
+synthetic sample catalog:
+
+```bash
+uv sync --all-groups
+uv run scripts/make_sample_catalog.py --out tests/fixtures
+uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --out site/data
+uv run quarto render site
+```
+
 ## Development
 
 ```bash

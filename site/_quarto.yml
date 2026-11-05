@@ -1,0 +1,60 @@
+# Quarto 1.10.19 (see README.md). Render from the repo root with:
+#   uv run quarto render site
+project:
+  type: website
+  output-dir: _site
+  pre-render: ../scripts/write_site_config.py
+  resources:
+    - data/
+    - robots.txt
+
+shortcodes:
+  - _filters/old-site.lua
+
+website:
+  title: "WHOI CMIP Data Server"
+  site-url: https://cmip.whoi.edu  # keep in sync with site_url in _variables.yml
+  description: "CMIP6 model output and reanalysis on WHOI's VAST storage"
+  search: true
+  navbar:
+    left:
+      - href: browse.qmd
+        text: Browse
+      - href: catalog.qmd
+        text: Catalog
+      - href: notebooks/quickstart.ipynb
+        text: Quickstart
+      - text: Using the data
+        menu:
+          - href: access.qmd
+            text: Access
+          - href: download-guide.qmd
+            text: Download guide
+          - href: cloud.qmd
+            text: Cloud
+      - href: blog/index.qmd
+        text: Blog
+    right:
+      - href: about.qmd
+        text: About
+      - href: cite.qmd
+        text: Cite
+      - href: report.qmd
+        text: Report a problem
+      # Temporary; remove with old_site_url in _variables.yml (task 6.3).
+      - href: http://cmip6.whoi.edu
+        text: Old site
+      - icon: rss
+        href: blog/index.xml
+        aria-label: Blog RSS feed
+  page-footer:
+    left: "Woods Hole Oceanographic Institution"
+    right: "{{< old-site >}}"
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+
+execute:
+  freeze: auto

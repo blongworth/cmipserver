@@ -1,0 +1,38 @@
+name: Request data
+description: Ask for a CMIP6 dataset or reanalysis product that is not on the server.
+title: "[Request]: "
+labels: ["data-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Issues are public: do not include passwords or private information.
+  - type: input
+    id: variable
+    attributes:
+      label: Variable(s)
+      description: e.g. thetao, so, tos (CMIP6 variable_id) or ERA5 parameter names
+    validations:
+      required: true
+  - type: input
+    id: experiment
+    attributes:
+      label: Experiment(s)
+      description: e.g. historical, ssp585, piControl
+  - type: input
+    id: source
+    attributes:
+      label: Source (model) or product
+      description: e.g. CESM2, GFDL-ESM4, all available, or ERA5
+  - type: input
+    id: frequency
+    attributes:
+      label: Frequency / table
+      description: e.g. Omon, day, 1hr
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why do you need it?
+      description: Project, deadline, and rough size if known. This helps us prioritize.
+    validations:
+      required: true

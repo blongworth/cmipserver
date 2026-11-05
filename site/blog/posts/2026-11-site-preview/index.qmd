@@ -1,0 +1,19 @@
+---
+title: "A new site for the WHOI CMIP data server"
+date: 2026-11-05
+author: Brett Longworth
+categories: [news, site]
+---
+
+We are rebuilding the WHOI CMIP6 server. The new site replaces the old
+search pages with a [dataset browser](../../../browse.qmd), an
+[intake-esm catalog](../../../catalog.qmd) you can open from Python, and
+[download instructions](../../../download-guide.qmd).
+
+The holdings are also being reorganized into the standard CMIP directory
+layout, and reanalysis products (ERA5 first) are being added.
+
+The old site at cmip6.whoi.edu stays up until the new
+one is ready. This preview runs on a sample catalog, so the datasets you see
+are not real yet. Please [tell us](../../../report.qmd) what is missing or
+confusing.
