@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Quarto (site/_freeze/ is committed on purpose)
+.quarto/
+_site/
+site/.quarto/
+site/_site/
