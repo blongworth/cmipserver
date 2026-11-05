@@ -13,12 +13,49 @@ stats = FileAttachment("data/catalog_stats.json").json()
 
 ```{ojs}
 //| echo: false
-md`Catalog **${config.catalog_version}**: ${stats.n_datasets.toLocaleString()} datasets,
+//| output: false
+// Pinned libraries served from site/vendor/ (see vendor/vendor.yml); the page
+// loads no third-party scripts at runtime.
+vendor = (p) => new URL(`vendor/${p}`, document.baseURI).href
+vendorCss = {
+  for (const p of ["tom-select/tom-select.default.min.css", "tabulator-tables/tabulator_bootstrap5.min.css"]) {
+    if (!document.querySelector(`link[href="${vendor(p)}"]`)) {
+      document.head.append(Object.assign(document.createElement("link"), {rel: "stylesheet", href: vendor(p)}));
+    }
+  }
+  return true;
+}
+TomSelect = require(vendor("tom-select/tom-select.complete.min.js"))
+arq = require(vendor("arquero/arquero.min.js"))
+Tabulator = (await import(vendor("tabulator-tables/tabulator_esm.min.js"))).TabulatorFull
+// Shadow the OJS standard library entries this page uses, which Quarto would
+// otherwise fetch from jsDelivr (same versions Quarto pins).
+d3 = require(vendor("d3/d3.min.js"))
+htl = require(vendor("htl/htl.min.js"))
+html = htl.html
+Inputs = require.alias({"htl@0.3.1/dist/htl.min.js": vendor("htl/htl.min.js")})(
+  vendor("@observablehq/inputs/inputs.min.js")
+)
+```
+
+```{=html}
+<style>
+.facet-select { margin-bottom: 0.6rem; }
+.facet-select .form-label { margin-bottom: 0.15rem; font-size: 0.9rem; }
+.ts-dropdown .ts-count { color: var(--bs-secondary-color, #6c757d); }
+.ts-dropdown .ts-zero { opacity: 0.45; }
+.browse-table .tabulator-cell a { white-space: nowrap; }
+</style>
+```
+
+```{ojs}
+//| echo: false
+html`<p>Catalog <strong>${config.catalog_version}</strong>: ${stats.n_datasets.toLocaleString()} datasets,
 ${stats.n_files.toLocaleString()} files, ${stats.size_tb.toLocaleString()} TB.
-Filter with the boxes on the left (Ctrl/Cmd-click to pick several values; no
-selection means "any"), then pick rows in the table. The **Get data** panel
-uses the rows you pick, or every matching dataset if you pick none.
-${config.catalog_version === "sample" ? "**This is a sample catalog: datasets and paths are not real.**" : ""}`
+Filter with the boxes on the left, then pick rows in the table. The
+<strong>Get data</strong> panel uses the rows you pick, or every matching dataset if you
+pick none.
+${config.catalog_version === "sample" ? html`<strong>This is a sample catalog: datasets and paths are not real.</strong>` : ""}</p>`
 ```
 
 :::: {.grid}
@@ -42,14 +79,74 @@ facets = [
   ["version", "Version"]
 ]
 uniq = (k) => [...new Set(summary.map((d) => d[k]).filter((v) => v != null))].sort()
-viewof filters = Inputs.form(
-  Object.fromEntries(
-    facets.map(([k, label]) => {
-      const values = uniq(k);
-      return [k, Inputs.select(values, {label, multiple: Math.min(6, Math.max(2, values.length))})];
-    })
-  )
-)
+// Filters and search text from the page URL, read once on load.
+urlState = {
+  const params = new URLSearchParams(location.search);
+  const known = new Map(facets.map(([k]) => [k, new Set(uniq(k))]));
+  const init = {};
+  const dropped = [];
+  for (const [k, v] of params) {
+    if (k === "search") continue;
+    if (known.get(k)?.has(v)) (init[k] ??= []).push(v);
+    else dropped.push(`${k}=${v}`);
+  }
+  // Not "q": Quarto's site search reads and removes ?q= on page load.
+  return {init, q: params.get("search") ?? "", dropped};
+}
+// One Tom Select multi-select that behaves as an Observable input:
+// .value is the picked values, an "input" event fires on change, .ts is the instance.
+facetSelect = (k, label, values, initial = []) => {
+  const id = `facet-${k}`;
+  const select = html`<select id=${id} multiple></select>`;
+  const root = html`<div class="facet-select"><label class="form-label" for=${id}>${label}</label>${select}</div>`;
+  root.ts = new TomSelect(select, {
+    options: values.map((v) => ({value: v, text: v, count: null})),
+    items: initial,
+    plugins: {remove_button: {title: "Remove"}, clear_button: {title: "Clear"}},
+    maxOptions: null,
+    placeholder: "Any",
+    hidePlaceholder: false,
+    closeAfterSelect: false,
+    render: {
+      option: (d, esc) =>
+        `<div class="${d.count === 0 ? "ts-zero" : ""}">${esc(d.text)}` +
+        `${d.count == null ? "" : ` <span class="ts-count">(${d.count.toLocaleString()})</span>`}</div>`,
+      item: (d, esc) => `<div>${esc(d.text)}</div>`
+    },
+    onChange: () => root.dispatchEvent(new Event("input", {bubbles: true}))
+  });
+  // Keep Tom Select's own typing/change events from reaching the page.
+  for (const type of ["input", "change"]) {
+    root.addEventListener(type, (e) => { if (e.target !== root) e.stopPropagation(); });
+  }
+  Object.defineProperty(root, "value", {get: () => root.ts.getValue()});
+  return root;
+}
+viewof filters = {
+  const widgets = Object.fromEntries(
+    facets.map(([k, label]) => [k, facetSelect(k, label, uniq(k), urlState.init[k] ?? [])])
+  );
+  const clear = html`<button type="button" class="btn btn-sm btn-outline-secondary">Clear all filters</button>`;
+  const copy = html`<button type="button" class="btn btn-sm btn-outline-secondary">Copy link to this search</button>`;
+  const root = html`<div class="facet-filters">
+    <p class="small text-body-secondary mb-2">Type or pick values; × removes one. No values means any.</p>
+    <div class="d-flex flex-wrap gap-2 mb-3">${clear}${copy}</div>
+    ${Object.values(widgets)}
+  </div>`;
+  root.widgets = widgets;
+  clear.onclick = () => {
+    for (const w of Object.values(widgets)) w.ts.clear(true);
+    root.dispatchEvent(new Event("input", {bubbles: true}));
+  };
+  copy.onclick = () => navigator.clipboard.writeText(location.href).then(() => {
+    copy.textContent = "Link copied";
+    setTimeout(() => (copy.textContent = "Copy link to this search"), 1500);
+  });
+  Object.defineProperty(root, "value", {
+    get: () => Object.fromEntries(facets.map(([k]) => [k, widgets[k].value]))
+  });
+  return root;
+}
 ```
 
 :::
@@ -58,13 +155,73 @@ viewof filters = Inputs.form(
 
 ```{ojs}
 //| echo: false
-filtered = summary.filter((d) =>
-  facets.every(([k]) => filters[k].length === 0 || filters[k].includes(d[k]))
+urlState.dropped.length > 0
+  ? html`<div class="alert alert-warning py-2 small">Ignored link values not in the catalog:
+      ${urlState.dropped.map((s) => html`<code>${s}</code>`).reduce((a, b) => html`${a}, ${b}`)}</div>`
+  : html`<span></span>`
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+base = arq.from(summary)
+// Rows matching every facet's picked values except `skip`'s.
+matching = (skip) => {
+  const active = facets.filter(([k]) => k !== skip && filters[k].length > 0);
+  if (active.length === 0) return base;
+  const sets = active.map(([k]) => [k, new Set(filters[k])]);
+  return base.filter(arq.escape((d) => sets.every(([k, s]) => s.has(d[k]))));
+}
+// Faceted-search counts: for each facet, the number of results each value
+// would give, given the other facets' picks.
+counts = Object.fromEntries(
+  facets.map(([k]) => [
+    k,
+    new Map(matching(k).groupby(k).count().objects().map((r) => [r[k], r.count]))
+  ])
 )
-viewof searched = Inputs.search(filtered, {
+filtered = matching(null).objects()
+// Update option labels on the existing widgets.
+updateCounts = {
+  for (const [k] of facets) {
+    const ts = (viewof filters).widgets[k].ts;
+    for (const v of uniq(k)) {
+      const n = counts[k].get(v) ?? 0;
+      if (ts.options[v]?.count !== n) ts.updateOption(v, {value: v, text: v, count: n});
+    }
+    ts.refreshOptions(false);
+  }
+  return true;
+}
+```
+
+```{ojs}
+//| echo: false
+viewof searchBox = Inputs.search(summary, {
+  query: urlState.q,
   placeholder: "Search within results (any column)",
-  label: "Search"
+  label: "Search",
+  width: 380,
+  format: () => ""
 })
+searchText = (searchBox, (viewof searchBox).querySelector("input").value)
+searched = searchText === ""
+  ? filtered
+  : ((ids) => filtered.filter((d) => ids.has(d.dataset_id)))(new Set(searchBox.map((d) => d.dataset_id)))
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+// Save the filters and search text in the page URL (no new history entries).
+saveUrl = {
+  const p = new URLSearchParams();
+  for (const [k] of facets) for (const v of filters[k]) p.append(k, v);
+  if (searchText) p.set("search", searchText);
+  const s = p.toString();
+  history.replaceState(history.state, "", `${location.pathname}${s ? `?${s}` : ""}${location.hash}`);
+  return s;
+}
 ```
 
 ```{ojs}
@@ -77,28 +234,83 @@ reportUrl = (d) => {
   u.searchParams.set("path", d.relative_path);
   return u.href;
 }
-viewof selected = Inputs.table(searched, {
-  columns: [
-    "source_id", "product", "experiment_id", "member_id", "table_id",
-    "frequency", "variable_id", "grid_label", "version", "n_files",
-    "size_gb", "dataset_id", "time_start", "time_end"
-  ],
-  header: {
-    source_id: "source", product: "product", experiment_id: "experiment",
-    member_id: "member", table_id: "table", frequency: "freq",
-    variable_id: "variable", grid_label: "grid", n_files: "files",
-    size_gb: "GB", dataset_id: "report"
-  },
-  format: {
-    dataset_id: (id, i, data) =>
-      html`<a href="${reportUrl(data[i])}" target="_blank" rel="noopener"
-        title="Report a problem with ${id}">Report</a>`
-  },
-  multiple: true,
-  required: false,
-  rows: 15,
-  layout: "auto"
-})
+// One Tabulator that behaves as an Observable input: .value is the selected
+// rows, an "input" event fires on selection change, .table is the instance.
+viewof selected = {
+  const holder = html`<div class="browse-table"></div>`;
+  const csv = html`<button type="button" class="btn btn-sm btn-outline-secondary">Download table (CSV)</button>`;
+  const status = html`<span class="small text-body-secondary"></span>`;
+  const root = html`<div>
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-2">${status}${csv}</div>
+    ${holder}
+  </div>`;
+  const col = (field, title, extra = {}) => ({field, title, ...extra});
+  const table = new Tabulator(holder, {
+    data: [],
+    index: "dataset_id",
+    layout: "fitDataStretch",
+    maxHeight: "520px",
+    renderVertical: "virtual",
+    selectableRows: true,
+    selectableRowsRangeMode: "click",
+    placeholder: "No matching datasets",
+    columnDefaults: {resizable: true, headerSort: true},
+    columns: [
+      {formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center",
+       headerSort: false, resizable: false, width: 44, frozen: true},
+      col("source_id", "source"),
+      col("product", "product"),
+      col("experiment_id", "experiment"),
+      col("member_id", "member"),
+      col("table_id", "table"),
+      col("frequency", "freq"),
+      col("variable_id", "variable"),
+      col("grid_label", "grid"),
+      col("version", "version"),
+      col("n_files", "files", {hozAlign: "right", sorter: "number"}),
+      col("size_gb", "GB", {hozAlign: "right", sorter: "number"}),
+      col("time_start", "start"),
+      col("time_end", "end"),
+      col("dataset_id", "report", {
+        frozen: true, headerSort: false, titleDownload: "dataset_id",
+        formatter: (cell) => {
+          const d = cell.getRow().getData();
+          const a = Object.assign(document.createElement("a"), {
+            href: reportUrl(d), target: "_blank", rel: "noopener", textContent: "Report",
+            title: `Report a problem with ${d.dataset_id}`
+          });
+          a.addEventListener("click", (e) => e.stopPropagation());
+          return a;
+        }
+      })
+    ]
+  });
+  root.table = table;
+  root.status = status;
+  root.ready = new Promise((resolve) => table.on("tableBuilt", resolve));
+  root.value = [];
+  table.on("rowSelectionChanged", (data) => {
+    root.value = data;
+    root.dispatchEvent(new Event("input", {bubbles: true}));
+  });
+  csv.onclick = () => table.download("csv", "cmip_datasets.csv");
+  return root;
+}
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+// Show the current results; drop any selection so Get data never uses rows
+// that are no longer shown.
+updateTable = {
+  const view = viewof selected;
+  await view.ready;
+  view.table.deselectRow();
+  await view.table.replaceData(searched);
+  view.status.textContent = `${searched.length.toLocaleString()} matching dataset(s)`;
+  return searched.length;
+}
 ```
 
 :::
@@ -121,13 +333,12 @@ copyBlock = (text, lang = "") => {
   });
   return html`<div class="get-data-block">${btn}${pre}</div>`;
 }
-md`## Get data
-
-${chosen.length.toLocaleString()} dataset(s)
+html`<h2>Get data</h2>
+<p>${chosen.length.toLocaleString()} dataset(s)
 ${selected.length > 0 ? "selected" : "matching (no rows picked)"},
 ${d3.sum(chosen, (d) => d.n_files).toLocaleString()} files,
 ${d3.sum(chosen, (d) => d.size_gb).toLocaleString(undefined, {maximumFractionDigits: 1})} GB.
-See the [access page](access.html) for which method to use.`
+See the <a href="access.html">access page</a> for which method to use.</p>`
 ```
 
 ::: {.panel-tabset}

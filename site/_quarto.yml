@@ -6,6 +6,7 @@ project:
   pre-render: ../scripts/write_site_config.py
   resources:
     - data/
+    - vendor/
     - robots.txt
 
 shortcodes:
@@ -53,7 +54,8 @@ website:
 
 format:
   html:
-    theme: cosmo
+    theme: [cosmo, theme.scss]
+    css: fonts.css
     toc: true
 
 execute:

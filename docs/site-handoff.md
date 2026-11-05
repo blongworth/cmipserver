@@ -63,6 +63,41 @@ config), **M.3** (CI checks). Also prepares **5.11** (versioning text and
    (96 KB) for the CESM2 historical tas dataset. Their attributes mark them
    as `SYNTHETIC`, not model output.
 
+## Browser upgrade: vendored libraries (2026-11-05)
+
+`site/browse.qmd` now uses Tom Select (filters, with per-value result
+counts), Tabulator (table), and Arquero (counts and filtering). The filters
+and search text are saved in the page URL, e.g.
+`browse.html?source_id=CESM2&variable_id=tas&search=Amon`. The search key is
+`search`, not `q`, because Quarto's site search reads and removes `?q=` on
+page load.
+
+All third-party code and fonts are pinned and served from `site/vendor/`
+(manifest `site/vendor/vendor.yml`, script `scripts/vendor_js.py`, test
+`tests/test_vendor.py` checks the sha256 hashes):
+
+| Package | Version | License | Why |
+|---|---|---|---|
+| tom-select | 2.6.2 | Apache-2.0 | facet filters |
+| tabulator-tables | 6.7.1 | MIT | results table |
+| arquero | 8.0.3 | BSD-3-Clause | facet counts, filtering |
+| d3 | 7.8.5 | ISC | OJS stdlib, same version Quarto 1.10.19 pins |
+| htl | 0.3.1 | ISC | OJS stdlib (`html`) |
+| @observablehq/inputs | 0.10.6 | ISC | OJS stdlib (`Inputs.search`) |
+| @fontsource/source-sans-pro | 5.3.0 | OFL-1.1 | cosmo theme font |
+
+**For the IT security review:** the site loads no third-party scripts, styles,
+or fonts at runtime. Checked in headless Chrome: every request from
+`browse.html` went to the local server. How:
+
+- `browse.qmd` shadows the OJS stdlib entries it uses (`d3`, `htl`, `html`,
+  `Inputs`) with the vendored copies. Quarto would otherwise fetch them from
+  jsDelivr on first use. The page no longer uses `md` (it would fetch
+  `marked`). Any new OJS page must do the same, or it will load from jsDelivr.
+- `site/theme.scss` sets `$web-font-path: false` so cosmo does not import
+  Google Fonts on every page. `site/fonts.css` serves Source Sans Pro (latin
+  300/400/700) from `vendor/`.
+
 ## Placeholders (in `site/_variables.yml` and `.github/ISSUE_TEMPLATE/config.yml`)
 
 | Key | Value now | Waiting on |

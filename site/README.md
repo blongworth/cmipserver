@@ -16,6 +16,13 @@ uv run quarto render site      # or: uv run quarto preview site
   placeholders. The pre-render step copies the browser's settings into
   `data/site_config.json`.
 - `data/` holds the small committed catalog summary (sample for now).
+- `vendor/` holds pinned third-party JavaScript, CSS, and fonts (Tom Select,
+  Tabulator, Arquero, the OJS stdlib pieces the browser uses, and the cosmo
+  font), so pages load nothing from CDNs. `vendor/vendor.yml` lists each file
+  with its version, source URL, and sha256. `uv run scripts/vendor_js.py`
+  downloads and checks them; after bumping a version, run it with `--update`
+  to record the new hashes, then commit the files. `theme.scss` and
+  `fonts.css` stop cosmo from loading Google Fonts.
 - Notebooks (`notebooks/*.ipynb`) use `freeze: auto`. Re-execute them where
   the catalog is reachable and commit `_freeze/`; CI renders from frozen output.
   Set `WHOI_CMIP_CATALOG` (and optionally `WHOI_CMIP_DATA_ROOT`) to point the
