@@ -1,0 +1,62 @@
+---
+title: "About"
+---
+
+The WHOI CMIP data server is a shared store of CMIP6 model output and
+reanalysis products for WHOI researchers, mainly in the Physical Oceanography
+Department. It replaces the older CMIP6 Community Storage Server
+({{< old-site >}}), which stays online until this site is ready.
+
+## Holdings
+
+::: {.callout-note}
+These figures are from the **old site's statistics page** and have not been
+checked yet. An audit of the store is under way; this section will be updated
+from the catalog when it finishes.
+:::
+
+| | Old-site figure |
+|---|---|
+| Datasets | 28,361 |
+| NetCDF files | 555,263 |
+| Volume | about 142 TB |
+
+Reanalysis products (ERA5 first, then MERRA-2 and JRA-3Q) are being added.
+
+## Layout
+
+Files live on WHOI's VAST storage under `{{< var vast_prefix >}}`, in the
+CMIP Data Reference Syntax (DRS) directory layout:
+
+```
+{{< var vast_prefix >}}/
+  cmip6/<activity_id>/<institution_id>/<source_id>/<experiment_id>/<member_id>/<table_id>/<variable_id>/<grid_label>/<version>/
+  cmip7/...              reserved, same scheme
+  reanalysis/era5/...
+  reanalysis/merra2/...
+  reanalysis/jra3q/...
+```
+
+For example:
+
+```
+{{< var vast_prefix >}}/cmip6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/v20190308/
+    tas_Amon_CESM2_historical_r1i1p1f1_gn_185001-189912.nc
+```
+
+Each directory level is one facet (see the
+[CMIP6 DRS documentation](https://wcrp-cmip.github.io/WGCM_Infrastructure_Panel/Papers/CMIP6_global_attributes_filenames_CVs_v6.2.7.pdf)).
+The [catalog](catalog.qmd) indexes every file with these facets, and the
+[browser](browse.qmd) searches a dataset-level summary of it.
+
+## Acknowledgment
+
+If you use data from this server, please include this acknowledgment (see
+[How to cite](cite.qmd)):
+
+> {{< var acknowledgment >}}
+
+## Contact
+
+Maintainer: Brett Longworth. Questions and problems: see
+[Report a problem](report.qmd).

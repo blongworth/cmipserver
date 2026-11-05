@@ -1,0 +1,51 @@
+---
+title: "Access"
+---
+
+There are three ways to reach the data. Use the first one that works for you.
+
+| You are... | Use | Account needed |
+|---|---|---|
+| Working on the WHOI HPC cluster | Direct path under `{{< var vast_prefix >}}` | WHOI HPC account |
+| On a WHOI computer (on site or VPN) | SMB share | WHOI login |
+| Outside WHOI, or without VAST access | HTTPS download | None |
+| Moving many terabytes off site | Globus (planned) | Globus account |
+
+## HPC cluster
+
+The store is mounted read-only at `{{< var vast_prefix >}}` on the cluster.
+This is the fastest option and the one to use for large analyses: open files
+in place with xarray, or through the [intake-esm catalog](catalog.qmd).
+
+```python
+import xarray as xr
+ds = xr.open_mfdataset(
+    "{{< var vast_prefix >}}/cmip6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/v20190308/*.nc"
+)
+```
+
+## SMB share
+
+From a WHOI laptop or desktop, connect to the share `{{< var smb_path >}}`
+(placeholder until IT confirms the share name). The directory layout is the
+same as on the cluster.
+
+::: {.callout-tip}
+Many people reading the same files over SMB at once has caused errors in the
+past. For heavy or parallel reads, work on the cluster instead.
+:::
+
+## HTTPS download
+
+Files can be downloaded over HTTPS, with no account, from
+`{{< var https_prefix >}}` (placeholder until the download host is set up).
+URLs follow the same layout as the store. There is no directory listing: use
+the [browser](browse.qmd) to generate a list of file URLs, then follow the
+[download guide](download-guide.qmd).
+
+Downloads are rate limited to keep the service available to everyone. For
+large transfers, use the cluster or ask about Globus.
+
+## Globus (planned)
+
+A Globus collection for bulk transfers is planned but not available yet.

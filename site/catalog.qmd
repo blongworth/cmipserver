@@ -1,0 +1,77 @@
+---
+title: "Catalog"
+---
+
+Every file on the server is listed in an
+[intake-esm](https://intake-esm.readthedocs.io/) catalog: a CSV with one row
+per NetCDF file, and a JSON descriptor that tells intake-esm how to combine
+files into datasets. The catalog is rebuilt nightly.
+
+## Location
+
+| | |
+|---|---|
+| Catalog descriptor | `{{< var catalog_path >}}` (placeholder) |
+| Current version | `{{< var catalog_version >}}` |
+
+## Open it from Python
+
+```python
+import intake
+
+cat = intake.open_esm_datastore("{{< var catalog_path >}}")
+sub = cat.search(
+    source_id="CESM2",
+    experiment_id="historical",
+    table_id="Amon",
+    variable_id="tas",
+)
+dsets = sub.to_dataset_dict()   # {dataset key: xarray.Dataset}
+```
+
+The [quickstart notebook](notebooks/quickstart.ipynb) walks through this
+end to end.
+
+## Columns
+
+| Column | Meaning |
+|---|---|
+| `master_id` | Dataset id without version, e.g. `CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn` |
+| `collection` | `cmip6` or `reanalysis` |
+| `path` | Full path to the file under `{{< var vast_prefix >}}` |
+| `activity_id` ... `grid_label` | CMIP6 DRS facets (empty for reanalysis) |
+| `product`, `frequency` | Reanalysis product (`era5`, ...) and frequency (empty for CMIP6) |
+| `variable_id` | Variable name (both collections) |
+| `version` | Dataset version directory, `vYYYYMMDD` |
+| `time_range` | Time range from the file name |
+| `size_bytes` | File size |
+
+Datasets are grouped by `master_id` and `version`, so a dataset key looks like
+`CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn.v20190308`. The
+[browser](browse.qmd) uses the same keys, so you can paste them into
+`cat[key]`.
+
+## Using it without VAST access
+
+The `path` column holds VAST paths. If you read the files another way,
+replace the prefix before loading:
+
+```python
+cat.df["path"] = cat.df["path"].str.replace(
+    "{{< var vast_prefix >}}", "{{< var https_prefix >}}", regex=False
+)
+```
+
+Reading NetCDF over HTTPS works for small requests; for anything large,
+download the files first (see the [download guide](download-guide.qmd)).
+
+## Versions
+
+The nightly build always updates `latest`. Dated snapshots (for example
+`2027-01`) that do not change are planned so analyses can pin a version; how
+often they are made and how long they are kept is still being decided.
+
+## Changelog
+
+- **sample**: development catalog generated from synthetic data. Not real
+  holdings.

@@ -1,0 +1,18 @@
+---
+title: "Cloud"
+---
+
+Much of CMIP6 is also available in public cloud storage, which may be faster
+than downloading from WHOI if you compute in the cloud:
+
+- [Pangeo / Google Cloud CMIP6](https://pangeo-data.github.io/pangeo-cmip6-cloud/):
+  Zarr stores with an intake-esm catalog.
+- [AWS Open Data CMIP6](https://registry.opendata.aws/cmip6/): the same
+  collection on Amazon S3.
+- [ERA5 on AWS](https://registry.opendata.aws/ecmwf-era5/) and other public
+  ERA5 mirrors.
+
+Use the WHOI server when you work on the WHOI cluster, need a dataset that is
+not in the cloud collections, or need the exact files used in an earlier WHOI
+analysis. The cloud copies can differ from ESGF and from each other in version
+and format; check `version` and the dataset attributes before mixing sources.

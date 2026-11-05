@@ -1,0 +1,22 @@
+---
+title: "Report a problem or request data"
+---
+
+Found a corrupted file, inconsistent variable names, missing time steps, or a
+dataset you need that is not here? Tell us.
+
+## With a GitHub account
+
+- [Report a problem with a dataset](https://github.com/{{< var github_repo >}}/issues/new?template=report-problem.yml)
+- [Request data](https://github.com/{{< var github_repo >}}/issues/new?template=data-request.yml)
+
+Every row in the [browser](browse.qmd) has a **Report** link that fills in
+the dataset id for you. Issues are public: do not include passwords or
+anything private.
+
+## Without a GitHub account
+
+Email [{{< var help_email >}}](mailto:{{< var help_email >}}) with the dataset
+id or file path, what you were doing, and what went wrong (or, for requests:
+variable, experiment, model, frequency, and why you need it). We will open an
+issue for you without publishing your email address.

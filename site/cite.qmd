@@ -1,0 +1,29 @@
+---
+title: "How to cite"
+---
+
+## Acknowledge the server
+
+Please include this text in the acknowledgments of papers, theses, and
+presentations that use data from this server:
+
+> {{< var acknowledgment >}}
+
+Telling us about your publications helps us justify continued funding for the
+server; see [Report a problem](report.qmd) for how to reach us.
+
+## Cite the models
+
+Each CMIP6 dataset has its own citation and license, set by the modeling
+group. Find them through the
+[CMIP6 citation service](https://cmip6cite.wdc-climate.de/) using the
+dataset id from the [browser](browse.qmd), and follow the
+[CMIP6 terms of use](https://pcmdi.llnl.gov/CMIP6/TermsOfUse).
+For reanalysis, cite the product's own reference (for ERA5:
+Hersbach et al., 2020, <https://doi.org/10.1002/qj.3803>).
+
+## Catalog versions
+
+If your analysis depends on the exact holdings, record the catalog version
+(currently `{{< var catalog_version >}}`) in your methods. A DOI for the
+server and its catalog snapshots is under consideration.
