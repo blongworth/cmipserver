@@ -1,0 +1,212 @@
+---
+title: "Browse datasets"
+page-layout: full
+toc: false
+---
+
+```{ojs}
+//| echo: false
+summary = FileAttachment("data/catalog_summary.json").json()
+config = FileAttachment("data/site_config.json").json()
+stats = FileAttachment("data/catalog_stats.json").json()
+```
+
+```{ojs}
+//| echo: false
+md`Catalog **${config.catalog_version}**: ${stats.n_datasets.toLocaleString()} datasets,
+${stats.n_files.toLocaleString()} files, ${stats.size_tb.toLocaleString()} TB.
+Filter with the boxes on the left (Ctrl/Cmd-click to pick several values; no
+selection means "any"), then pick rows in the table. The **Get data** panel
+uses the rows you pick, or every matching dataset if you pick none.
+${config.catalog_version === "sample" ? "**This is a sample catalog: datasets and paths are not real.**" : ""}`
+```
+
+:::: {.grid}
+
+::: {.g-col-12 .g-col-lg-3}
+
+```{ojs}
+//| echo: false
+facets = [
+  ["collection", "Collection"],
+  ["product", "Reanalysis product"],
+  ["frequency", "Frequency (reanalysis)"],
+  ["activity_id", "Activity"],
+  ["institution_id", "Institution"],
+  ["source_id", "Source (model)"],
+  ["experiment_id", "Experiment"],
+  ["member_id", "Member"],
+  ["table_id", "Table"],
+  ["variable_id", "Variable"],
+  ["grid_label", "Grid"],
+  ["version", "Version"]
+]
+uniq = (k) => [...new Set(summary.map((d) => d[k]).filter((v) => v != null))].sort()
+viewof filters = Inputs.form(
+  Object.fromEntries(
+    facets.map(([k, label]) => {
+      const values = uniq(k);
+      return [k, Inputs.select(values, {label, multiple: Math.min(6, Math.max(2, values.length))})];
+    })
+  )
+)
+```
+
+:::
+
+::: {.g-col-12 .g-col-lg-9}
+
+```{ojs}
+//| echo: false
+filtered = summary.filter((d) =>
+  facets.every(([k]) => filters[k].length === 0 || filters[k].includes(d[k]))
+)
+viewof searched = Inputs.search(filtered, {
+  placeholder: "Search within results (any column)",
+  label: "Search"
+})
+```
+
+```{ojs}
+//| echo: false
+reportUrl = (d) => {
+  const u = new URL(`https://github.com/${config.github_repo}/issues/new`);
+  u.searchParams.set("template", "report-problem.yml");
+  u.searchParams.set("title", `[Problem]: ${d.dataset_id}`);
+  u.searchParams.set("dataset_id", d.dataset_id);
+  u.searchParams.set("path", d.relative_path);
+  return u.href;
+}
+viewof selected = Inputs.table(searched, {
+  columns: [
+    "source_id", "product", "experiment_id", "member_id", "table_id",
+    "frequency", "variable_id", "grid_label", "version", "n_files",
+    "size_gb", "dataset_id", "time_start", "time_end"
+  ],
+  header: {
+    source_id: "source", product: "product", experiment_id: "experiment",
+    member_id: "member", table_id: "table", frequency: "freq",
+    variable_id: "variable", grid_label: "grid", n_files: "files",
+    size_gb: "GB", dataset_id: "report"
+  },
+  format: {
+    dataset_id: (id, i, data) =>
+      html`<a href="${reportUrl(data[i])}" target="_blank" rel="noopener"
+        title="Report a problem with ${id}">Report</a>`
+  },
+  multiple: true,
+  required: false,
+  rows: 15,
+  layout: "auto"
+})
+```
+
+:::
+
+::::
+
+```{ojs}
+//| echo: false
+chosen = selected.length > 0 ? selected : searched
+maxSnippet = 50
+maxFiles = config.wget_max_files
+isPlaceholder = (v) => !v || /_TBD$/.test(v)
+internal = config.audience === "internal"
+copyBlock = (text, lang = "") => {
+  const pre = html`<pre class="sourceCode ${lang}"><code>${text}</code></pre>`;
+  const btn = html`<button class="btn btn-sm btn-outline-secondary mb-2">Copy</button>`;
+  btn.onclick = () => navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = "Copied";
+    setTimeout(() => (btn.textContent = "Copy"), 1500);
+  });
+  return html`<div class="get-data-block">${btn}${pre}</div>`;
+}
+md`## Get data
+
+${chosen.length.toLocaleString()} dataset(s)
+${selected.length > 0 ? "selected" : "matching (no rows picked)"},
+${d3.sum(chosen, (d) => d.n_files).toLocaleString()} files,
+${d3.sum(chosen, (d) => d.size_gb).toLocaleString(undefined, {maximumFractionDigits: 1})} GB.
+See the [access page](access.html) for which method to use.`
+```
+
+::: {.panel-tabset}
+
+## Python (intake-esm)
+
+```{ojs}
+//| echo: false
+pythonSnippet = {
+  const ids = chosen.slice(0, maxSnippet).map((d) => d.dataset_id);
+  const swap = internal
+    ? ""
+    : `\n# Outside VAST: read over HTTPS instead of ${config.vast_prefix}\n` +
+      `cat.df["path"] = cat.df["path"].str.replace(\n` +
+      `    "${config.vast_prefix}", "${config.https_prefix}", regex=False\n)\n`;
+  return `import intake
+
+cat = intake.open_esm_datastore("${config.catalog_path}")
+${swap}
+keys = [
+${ids.map((k) => `    "${k}",`).join("\n")}
+]
+dsets = {k: cat[k].to_dask() for k in keys}`;
+}
+html`${chosen.length > maxSnippet
+  ? html`<p><em>Showing the first ${maxSnippet} of ${chosen.length} datasets. Narrow the filters or pick rows.</em></p>`
+  : ""}
+${copyBlock(pythonSnippet, "python")}
+${isPlaceholder(config.catalog_path) ? html`<p><em>The catalog path is not final yet (placeholder).</em></p>` : ""}`
+```
+
+## VAST path (HPC, SMB)
+
+```{ojs}
+//| echo: false
+internal
+  ? html`${copyBlock(chosen.slice(0, maxSnippet).map((d) => `${config.vast_prefix}/${d.relative_path}/`).join("\n"))}
+    <p>On HPC these paths work as shown. Over the SMB share, see the
+    <a href="access.html">access page</a> for the share name.</p>`
+  : html`<p>Storage paths are shown only on the internal site.</p>`
+```
+
+## HTTPS download
+
+```{ojs}
+//| echo: false
+wgetList = {
+  // Fetch the file-list shards needed for the chosen datasets, stopping
+  // once maxFiles names have been collected.
+  const take = [];
+  let n = 0;
+  for (const d of chosen) {
+    if (n >= maxFiles) break;
+    take.push(d);
+    n += d.n_files;
+  }
+  const shards = [...new Set(take.map((d) => d.file_list))];
+  const lists = Object.assign(
+    {},
+    ...(await Promise.all(shards.map((s) => fetch(`data/${s}`).then((r) => r.json()))))
+  );
+  const urls = take.flatMap((d) =>
+    (lists[d.dataset_id] ?? []).map((f) => `${config.https_prefix}/${d.relative_path}/${f}`)
+  );
+  const total = d3.sum(chosen, (d) => d.n_files);
+  return {urls: urls.slice(0, maxFiles), total};
+}
+html`${isPlaceholder(config.https_prefix)
+  ? html`<p><em>HTTPS downloads are not available yet; the URL prefix below is a placeholder.</em></p>`
+  : ""}
+${wgetList.total > maxFiles
+  ? html`<p><em>List capped at ${maxFiles} of ${wgetList.total.toLocaleString()} files.
+    For large requests use the cluster or SMB share${config.globus_url ? html`, or <a href="${config.globus_url}">Globus</a>` : ""}
+    (see the <a href="download-guide.html">download guide</a>).</em></p>`
+  : ""}
+<p>Save as <code>urls.txt</code>, then run:</p>
+${copyBlock("wget --continue --force-directories --no-host-directories -i urls.txt", "bash")}
+${DOM.download(new Blob([wgetList.urls.join("\n") + "\n"], {type: "text/plain"}), "urls.txt", "Download urls.txt")}
+${copyBlock(wgetList.urls.join("\n"))}`
+```
+
+:::
