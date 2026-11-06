@@ -72,6 +72,17 @@ and search text are saved in the page URL, e.g.
 `search`, not `q`, because Quarto's site search reads and removes `?q=` on
 page load.
 
+**Dataset pages.** The table's **download** column links to
+`dataset.html?id=<dataset_id>`. That page is built in the browser: it finds
+the row in `catalog_summary.json`, fetches the row's file-list shard, and lists
+one HTTPS link per file (`https_prefix/relative_path/file`), plus `urls.txt`,
+the `wget` command, the VAST path (internal only), and Report. It replaces the
+old site's directory listings, so the new download host can keep listings off
+(plan §4.8). Shards hold only file names, so there are no per-file sizes or
+dates; adding them means changing `summarize_catalog.py`. The page loads the
+whole summary to find one row (a few MB at 28k rows; usually cached from
+Browse).
+
 All third-party code and fonts are pinned and served from `site/vendor/`
 (manifest `site/vendor/vendor.yml`, script `scripts/vendor_js.py`, test
 `tests/test_vendor.py` checks the sha256 hashes):

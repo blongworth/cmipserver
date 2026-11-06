@@ -271,6 +271,18 @@ viewof selected = {
       col("size_gb", "GB", {hozAlign: "right", sorter: "number"}),
       col("time_start", "start"),
       col("time_end", "end"),
+      col("relative_path", "download", {
+        frozen: true, headerSort: false, titleDownload: "relative_path",
+        formatter: (cell) => {
+          const d = cell.getRow().getData();
+          const a = Object.assign(document.createElement("a"), {
+            href: `dataset.html?id=${encodeURIComponent(d.dataset_id)}`, textContent: "Files",
+            title: `Download links for the ${d.n_files} file(s) in ${d.dataset_id}`
+          });
+          a.addEventListener("click", (e) => e.stopPropagation());
+          return a;
+        }
+      }),
       col("dataset_id", "report", {
         frozen: true, headerSort: false, titleDownload: "dataset_id",
         formatter: (cell) => {

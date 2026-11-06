@@ -1,0 +1,112 @@
+---
+title: "Dataset files"
+toc: false
+---
+
+```{ojs}
+//| echo: false
+summary = FileAttachment("data/catalog_summary.json").json()
+config = FileAttachment("data/site_config.json").json()
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+// Served from site/vendor/ (see vendor/vendor.yml) instead of jsDelivr, which
+// Quarto's OJS runtime would otherwise use for the `html` builtin.
+vendor = (p) => new URL(`vendor/${p}`, document.baseURI).href
+htl = require(vendor("htl/htl.min.js"))
+html = htl.html
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+// The dataset comes from the page URL: dataset.html?id=<dataset_id>.
+id = new URLSearchParams(location.search).get("id") ?? ""
+row = summary.find((d) => d.dataset_id === id) ?? null
+// File names come from the same file-list shard the Browse page uses.
+files = row
+  ? ((await (await fetch(`data/${row.file_list}`)).json())[id] ?? [])
+  : []
+urls = files.map((f) => `${config.https_prefix}/${row.relative_path}/${f}`)
+isPlaceholder = (v) => !v || /_TBD$/.test(v)
+internal = config.audience === "internal"
+reportUrl = (d) => {
+  const u = new URL(`https://github.com/${config.github_repo}/issues/new`);
+  u.searchParams.set("template", "report-problem.yml");
+  u.searchParams.set("title", `[Problem]: ${d.dataset_id}`);
+  u.searchParams.set("dataset_id", d.dataset_id);
+  u.searchParams.set("path", d.relative_path);
+  return u.href;
+}
+copyBlock = (text, lang = "") => {
+  const pre = html`<pre class="sourceCode ${lang}"><code>${text}</code></pre>`;
+  const btn = html`<button class="btn btn-sm btn-outline-secondary mb-2">Copy</button>`;
+  btn.onclick = () => navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = "Copied";
+    setTimeout(() => (btn.textContent = "Copy"), 1500);
+  });
+  return html`<div class="get-data-block">${btn}${pre}</div>`;
+}
+facetLabels = [
+  ["collection", "Collection"],
+  ["product", "Reanalysis product"],
+  ["frequency", "Frequency"],
+  ["activity_id", "Activity"],
+  ["institution_id", "Institution"],
+  ["source_id", "Source (model)"],
+  ["experiment_id", "Experiment"],
+  ["member_id", "Member"],
+  ["table_id", "Table"],
+  ["variable_id", "Variable"],
+  ["grid_label", "Grid"],
+  ["version", "Version"]
+]
+```
+
+```{ojs}
+//| echo: false
+row === null
+  ? html`<div class="alert alert-warning">
+      ${id ? html`No dataset <code>${id}</code> in catalog <strong>${config.catalog_version}</strong>.`
+           : "No dataset given."}
+      Find one on the <a href="browse.html">Browse</a> page.</div>`
+  : html`<p class="mb-1"><a href="browse.html">← Browse datasets</a></p>
+    <h2 class="mt-2"><code style="white-space: normal; word-break: break-all;">${row.dataset_id}</code></h2>
+    <table class="table table-sm w-auto small mb-3"><tbody>
+      ${facetLabels.filter(([k]) => row[k] != null).map(([k, label]) =>
+        html`<tr><th scope="row" class="pe-4">${label}</th><td>${row[k]}</td></tr>`)}
+      <tr><th scope="row" class="pe-4">Time range</th><td>${row.time_start ?? "?"} to ${row.time_end ?? "?"}</td></tr>
+      <tr><th scope="row" class="pe-4">Size</th><td>${row.n_files.toLocaleString()} files,
+        ${row.size_gb.toLocaleString(undefined, {maximumFractionDigits: 1})} GB</td></tr>
+      <tr><th scope="row" class="pe-4">Catalog</th><td>${config.catalog_version}</td></tr>
+    </tbody></table>
+    <p><a href="${reportUrl(row)}" target="_blank" rel="noopener">Report a problem with this dataset</a></p>`
+```
+
+```{ojs}
+//| echo: false
+row === null
+  ? html`<span></span>`
+  : html`<h3>Files</h3>
+    ${isPlaceholder(config.https_prefix)
+      ? html`<p><em>HTTPS downloads are not available yet; the URL prefix in these links is a placeholder.</em></p>`
+      : ""}
+    ${files.length !== row.n_files
+      ? html`<p><em>The file list has ${files.length} of the catalog's ${row.n_files} files.</em></p>`
+      : ""}
+    <ol class="dataset-files small">
+      ${urls.map((u, i) => html`<li><a href="${u}" download>${files[i]}</a></li>`)}
+    </ol>
+    <p>To fetch them all, save <code>urls.txt</code> and run the command below
+    (see the <a href="download-guide.html">download guide</a>).</p>
+    <p>${DOM.download(new Blob([urls.join("\n") + "\n"], {type: "text/plain"}), "urls.txt", "Download urls.txt")}</p>
+    ${copyBlock("wget --continue --force-directories --no-host-directories -i urls.txt", "bash")}
+    ${internal
+      ? html`<h3>On VAST</h3>
+        ${copyBlock(`${config.vast_prefix}/${row.relative_path}/`)}
+        <p>On HPC this path works as shown. Over the SMB share, see the
+        <a href="access.html">access page</a> for the share name.</p>`
+      : ""}`
+```
