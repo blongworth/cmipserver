@@ -1,0 +1,14 @@
+# Products to catalog (schema: whoi_cmip_reorg_code.manifest.CatalogsManifest).
+# build_catalog.py --manifest manifests/catalogs.yaml builds every enabled one.
+#
+# root: the DRS root (the directory holding activity_id dirs). /proj/cmip6/cmip6
+# matches the site's sample layout (relative_path "cmip6/CMIP/..."). CONFIRM
+# against the Step 1 scan before the first real build.
+schema_version: 1
+products:
+  - name: cmip6
+    root: /proj/cmip6/cmip6
+    builder: cmip6
+    output: whoi_cmip6
+    enabled: true
+    description: WHOI CMIP6 holdings on VAST

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import polars as pl
 
+from whoi_cmip_reorg_code.catalog import io as catalog_io
 from whoi_cmip_reorg_code.catalog_schema import (
     CATALOG_SCHEMA,
     CMIP6_FACETS,
@@ -177,41 +178,12 @@ def make_catalog(root: str = DEFAULT_DATA_ROOT, seed: int = SEED) -> pl.DataFram
 
 def esm_descriptor(csv_name: str) -> dict:
     """intake-esm (esmcat 0.1.0) descriptor for the catalog CSV."""
-    return {
-        "esmcat_version": "0.1.0",
-        "id": CATALOG_NAME,
-        "description": (
-            "SAMPLE WHOI CMIP catalog for development and tests. Synthetic: "
-            "paths do not exist except for one dataset in sample_data/."
-        ),
-        "catalog_file": csv_name,
-        "attributes": [
-            {"column_name": c, "vocabulary": ""}
-            for c in CATALOG_SCHEMA
-            if c not in ("master_id", "path", "size_bytes")
-        ],
-        "assets": {"column_name": "path", "format": "netcdf"},
-        "aggregation_control": {
-            "variable_column_name": "variable_id",
-            # CMIP6 facets are null on reanalysis rows and intake-esm rejects
-            # partly-null groupby columns, so group on master_id + version.
-            # Keys are then "<master_id>.<version>" (= summary dataset_id).
-            # (A single groupby column breaks key lookup with pandas 3.)
-            "groupby_attrs": ["master_id", "version"],
-            "aggregations": [
-                {"type": "union", "attribute_name": "variable_id"},
-                {
-                    "type": "join_existing",
-                    "attribute_name": "time_range",
-                    "options": {
-                        "dim": "time",
-                        "coords": "minimal",
-                        "compat": "override",
-                    },
-                },
-            ],
-        },
-    }
+    return catalog_io.esm_descriptor(
+        csv_name,
+        CATALOG_NAME,
+        "SAMPLE WHOI CMIP catalog for development and tests. Synthetic: "
+        "paths do not exist except for one dataset in sample_data/.",
+    )
 
 
 def write_real_files(cat: pl.DataFrame, root: str, data_dir: Path) -> list[Path]:

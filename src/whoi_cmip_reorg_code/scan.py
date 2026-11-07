@@ -226,7 +226,7 @@ def _finalize_holdings(lf: pl.LazyFrame) -> pl.LazyFrame:
 
 
 @dataclass
-class _BatchWriter:
+class BatchWriter:
     """Accumulate rows, flush to part files, then stream into one parquet."""
 
     out_path: Path
@@ -285,8 +285,8 @@ def scan(
     holdings_path = out_dir / f"holdings_{tag}.parquet"
     errors_path = out_dir / f"errors_{tag}.parquet"
 
-    hw = _BatchWriter(holdings_path, HOLDINGS_SCHEMA, batch_rows, _finalize_holdings)
-    ew = _BatchWriter(errors_path, ERRORS_SCHEMA, batch_rows)
+    hw = BatchWriter(holdings_path, HOLDINGS_SCHEMA, batch_rows, _finalize_holdings)
+    ew = BatchWriter(errors_path, ERRORS_SCHEMA, batch_rows)
     for item in iter_entries(root, shard):
         if item[0] == "error":
             _, op, path, exc = item
@@ -305,3 +305,38 @@ def scan(
         "n_rows": hw.n_rows,
         "n_errors": ew.n_rows,
     }
+
+
+def holdings_tags(scan_dir: str | os.PathLike) -> list[str]:
+    """Shard tags of the ``holdings_<tag>.parquet`` files in ``scan_dir``,
+    sorted. Downstream array jobs (``check_nc.py``) index into this list."""
+    return sorted(
+        p.name.removeprefix("holdings_").removesuffix(".parquet")
+        for p in Path(scan_dir).glob("holdings_*.parquet")
+    )
+
+
+def pick_tag(
+    scan_dir: str | os.PathLike, shard: str | None, shard_index: int | None
+) -> str:
+    """Resolve ``--shard``/``--shard-index`` (default ``$SLURM_ARRAY_TASK_ID``)
+    against ``holdings_tags``. A shard like ``CMIP/NCAR`` maps to tag
+    ``CMIP__NCAR``. Raises ValueError if nothing matches."""
+    tags = holdings_tags(scan_dir)
+    if not tags:
+        raise ValueError(f"no holdings_*.parquet in {scan_dir}")
+    if shard is None and shard_index is None:
+        env = os.environ.get("SLURM_ARRAY_TASK_ID")
+        if env is None:
+            raise ValueError("give --shard or --shard-index (or run as an array job)")
+        shard_index = int(env)
+    if shard_index is not None:
+        if not 0 <= shard_index < len(tags):
+            raise ValueError(
+                f"shard index {shard_index} out of range (0-{len(tags) - 1})"
+            )
+        return tags[shard_index]
+    tag = shard.strip("/").replace("/", "__")
+    if tag not in tags:
+        raise ValueError(f"no holdings_{tag}.parquet in {scan_dir}")
+    return tag

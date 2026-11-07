@@ -14,3 +14,6 @@ wheels/
 _site/
 site/.quarto/
 site/_site/
+
+# Per-run outputs from the rollout ladder (runs/<date>_<level>/)
+runs/

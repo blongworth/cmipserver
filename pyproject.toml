@@ -8,8 +8,14 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "ecgtools>=2024.7.31",
     "intake-esm>=2025.7.9",
+    "netcdf4>=1.7.5.1.post1",
     "polars>=2.0.0",
+    "pydantic>=2.14.3",
+    "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+    "xarray>=2026.9.0",
 ]
 
 [project.scripts]
@@ -29,9 +35,7 @@ site = [
     "jupyter-core>=5.9.1",
     "nbclient>=0.11.0",
     "nbformat>=5.11.1",
-    "netcdf4>=1.7.5.1.post1",
     "plotly>=7.1.0",
-    "pyyaml>=6.0.3",
 ]
 
 [tool.uv]

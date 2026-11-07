@@ -1,0 +1,20 @@
+# Required datasets (schema: whoi_cmip_reorg_code.manifest.CoreManifest).
+#
+# Each requirement is the cartesian product of its facet values; facets left
+# out match anything. find_gaps.py --core reports every expanded combination
+# with the number of matching files on disk.
+#
+# Empty on purpose: the list is Brett's call (task 1.x core list). Example:
+#
+# requirements:
+#   - name: historical-ssp-atmos
+#     note: monthly near-surface fields for the PO group
+#     facets:
+#       source_id: [CESM2, GFDL-ESM4]
+#       experiment_id: [historical, ssp585]
+#       member_id: r1i1p1f1
+#       table_id: Amon
+#       variable_id: [tas, pr, psl]
+schema_version: 1
+description: WHOI CMIP6 core holdings
+requirements: []
