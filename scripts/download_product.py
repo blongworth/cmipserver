@@ -1,8 +1,9 @@
 """Download a product fetch manifest into the staging tree.
 
 DRY RUN by default: prints what it would fetch. --execute downloads. Runs on
-the DTN as the service account. Files land in <staging-root>/<rel_path>
-(reanalysis/<product>/...), never in the live store. Each file is checked:
+an HPC login node, or as a Slurm job over 5 GB (slurm/download_product.sbatch).
+Files land in <staging-root>/<rel_path> (reanalysis/<product>/...), never in
+the live store. Each file is checked:
 size against the upstream listing (or checksum, if the manifest has one),
 then readable NetCDF with the expected variable (and units, if given) and
 time inside the file's year. Failures are kept as .bad. sha256 is logged.
@@ -17,6 +18,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import asdict
 
@@ -35,6 +37,8 @@ LOG_SCHEMA = {
     "digest": pl.String,
     "error": pl.String,
 }
+# Downloads bigger than this go through Slurm (slurm/download_product.sbatch).
+SLURM_GB = 5.0
 BAD = [
     "checksum_mismatch",
     "size_mismatch",
@@ -60,6 +64,13 @@ def main(argv: list[str] | None = None, opener: Opener | None = None) -> int:
     args = ap.parse_args(argv)
 
     m = load(args.fetch, FetchManifest)
+    total_gb = sum(i.size_bytes or 0 for i in m.items) / 1e9
+    if total_gb > SLURM_GB and "SLURM_JOB_ID" not in os.environ:
+        print(
+            f"NOTE: {total_gb:.1f} GB > {SLURM_GB:g} GB: run the --execute step as a "
+            "Slurm job (slurm/download_product.sbatch), not on a login node.",
+            file=sys.stderr,
+        )
 
     def progress(i, n, r):
         if args.execute:

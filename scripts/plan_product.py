@@ -16,7 +16,7 @@ files elsewhere in the store. Use an existing scan or a scan of reanalysis/
 only; never start a full-store scan for this.
 
 Examples:
-    # DTN: read-only listing + store check
+    # HPC login node: read-only listing + store check
     uv run scripts/plan_product.py --product manifests/products/20crv3.yaml \\
         --store-root /proj/cmip6/data --out runs/2026-11-20_20crv3/plan \\
         --fetch-out manifests/fetch/2026-11-20-20crv3.yaml

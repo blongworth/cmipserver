@@ -656,3 +656,19 @@ def test_repo_catalogs_spec_resolves():
     for p in cm.products:
         if p.builder == "reanalysis":
             load(REPO / "manifests" / p.spec, ProductManifest)
+
+
+def test_large_download_suggests_slurm(spec, payloads, tmp_path, capsys, monkeypatch):
+    fm = _fetch(spec, payloads, tmp_path)
+    fm.items[0].size_bytes = 6 * 10**9
+    path = tmp_path / "fetch.yaml"
+    from whoi_cmip_reorg_code.manifest import dump
+
+    dump(fm, path)
+    args = ["--fetch", str(path), "--staging-root", str(tmp_path / "stage")]
+    monkeypatch.delenv("SLURM_JOB_ID", raising=False)
+    assert download_product.main(args, opener=path_server(payloads)) == 0
+    assert "slurm/download_product.sbatch" in capsys.readouterr().err
+    monkeypatch.setenv("SLURM_JOB_ID", "1")
+    assert download_product.main(args, opener=path_server(payloads)) == 0
+    assert "sbatch" not in capsys.readouterr().err

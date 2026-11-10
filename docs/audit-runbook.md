@@ -16,6 +16,29 @@ read-only or dry-run by default. Keep each level's outputs in
 
 Below, `R=runs/$(date +%F)_L1` etc. and `ROOT=/proj/cmip6`.
 
+## HPC setup (once per account)
+
+Install uv in your home directory (no admin rights, nothing global). If
+`module avail uv` lists a module, `module load uv` instead.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh   # -> ~/.local/bin/uv
+cat >> ~/.bashrc <<'SH'
+export PATH="$HOME/.local/bin:$PATH"
+# If home quota is small, keep uv's cache and Pythons in project space:
+# export UV_CACHE_DIR=<project space>/uv-cache
+# export UV_PYTHON_INSTALL_DIR=<project space>/uv-python
+export UV_LINK_MODE=copy   # cache and repo on different filesystems: copy, don't warn
+SH
+source ~/.bashrc && uv --version
+
+git clone <repo url> whoi-cmip-reorg-code && cd whoi-cmip-reorg-code
+uv sync          # login node: fetches Python 3.14 and packages into .venv
+```
+
+Run `uv sync` on a login node. Slurm jobs use `uv run --frozen` with the
+`.venv` already built, so they don't need internet access for packages.
+
 ## 1. Scan (read-only)
 
 ```bash
@@ -102,24 +125,49 @@ fetch: source, groups of files, variables, years, expected units). Files keep
 the provider's layout under `/proj/cmip6/data/reanalysis/<product>/` (or a
 `path_template`, for API-only products). Example: `20crv3.yaml`.
 
+Runs on an HPC login node (outbound HTTPS, `/proj/cmip6` mounted). Check
+once per node: `curl -sI https://downloads.psl.noaa.gov/ | head -1` should
+print an HTTP status line, not a reset. **Downloads over 5 GB run as a Slurm
+job**; smaller ones run interactively in `tmux` (`download_product.py` prints a
+note when a fetch is over the limit).
+
 ```bash
-R=runs/$(date +%F)_20crv3
-F=manifests/fetch/$(date +%F)-20crv3.yaml
-# DTN: read-only listing (one page per dir + a HEAD per file) and store check.
-# Ladder L1 first: one group, one variable, two years.
+tmux new -s 20crv3            # detach: Ctrl-b d   reattach: tmux attach -t 20crv3
+D=$(date +%F); R=runs/${D}_20crv3; F=manifests/fetch/${D}-20crv3.yaml
+STORE=/proj/cmip6/data; STAGING=<STAGING>
+
+# 1. Plan (read-only: one listing per dir, a HEAD per file, stat of the store).
+#    Ladder L1 first: one small group (prmsl, 0.32 GB).
 uv run scripts/plan_product.py --product manifests/products/20crv3.yaml \
-    --store-root /proj/cmip6/data --out $R/plan --fetch-out $F \
-    --group 2mMO --variable air --years 2014 2015
+    --store-root $STORE --out $R/plan --fetch-out $F --group Monthlies/miscSI-MO
 # review $R/plan.md: verdict new / partial / complete / possible_duplicate
-uv run scripts/download_product.py --fetch $F --staging-root <STAGING> --log $R/download.parquet
-uv run scripts/download_product.py --fetch $F --staging-root <STAGING> --log $R/download.parquet --execute
-uv run scripts/plan_moves.py install --fetch $F --staging-root <STAGING> \
-    --store-root /proj/cmip6/data --out manifests/moves/$(date +%F)-20crv3.yaml
-# Brett: review, set approved_by / approved_on, then
-uv run scripts/apply_moves.py --manifest manifests/moves/<date>-20crv3.yaml --log $R/moves.jsonl --execute
+
+# 2. Download into staging. Dry run first, always on the login node:
+uv run scripts/download_product.py --fetch $F --staging-root $STAGING --log $R/download-dry.parquet
+#    <= 5 GB: run it here
+uv run scripts/download_product.py --fetch $F --staging-root $STAGING --log $R/download.parquet --execute
+#    > 5 GB: submit instead (resubmit to resume after a timeout)
+mkdir -p logs
+sbatch --export=ALL,FETCH=$F,STAGING=$STAGING,LOG=$R/download.parquet slurm/download_product.sbatch
+squeue --me; tail -f logs/download_product_<jobid>.out
+
+# 3. Plan the install (writes an UNAPPROVED move manifest; touches no data)
+uv run scripts/plan_moves.py install --fetch $F --staging-root $STAGING \
+    --store-root $STORE --out manifests/moves/${D}-20crv3.yaml
+# Brett: review, set approved_by / approved_on, then (dry run, then --execute)
+uv run scripts/apply_moves.py --manifest manifests/moves/${D}-20crv3.yaml --log $R/moves.jsonl
+uv run scripts/apply_moves.py --manifest manifests/moves/${D}-20crv3.yaml --log $R/moves.jsonl --execute
+# undo: uv run scripts/rollback_moves.py --log $R/moves.jsonl --execute
+
+# 4. Confirm: same plan command as step 1 -> "verdict: complete"
 # first install only: set enabled: true for 20crv3 in manifests/catalogs.yaml
 uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product 20crv3 --out catalog/next
 ```
+
+Before the first Slurm download, check that compute nodes can reach the source
+(the job also checks, and fails fast if not):
+`srun --pty curl -sI https://downloads.psl.noaa.gov/ | head -1`. If they
+can't, ask whether there is a transfer partition (`sinfo -s`).
 
 - Files already in the store are never planned. `present_differs` (size
   differs, or upstream is newer) is report-only; replacing a file is a
