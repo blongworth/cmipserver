@@ -1,4 +1,8 @@
-"""Build the intake-esm catalog for CMIP6 holdings (path-only; opens no files).
+"""Build intake-esm catalogs for CMIP6 and reanalysis holdings (path-only).
+
+Opens no data files. With --manifest each product uses its builder: cmip6
+(DRS paths) or reanalysis (paths matched against the product manifest named
+by ``spec``).
 
 Writes <out>/<name>.csv, <name>.json (temp file then rename) and
 <name>_invalid.parquet (non-DRS or excluded files, for review). Run
@@ -9,8 +13,8 @@ Examples:
     uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --out catalog/next
 
     # ladder: one subtree of the DRS root, excluding files check_nc flagged
-    uv run scripts/build_catalog.py --drs-root /proj/cmip6/cmip6 --name whoi_cmip6 \
-        --root /proj/cmip6/cmip6/CMIP/NCAR/CESM2 --ncinfo ncinfo/ --out runs/x/catalog
+    uv run scripts/build_catalog.py --drs-root /proj/cmip6/data/cmip6 --name whoi_cmip6 \
+        --root /proj/cmip6/data/cmip6/CMIP/NCAR/CESM2 --ncinfo ncinfo/ --out runs/x/catalog
 """
 
 from __future__ import annotations
@@ -22,9 +26,9 @@ from pathlib import Path
 
 import polars as pl
 
-from whoi_cmip_reorg_code.catalog import cmip6
+from whoi_cmip_reorg_code.catalog import cmip6, reanalysis
 from whoi_cmip_reorg_code.catalog.io import write_catalog
-from whoi_cmip_reorg_code.manifest import CatalogsManifest, load
+from whoi_cmip_reorg_code.manifest import CatalogsManifest, ProductManifest, load
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,25 +51,39 @@ def main(argv: list[str] | None = None) -> int:
             for p in load(args.manifest, CatalogsManifest).products
             if p.enabled and (not args.product or p.name in args.product)
         ]
-        jobs = [(p.name, p.root, p.description or p.name) for p in prods]
+        here = Path(args.manifest).parent
+        jobs = [
+            (
+                p.name,
+                p.root,
+                p.description or p.name,
+                p.builder,
+                p.spec and here / p.spec,
+            )
+            for p in prods
+        ]
     else:
-        jobs = [(args.name, args.drs_root, "WHOI CMIP6 holdings")]
+        jobs = [(args.name, args.drs_root, "WHOI CMIP6 holdings", "cmip6", None)]
     exclude = None
     if args.ncinfo:
         nci = pl.read_parquet(sorted(Path(args.ncinfo).glob("ncinfo_*.parquet")))
         exclude = set(nci.filter(pl.col("nc_status") != "ok")["path"].to_list())
 
     rc = 0
-    for name, drs_root, desc in jobs:
+    for name, root, desc, builder, spec in jobs:
         t0 = time.monotonic()
+        kw = {
+            "jobs": args.jobs,
+            "exclude_patterns": args.exclude_pattern,
+            "exclude_paths": exclude,
+        }
         try:
-            df, invalid = cmip6.build(
-                args.root or [drs_root],
-                drs_root,
-                jobs=args.jobs,
-                exclude_patterns=args.exclude_pattern,
-                exclude_paths=exclude,
-            )
+            if builder == "reanalysis":
+                if args.root:
+                    raise ValueError("--root applies to cmip6 products only")
+                df, invalid = reanalysis.build(root, load(spec, ProductManifest), **kw)
+            else:
+                df, invalid = cmip6.build(args.root or [root], root, **kw)
         except (OSError, ValueError) as exc:
             # one failed product keeps its last good catalog; report and go on
             print(f"{name}: FAILED: {exc}", file=sys.stderr)

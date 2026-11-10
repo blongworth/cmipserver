@@ -8,6 +8,11 @@ reported as unmappable. Corrupt files are left for the repair path.
 ``plan_repair_moves``: for each staged redownload, the bad original (if any)
 -> ``<quarantine_root>/<path relative to store_root>``, then the staged file
 -> ``<drs_root>/<drs_rel_path>``.
+
+``plan_install_moves``: each staged file of a product fetch manifest
+``<staging_root>/<rel_path>`` -> ``<store_root>/<rel_path>``. An existing
+destination is a collision: reported, never planned (replacement is a
+separate, reviewed quarantine-and-install).
 """
 
 from __future__ import annotations
@@ -18,7 +23,7 @@ from pathlib import Path
 import polars as pl
 
 from whoi_cmip_reorg_code.checksums import sha256_file
-from whoi_cmip_reorg_code.manifest import Move, RepairManifest
+from whoi_cmip_reorg_code.manifest import FetchManifest, Move, RepairManifest
 
 REPORT_SCHEMA = {"src": pl.String, "dst": pl.String, "status": pl.String}
 _BAD_NC = ("empty", "not_hdf5_or_nc", "truncated", "header_error", "read_error")
@@ -151,4 +156,42 @@ def plan_repair_moves(
             Move(src=str(staged), dst=str(final), kind="install", note=a.reason)
         )
         report("planned")
+    return moves, pl.DataFrame(rows, schema=REPORT_SCHEMA)
+
+
+def plan_install_moves(
+    fetch: FetchManifest,
+    staging_root: str,
+    store_root: str,
+    verify: bool = False,
+) -> tuple[list[Move], pl.DataFrame]:
+    """Install moves for staged product files.
+
+    Report statuses: planned / not_staged / staged_size_mismatch /
+    staged_checksum_mismatch / collision.
+    """
+    staging, store = Path(staging_root), Path(store_root)
+    moves: list[Move] = []
+    rows = []
+    for it in fetch.items:
+        staged, final = staging / it.rel_path, store / it.rel_path
+        if not staged.exists():
+            status = "not_staged"
+        elif it.size_bytes is not None and staged.stat().st_size != it.size_bytes:
+            status = "staged_size_mismatch"
+        elif verify and it.checksum and sha256_file(staged) != it.checksum.lower():
+            status = "staged_checksum_mismatch"
+        elif os.path.lexists(final):
+            status = "collision"
+        else:
+            status = "planned"
+            moves.append(
+                Move(
+                    src=str(staged),
+                    dst=str(final),
+                    kind="install",
+                    note=f"{fetch.product}: {it.url}",
+                )
+            )
+        rows.append({"src": str(staged), "dst": str(final), "status": status})
     return moves, pl.DataFrame(rows, schema=REPORT_SCHEMA)

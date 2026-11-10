@@ -53,6 +53,7 @@ facetLabels = [
   ["collection", "Collection"],
   ["product", "Reanalysis product"],
   ["frequency", "Frequency"],
+  ["level", "Level"],
   ["activity_id", "Activity"],
   ["institution_id", "Institution"],
   ["source_id", "Source (model)"],

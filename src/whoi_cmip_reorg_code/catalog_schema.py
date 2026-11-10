@@ -5,8 +5,10 @@ summary (``scripts/summarize_catalog.py``), and the tests. A future
 ``build_catalog.py`` should write ``CATALOG_SCHEMA`` columns too.
 
 CMIP6 facet names come from ``drs.DRS_DIR_FACETS``. Reanalysis rows use
-``product``, ``frequency`` and ``variable_id``; CMIP6-only facets are null for
-them, and vice versa.
+``product``, ``frequency``, ``level`` and ``variable_id``; CMIP6-only facets
+are null for them, and vice versa. ``level`` (e.g. ``2m``, ``sfc``, ``prs``)
+separates reanalysis datasets that reuse one variable name at several levels
+(20CRv3 ``air``); ``variable_id`` stays the native NetCDF variable name.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ COLLECTIONS = ("cmip6", "reanalysis")
 
 # DRS directory facets except version (version is common to all collections).
 CMIP6_FACETS = drs.DRS_DIR_FACETS[:-1]
-REANALYSIS_FACETS = ("product", "frequency", "variable_id")
+REANALYSIS_FACETS = ("product", "frequency", "level", "variable_id")
 FACETS = (*CMIP6_FACETS, *(f for f in REANALYSIS_FACETS if f not in CMIP6_FACETS))
 
 # File level, one row per NetCDF file (intake-esm CSV).
@@ -40,7 +42,7 @@ DATASET_KEYS = ["collection", *FACETS, "version"]
 def master_id_expr() -> pl.Expr:
     """ESGF-style unversioned dataset id (ESGF ``master_id``), e.g.
     ``CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn`` or
-    ``reanalysis.era5.mon.t2m``."""
+    ``reanalysis.20crv3.3hr.2m.air``."""
     cmip6 = pl.concat_str(
         [pl.lit("CMIP6"), *(pl.col(f) for f in CMIP6_FACETS)], separator="."
     )

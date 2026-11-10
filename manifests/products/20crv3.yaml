@@ -1,0 +1,64 @@
+# Reanalysis product manifest (schema: whoi_cmip_reorg_code.manifest.ProductManifest).
+# plan_product.py expands it into expected files, lists the remote, and writes a
+# fetch manifest of what the store is missing. The catalog builder
+# (catalogs.yaml, builder: reanalysis) matches store paths against the same groups.
+#
+# Store layout: /proj/cmip6/data/reanalysis/20crv3/<remote_dir>/<file> (mirror of
+# PSL). Product tools take --store-root /proj/cmip6/data.
+#
+# Monthly means only. Checked against the PSL server on 2026-11-10:
+# - Each Monthlies/<group>MO, <group>SI and <group>SI-MO file of the same name
+#   is one file (same ETag, size, mtime). We mirror the SI-MO dirs.
+# - One file per variable covering the full record: miscSI-MO/prmsl.mon.mean.nc
+#   runs 1806-01 to 2015-12 (2520 months), units Pa.
+# - air.2m units are "degK" (checked on a 2mMO 3-hourly file). Units for the
+#   other variables are not checked yet; download still checks the variable
+#   is present and the size matches. Units are never converted.
+# - PSL publishes no checksums; sizes come from HEAD.
+#
+# Variable choices (Brett, 2026-11-10): T/q/RH at 2m; u, v, omega on pressure
+# levels; precipitation as rate (prate), not accumulation (apcp).
+# Pressure-level files are large (omega ~11 GB, uwnd ~12 GB, vwnd ~13 GB).
+schema_version: 1
+product: 20crv3
+title: NOAA/CIRES/DOE 20th Century Reanalysis V3
+version: v3
+citation: null   # FILL IN (Brett): paper reference / DOI to cite
+# Acknowledgment text requested by PSL (from the PSL 20CRv3 page, 2026-11-10).
+acknowledgment: >-
+  Support for the Twentieth Century Reanalysis Project version 3 dataset is
+  provided by the U.S. Department of Energy, Office of Science Biological and
+  Environmental Research (BER), by the National Oceanic and Atmospheric
+  Administration Climate Program Office, and by the NOAA Earth System Research
+  Laboratory Physical Sciences Laboratory.
+source:
+  kind: https_index
+  base_url: https://downloads.psl.noaa.gov/Datasets/20thC_ReanV3/
+groups:
+  - remote_dir: Monthlies/2mSI-MO       # air temperature, specific and relative humidity
+    frequency: mon
+    level: 2m
+    file_pattern: "{variable}.2m.mon.mean.nc"
+    variables: [air, shum, rhum]
+    expect: {units: {air: degK}}
+  - remote_dir: Monthlies/sfcFlxSI-MO   # latent and sensible heat flux
+    frequency: mon
+    level: sfc
+    file_pattern: "{variable}.mon.mean.nc"
+    variables: [lhtfl, shtfl]
+  - remote_dir: Monthlies/sfcSI-MO      # precipitation rate
+    frequency: mon
+    level: sfc
+    file_pattern: "{variable}.mon.mean.nc"
+    variables: [prate]
+  - remote_dir: Monthlies/miscSI-MO     # sea level pressure
+    frequency: mon
+    level: msl
+    file_pattern: "{variable}.mon.mean.nc"
+    variables: [prmsl]
+    expect: {units: {prmsl: Pa}}
+  - remote_dir: Monthlies/prsSI-MO      # omega, u-wind, v-wind
+    frequency: mon
+    level: prs
+    file_pattern: "{variable}.mon.mean.nc"
+    variables: [omega, uwnd, vwnd]

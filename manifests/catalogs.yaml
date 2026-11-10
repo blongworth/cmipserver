@@ -1,14 +1,23 @@
 # Products to catalog (schema: whoi_cmip_reorg_code.manifest.CatalogsManifest).
 # build_catalog.py --manifest manifests/catalogs.yaml builds every enabled one.
 #
-# root: the DRS root (the directory holding activity_id dirs). /proj/cmip6/cmip6
-# matches the site's sample layout (relative_path "cmip6/CMIP/..."). CONFIRM
-# against the Step 1 scan before the first real build.
+# root: the DRS root (the directory holding activity_id dirs). Data lives in
+# /proj/cmip6/data/: CMIP6 activities are in /proj/cmip6/data/cmip6/ (checked
+# on the mounted store 2026-11-10).
 schema_version: 1
 products:
   - name: cmip6
-    root: /proj/cmip6/cmip6
+    root: /proj/cmip6/data/cmip6
     builder: cmip6
     output: whoi_cmip6
     enabled: true
     description: WHOI CMIP6 holdings on VAST
+  # Enable after the first install (docs/audit-runbook.md, "Adding a product").
+  # spec is relative to this file's directory.
+  - name: 20crv3
+    root: /proj/cmip6/data/reanalysis/20crv3
+    builder: reanalysis
+    spec: products/20crv3.yaml
+    output: whoi_20crv3
+    enabled: false
+    description: NOAA/CIRES/DOE 20th Century Reanalysis V3 (WHOI mirror)

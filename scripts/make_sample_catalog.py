@@ -59,10 +59,26 @@ VARIABLES = [
     ("Oday", "tos", 10, "day"),
 ]
 MEMBERS = ["r1i1p1f1", "r2i1p1f1", "r3i1p1f1"]
-# ERA5: (frequency, variable_id) with one file per year
-ERA5_VARIABLES = [("1hr", "t2m"), ("1hr", "msl"), ("mon", "t2m"), ("mon", "sst")]
+# Reanalysis paths: reanalysis/<product>/<path_template> (manifest.ProductGroup).
+# ERA5 (API-only, so a chosen template): (frequency, level, variable_id), one
+# file per year in reanalysis/era5/<frequency>/<variable>/.
+ERA5_VARIABLES = [
+    ("1hr", "2m", "t2m"),
+    ("1hr", "sfc", "msl"),
+    ("mon", "2m", "t2m"),
+    ("mon", "sfc", "sst"),
+]
 ERA5_YEARS = (2015, 2024)
 ERA5_VERSION = "v20261101"
+# 20CRv3 mirrors the PSL tree. (remote_dir, frequency, level, file_pattern,
+# variables); the same variable name at two levels shows why ``level`` exists.
+TCR_GROUPS = [
+    ("2mMO", "3hr", "2m", "{variable}.2m.{year}.nc", ["air", "shum"]),
+    ("prsMO", "3hr", "prs", "{variable}.{year}.nc", ["air", "hgt"]),
+    ("Monthlies/2mMO", "mon", "2m", "{variable}.2m.mon.mean.nc", ["air"]),
+]
+TCR_YEARS = (2011, 2015)
+TCR_VERSION = "v3"
 
 # The one dataset that gets real (tiny, synthetic) files.
 REAL_DATASET = {
@@ -143,8 +159,8 @@ def cmip6_rows(rng: random.Random, root: str) -> list[dict]:
 
 def era5_rows(rng: random.Random, root: str) -> list[dict]:
     rows = []
-    for freq, variable in ERA5_VARIABLES:
-        ddir = f"reanalysis/era5/{freq}/{variable}/{ERA5_VERSION}"
+    for freq, level, variable in ERA5_VARIABLES:
+        ddir = f"reanalysis/era5/{freq}/{variable}"
         for year in range(ERA5_YEARS[0], ERA5_YEARS[1] + 1):
             per_year = 1.9e10 if freq == "1hr" else 2.6e7
             rows.append(
@@ -153,20 +169,44 @@ def era5_rows(rng: random.Random, root: str) -> list[dict]:
                     "path": f"{root}/{ddir}/era5_{variable}_{freq}_{year}.nc",
                     "product": "era5",
                     "frequency": freq,
+                    "level": level,
                     "variable_id": variable,
                     "version": ERA5_VERSION,
-                    "time_range": f"{year}01-{year}12"
-                    if freq == "mon"
-                    else f"{year}010100-{year}123123",
+                    "time_range": str(year),
                     "size_bytes": int(per_year * rng.uniform(0.95, 1.05)),
                 }
             )
     return rows
 
 
+def tcr_rows(rng: random.Random, root: str) -> list[dict]:
+    rows = []
+    for rdir, freq, level, pattern, variables in TCR_GROUPS:
+        yearly = "{year}" in pattern
+        years = range(TCR_YEARS[0], TCR_YEARS[1] + 1) if yearly else [None]
+        for variable in variables:
+            for year in years:
+                fn = pattern.format(variable=variable, year=year)
+                size = 2.0e8 * (28 if level == "prs" else 1) if yearly else 3.4e8
+                rows.append(
+                    {
+                        "collection": "reanalysis",
+                        "path": f"{root}/reanalysis/20crv3/{rdir}/{fn}",
+                        "product": "20crv3",
+                        "frequency": freq,
+                        "level": level,
+                        "variable_id": variable,
+                        "version": TCR_VERSION,
+                        "time_range": None if year is None else str(year),
+                        "size_bytes": int(size * rng.uniform(0.95, 1.05)),
+                    }
+                )
+    return rows
+
+
 def make_catalog(root: str = DEFAULT_DATA_ROOT, seed: int = SEED) -> pl.DataFrame:
     rng = random.Random(seed)
-    rows = cmip6_rows(rng, root) + era5_rows(rng, root)
+    rows = cmip6_rows(rng, root) + era5_rows(rng, root) + tcr_rows(rng, root)
     schema = {k: v for k, v in CATALOG_SCHEMA.items() if k != "master_id"}
     return (
         pl.DataFrame(rows, schema=schema)

@@ -50,10 +50,15 @@ config), **M.3** (CI checks). Also prepares **5.11** (versioning text and
    the data" menu, to keep 11 items readable. The quickstart notebook is
    rendered directly (`notebooks/quickstart.ipynb`). There is no separate
    `quickstart.qmd`.
-7. **Reanalysis layout and version (proposal).** The sample uses
-   `reanalysis/era5/<frequency>/<variable>/<vYYYYMMDD>/era5_<var>_<freq>_<year>.nc`
-   with ERA5 short names (`t2m`, `msl`, `sst`). This is a guess at the layout
-   and needs deciding before ERA5 downloads land.
+7. **Reanalysis layout and version (settled by the product pipeline).**
+   Files keep the provider's layout under `reanalysis/<product>/` (e.g.
+   `reanalysis/20crv3/2mMO/air.2m.1981.nc`). API-only products (ERA5 from CDS)
+   set a `path_template` in their product manifest. `version` is the product
+   version from that manifest (`v3`), not a version directory. A `level`
+   facet (`2m`, `sfc`, `prs`) was added, because 20CRv3 reuses variable names
+   across levels. The sample's ERA5 rows now use
+   `reanalysis/era5/<frequency>/<variable>/era5_<var>_<freq>_<year>.nc`, which
+   is still a placeholder until the `cds` fetcher exists.
 8. **Dependencies.** New `site` dependency group: ipykernel, jupyter-core,
    nbclient, nbformat, netcdf4, plotly, pyyaml. It resolved on Python 3.14
    with no changes to `requires-python`. `lychee` in the main deps is the PyPI
@@ -140,7 +145,7 @@ or fonts at runtime. Checked in headless Chrome: every request from
 - **C-12:** snapshot naming and retention. `catalog.qmd` describes `latest`
   plus dated snapshots as planned.
 - **New:** whether `master_id` is an acceptable catalog column (deviation 2),
-  and the ERA5 directory layout (deviation 7).
+  and the ERA5 `path_template` (deviation 7).
 
 ## Commands for Brett
 

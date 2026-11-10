@@ -49,6 +49,10 @@
       "vocabulary": ""
     },
     {
+      "column_name": "level",
+      "vocabulary": ""
+    },
+    {
       "column_name": "version",
       "vocabulary": ""
     },

@@ -40,10 +40,10 @@ end to end.
 | `collection` | `cmip6` or `reanalysis` |
 | `path` | Full path to the file under `{{< var vast_prefix >}}` |
 | `activity_id` ... `grid_label` | CMIP6 DRS facets (empty for reanalysis) |
-| `product`, `frequency` | Reanalysis product (`era5`, ...) and frequency (empty for CMIP6) |
-| `variable_id` | Variable name (both collections) |
-| `version` | Dataset version directory, `vYYYYMMDD` |
-| `time_range` | Time range from the file name |
+| `product`, `frequency`, `level` | Reanalysis product (`era5`, `20crv3`, ...), frequency, and level (`2m`, `sfc`, `prs`, ...); empty for CMIP6 |
+| `variable_id` | Variable name (both collections); for reanalysis, the variable's name inside the file |
+| `version` | CMIP6: dataset version directory, `vYYYYMMDD`. Reanalysis: the product version (e.g. `v3`) |
+| `time_range` | Time range from the file name (reanalysis: the file's year; empty for single-file datasets) |
 | `size_bytes` | File size |
 
 Datasets are grouped by `master_id` and `version`, so a dataset key looks like

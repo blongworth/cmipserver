@@ -20,7 +20,19 @@ group. Find them through the
 dataset id from the [browser](browse.qmd), and follow the
 [CMIP6 terms of use](https://pcmdi.llnl.gov/CMIP6/TermsOfUse).
 For reanalysis, cite the product's own reference (for ERA5:
-Hersbach et al., 2020, <https://doi.org/10.1002/qj.3803>).
+Hersbach et al., 2020, <https://doi.org/10.1002/qj.3803>), and include any
+acknowledgment the provider requests.
+
+### NOAA-CIRES-DOE Twentieth Century Reanalysis version 3 (20CRv3)
+
+NOAA PSL asks that papers using 20CRv3 include this text in their
+acknowledgments:
+
+> Support for the Twentieth Century Reanalysis Project version 3 dataset is
+> provided by the U.S. Department of Energy, Office of Science Biological and
+> Environmental Research (BER), by the National Oceanic and Atmospheric
+> Administration Climate Program Office, and by the NOAA Earth System Research
+> Laboratory Physical Sciences Laboratory.
 
 ## Catalog versions
 

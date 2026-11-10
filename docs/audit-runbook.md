@@ -95,9 +95,50 @@ uv run scripts/check_catalog.py --catalog $R/catalog/whoi_cmip6.json --report $R
 uv run scripts/summarize_catalog.py --catalog $R/catalog/whoi_cmip6.csv --out site/data
 ```
 
+## Adding a reanalysis product
+
+A product is a YAML manifest, `manifests/products/<product>.yaml` (what to
+fetch: source, groups of files, variables, years, expected units). Files keep
+the provider's layout under `/proj/cmip6/data/reanalysis/<product>/` (or a
+`path_template`, for API-only products). Example: `20crv3.yaml`.
+
+```bash
+R=runs/$(date +%F)_20crv3
+F=manifests/fetch/$(date +%F)-20crv3.yaml
+# DTN: read-only listing (one page per dir + a HEAD per file) and store check.
+# Ladder L1 first: one group, one variable, two years.
+uv run scripts/plan_product.py --product manifests/products/20crv3.yaml \
+    --store-root /proj/cmip6/data --out $R/plan --fetch-out $F \
+    --group 2mMO --variable air --years 2014 2015
+# review $R/plan.md: verdict new / partial / complete / possible_duplicate
+uv run scripts/download_product.py --fetch $F --staging-root <STAGING> --log $R/download.parquet
+uv run scripts/download_product.py --fetch $F --staging-root <STAGING> --log $R/download.parquet --execute
+uv run scripts/plan_moves.py install --fetch $F --staging-root <STAGING> \
+    --store-root /proj/cmip6/data --out manifests/moves/$(date +%F)-20crv3.yaml
+# Brett: review, set approved_by / approved_on, then
+uv run scripts/apply_moves.py --manifest manifests/moves/<date>-20crv3.yaml --log $R/moves.jsonl --execute
+# first install only: set enabled: true for 20crv3 in manifests/catalogs.yaml
+uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product 20crv3 --out catalog/next
+```
+
+- Files already in the store are never planned. `present_differs` (size
+  differs, or upstream is newer) is report-only; replacing a file is a
+  separate, reviewed quarantine-and-install step.
+- `possible_duplicate` needs `--scan` (an existing holdings scan, or a scan of
+  `reanalysis/` only, never a new full-store scan). It lists same-named files
+  elsewhere in the store. Resolve them before downloading.
+- PSL publishes no checksums. A download is accepted only if it matches the
+  exact size from HEAD, opens as NetCDF, holds the expected variable (and
+  units, if listed), and its time axis is inside the year in its name.
+  Failures stay in staging as `.bad`. sha256 is logged.
+- Downloads get the upstream Last-Modified as their mtime, and the install
+  (hard link) keeps it. That is how a later plan detects upstream changes.
+- `<STAGING>` must be on the same filesystem as `/proj/cmip6` (install moves
+  are `link` + `unlink`) and outside it (`--protect`).
+
 ## Placeholders to confirm
 
-- `<DRS_ROOT>`: `manifests/catalogs.yaml` says `/proj/cmip6/cmip6` (the
-  site's sample layout). Confirm it from the Step 1 scan.
+- `<DRS_ROOT>`: `/proj/cmip6/data/cmip6` (data lives in `/proj/cmip6/data/`;
+  checked on the mounted store, 2026-11-10).
 - `<STAGING>`, `<QUARANTINE>`: paths and owner (service account?).
 - ESGF `--index-url`.

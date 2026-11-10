@@ -32,10 +32,13 @@ CMIP Data Reference Syntax (DRS) directory layout:
 {{< var vast_prefix >}}/
   cmip6/<activity_id>/<institution_id>/<source_id>/<experiment_id>/<member_id>/<table_id>/<variable_id>/<grid_label>/<version>/
   cmip7/...              reserved, same scheme
-  reanalysis/era5/...
-  reanalysis/merra2/...
-  reanalysis/jra3q/...
+  reanalysis/<product>/...   e.g. reanalysis/20crv3/2mMO/air.2m.1981.nc
 ```
+
+Reanalysis products keep their provider's own file names and directory layout
+under `reanalysis/<product>/`, so files match the product's documentation.
+The [catalog](catalog.qmd) gives every product the same facets: `product`,
+`frequency`, `level`, `variable_id`, `version`.
 
 For example:
 

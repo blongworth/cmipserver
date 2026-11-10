@@ -1,10 +1,10 @@
 {
   "catalog": "sample_catalog.csv",
-  "n_datasets": 155,
-  "n_files": 1069,
-  "size_tb": 8.602,
+  "n_datasets": 160,
+  "n_files": 1090,
+  "size_tb": 8.659,
   "by_collection": {
     "cmip6": 151,
-    "reanalysis": 4
+    "reanalysis": 9
   }
 }

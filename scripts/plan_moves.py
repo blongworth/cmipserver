@@ -9,12 +9,17 @@ Examples:
     # repairs: quarantine bad originals, install staged replacements
     uv run scripts/plan_moves.py repairs --repairs manifests/repairs/2026-11-20.yaml \
         --staging-root <STAGING> --quarantine-root <QUARANTINE> \
-        --store-root /proj/cmip6 --drs-root /proj/cmip6/cmip6 --verify \
+        --store-root /proj/cmip6 --drs-root /proj/cmip6/data/cmip6 --verify \
         --out manifests/moves/2026-11-20-repairs.yaml
+
+    # product install: staged reanalysis files into reanalysis/<product>/
+    uv run scripts/plan_moves.py install --fetch manifests/fetch/2026-11-20-20crv3.yaml \
+        --staging-root <STAGING> --store-root /proj/cmip6/data \
+        --out manifests/moves/2026-11-20-20crv3.yaml
 
     # reorganization: non-DRS files into the DRS layout
     uv run scripts/plan_moves.py reorg --scan scan/ --ncinfo ncinfo/ \
-        --drs-root /proj/cmip6/cmip6 --out manifests/moves/2026-12-01-reorg.yaml
+        --drs-root /proj/cmip6/data/cmip6 --out manifests/moves/2026-12-01-reorg.yaml
 """
 
 from __future__ import annotations
@@ -27,8 +32,14 @@ from pathlib import Path
 
 import polars as pl
 
-from whoi_cmip_reorg_code.manifest import MoveManifest, RepairManifest, dump, load
-from whoi_cmip_reorg_code.moves import plan_reorg, plan_repair_moves
+from whoi_cmip_reorg_code.manifest import (
+    FetchManifest,
+    MoveManifest,
+    RepairManifest,
+    dump,
+    load,
+)
+from whoi_cmip_reorg_code.moves import plan_install_moves, plan_reorg, plan_repair_moves
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,7 +58,11 @@ def main(argv: list[str] | None = None) -> int:
         "--ncinfo", help="dir of ncinfo_*.parquet (fills activity/institution)"
     )
     g.add_argument("--drs-root", required=True)
-    for p in (r, g):
+    i = sub.add_parser("install")
+    i.add_argument("--fetch", required=True, help="fetch manifest (plan_product.py)")
+    i.add_argument("--staging-root", required=True)
+    i.add_argument("--store-root", required=True)
+    for p in (r, g, i):
         p.add_argument("--out", required=True)
     args = ap.parse_args(argv)
 
@@ -63,6 +78,10 @@ def main(argv: list[str] | None = None) -> int:
         desc = (
             f"Repairs from {args.repairs}: quarantine originals, install staged files"
         )
+    elif args.cmd == "install":
+        fetch = load(args.fetch, FetchManifest)
+        moves, report = plan_install_moves(fetch, args.staging_root, args.store_root)
+        desc = f"Install {fetch.product} from {args.fetch} (staged downloads)"
     else:
         holdings = pl.read_parquet(sorted(Path(args.scan).glob("holdings_*.parquet")))
         nci = None
