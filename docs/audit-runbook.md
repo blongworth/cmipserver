@@ -89,7 +89,7 @@ uv run scripts/plan_repairs.py --esgf $R/esgf --ncinfo $R/ncinfo \
     --checksums $R/checksums --gaps $R/gaps --out manifests/repairs/<date>.yaml
 # review manifests/repairs/<date>.md
 uv run scripts/download_esgf.py --repairs manifests/repairs/<date>.yaml \
-    --staging-root <STAGING> --log $R/download.parquet            # dry run
+    --staging-root /proj/cmip6/tmp/staging --log $R/download.parquet            # dry run
 uv run scripts/download_esgf.py ... --execute
 ```
 
@@ -97,7 +97,7 @@ uv run scripts/download_esgf.py ... --execute
 
 ```bash
 uv run scripts/plan_moves.py repairs --repairs manifests/repairs/<date>.yaml \
-    --staging-root <STAGING> --quarantine-root <QUARANTINE> \
+    --staging-root /proj/cmip6/tmp/staging --quarantine-root <QUARANTINE> \
     --store-root /proj/cmip6 --drs-root <DRS_ROOT> --verify \
     --out manifests/moves/<date>-repairs.yaml
 uv run scripts/apply_moves.py --manifest manifests/moves/<date>-repairs.yaml --log $R/moves.jsonl
@@ -134,7 +134,7 @@ note when a fetch is over the limit).
 ```bash
 tmux new -s 20crv3            # detach: Ctrl-b d   reattach: tmux attach -t 20crv3
 D=$(date +%F); R=runs/${D}_20crv3; F=manifests/fetch/${D}-20crv3.yaml
-STORE=/proj/cmip6/data; STAGING=<STAGING>
+STORE=/proj/cmip6/data; STAGING=/proj/cmip6/tmp/staging
 
 # 1. Plan (read-only: one listing per dir, a HEAD per file, stat of the store).
 #    Ladder L1 first: one small group (prmsl, 0.32 GB).
@@ -181,12 +181,14 @@ can't, ask whether there is a transfer partition (`sinfo -s`).
   Failures stay in staging as `.bad`. sha256 is logged.
 - Downloads get the upstream Last-Modified as their mtime, and the install
   (hard link) keeps it. That is how a later plan detects upstream changes.
-- `<STAGING>` must be on the same filesystem as `/proj/cmip6` (install moves
-  are `link` + `unlink`) and outside it (`--protect`).
+- Staging is `/proj/cmip6/tmp/staging`: same filesystem as the data (install
+  moves are `link` + `unlink`), outside `/proj/cmip6/data`. The download
+  scripts refuse a staging root inside or above `/proj/cmip6/data`.
 
 ## Placeholders to confirm
 
 - `<DRS_ROOT>`: `/proj/cmip6/data/cmip6` (data lives in `/proj/cmip6/data/`;
   checked on the mounted store, 2026-11-10).
-- `<STAGING>`, `<QUARANTINE>`: paths and owner (service account?).
+- `<QUARANTINE>`: path and owner (service account?). Staging is settled:
+  `/proj/cmip6/tmp/staging`.
 - ESGF `--index-url`.

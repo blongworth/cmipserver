@@ -28,6 +28,11 @@ from whoi_cmip_reorg_code.manifest import FetchManifest, RepairManifest
 
 CHUNK = 8 * 1024 * 1024
 
+# The live data tree. Staging may sit elsewhere under /proj/cmip6 (e.g.
+# /proj/cmip6/tmp/staging, same filesystem so installs can hard-link), but
+# never inside this, nor above it.
+DEFAULT_PROTECTED = "/proj/cmip6/data"
+
 # opener(url, start) -> (chunks, resumed). ``resumed`` False means the server
 # ignored the Range request and is sending the whole file from byte 0.
 Opener = Callable[[str, int], tuple[Iterator[bytes], bool]]
@@ -81,6 +86,8 @@ def _check_staging_root(root: Path, protected: list[Path]) -> None:
         p = p.resolve()
         if root == p or p in root.parents:
             raise ValueError(f"staging root {root} is inside protected {p}")
+        if root in p.parents:
+            raise ValueError(f"staging root {root} contains protected {p}")
 
 
 def _safe_join(root: Path, rel: str) -> Path:

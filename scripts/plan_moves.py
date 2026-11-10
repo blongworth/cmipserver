@@ -8,13 +8,13 @@ report parquet (same name, .parquet) lists every candidate with its status
 Examples:
     # repairs: quarantine bad originals, install staged replacements
     uv run scripts/plan_moves.py repairs --repairs manifests/repairs/2026-11-20.yaml \
-        --staging-root <STAGING> --quarantine-root <QUARANTINE> \
+        --staging-root /proj/cmip6/tmp/staging --quarantine-root <QUARANTINE> \
         --store-root /proj/cmip6 --drs-root /proj/cmip6/data/cmip6 --verify \
         --out manifests/moves/2026-11-20-repairs.yaml
 
     # product install: staged reanalysis files into reanalysis/<product>/
     uv run scripts/plan_moves.py install --fetch manifests/fetch/2026-11-20-20crv3.yaml \
-        --staging-root <STAGING> --store-root /proj/cmip6/data \
+        --staging-root /proj/cmip6/tmp/staging --store-root /proj/cmip6/data \
         --out manifests/moves/2026-11-20-20crv3.yaml
 
     # reorganization: non-DRS files into the DRS layout

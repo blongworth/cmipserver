@@ -5,7 +5,7 @@
 #
 # Dry run first on the login node, then submit from the repo root:
 #   mkdir -p logs
-#   sbatch --export=ALL,FETCH=manifests/fetch/<date>-20crv3.yaml,STAGING=<STAGING>,LOG=runs/<date>_20crv3/download.parquet \
+#   sbatch --export=ALL,FETCH=manifests/fetch/<date>-20crv3.yaml,STAGING=/proj/cmip6/tmp/staging,LOG=runs/<date>_20crv3/download.parquet \
 #       slurm/download_product.sbatch
 # Re-submitting resumes interrupted files (.part) and skips finished ones, so a
 # job that hits its time limit can simply be submitted again.

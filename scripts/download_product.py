@@ -24,8 +24,12 @@ from dataclasses import asdict
 
 import polars as pl
 
-from whoi_cmip_reorg_code.catalog_schema import DEFAULT_DATA_ROOT
-from whoi_cmip_reorg_code.download import Opener, requests_opener, run
+from whoi_cmip_reorg_code.download import (
+    DEFAULT_PROTECTED,
+    Opener,
+    requests_opener,
+    run,
+)
 from whoi_cmip_reorg_code.manifest import FetchManifest, load
 from whoi_cmip_reorg_code.products import check_fetched
 
@@ -58,8 +62,8 @@ def main(argv: list[str] | None = None, opener: Opener | None = None) -> int:
     ap.add_argument(
         "--protect",
         action="append",
-        default=[DEFAULT_DATA_ROOT],
-        help=f"refuse a staging root inside this (default {DEFAULT_DATA_ROOT})",
+        default=[DEFAULT_PROTECTED],
+        help=f"refuse a staging root inside or above this (default {DEFAULT_PROTECTED})",
     )
     args = ap.parse_args(argv)
 

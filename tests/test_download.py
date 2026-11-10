@@ -126,3 +126,27 @@ def test_refuses_staging_inside_store(repairs, messy_store, fake_esgf):
             FakeServer({}),
             protected=[messy_store.root],
         )
+
+
+@pytest.mark.parametrize(
+    "staging, ok",
+    [
+        ("tmp/staging", True),  # beside data/, same filesystem: allowed
+        ("data/staging", False),  # inside the live tree
+        ("data", False),
+        (".", False),  # above data/: rel paths could land in it
+    ],
+)
+def test_staging_beside_protected_data(tmp_path, repairs, staging, ok):
+    store = tmp_path / "cmip6"
+    (store / "data").mkdir(parents=True)
+    root = store / staging
+
+    def go():
+        return run(repairs, root, FakeServer({}), protected=[store / "data"])
+
+    if ok:
+        assert {r.status for r in go()} == {"would_download"}
+    else:
+        with pytest.raises(ValueError, match="protected"):
+            go()
