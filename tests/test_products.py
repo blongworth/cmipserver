@@ -622,7 +622,7 @@ def test_end_to_end(spec, payloads, tmp_path, capsys):
         build_catalog.main(["--manifest", str(cats), "--out", str(out), "--jobs", "1"])
         == 0
     )
-    cat = intake.open_esm_datastore(str(out / "20crv3.json"))
+    cat = intake.open_esm_datastore(str(out / "whoi_20crv3.json"))
     assert len(cat.df) == n
     key = "reanalysis.20crv3.3hr.2m.air.v3"
     assert key in cat
@@ -634,7 +634,7 @@ def test_end_to_end(spec, payloads, tmp_path, capsys):
         summarize_catalog.main(
             [
                 "--catalog",
-                str(out / "20crv3.csv"),
+                str(out / "whoi_20crv3.csv"),
                 "--out",
                 str(site),
                 "--root",

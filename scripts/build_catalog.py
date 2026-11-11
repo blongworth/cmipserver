@@ -4,7 +4,7 @@ Opens no data files. With --manifest each product uses its builder: cmip6
 (DRS paths) or reanalysis (paths matched against the product manifest named
 by ``spec``).
 
-Writes <out>/<name>.csv, <name>.json (temp file then rename) and
+Writes <out>/<output>.csv, <output>.json (temp file then rename) and
 <name>_invalid.parquet (non-DRS or excluded files, for review). Run
 check_catalog.py on the result before publishing it.
 
@@ -54,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         here = Path(args.manifest).parent
         jobs = [
             (
-                p.name,
+                p.output,  # file stem and catalog id; p.name only selects --product
                 p.root,
                 p.description or p.name,
                 p.builder,
@@ -81,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
             if builder == "reanalysis":
                 if args.root:
                     raise ValueError("--root applies to cmip6 products only")
+                if spec is None:  # the manifest validator guarantees it
+                    raise ValueError(f"{name}: reanalysis product has no spec")
                 df, invalid = reanalysis.build(root, load(spec, ProductManifest), **kw)
             else:
                 df, invalid = cmip6.build(args.root or [root], root, **kw)

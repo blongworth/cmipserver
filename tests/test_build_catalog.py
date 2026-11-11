@@ -108,6 +108,19 @@ def test_manifest_mode(messy_store, tmp_path):
     assert (tmp_path / "a.json").exists() and not (tmp_path / "b.json").exists()
 
 
+def test_manifest_mode_names_files_by_output(messy_store, tmp_path):
+    m = tmp_path / "catalogs.yaml"
+    m.write_text(
+        "products:\n"
+        f"  - {{name: prod, root: {messy_store.root}, builder: cmip6, output: whoi_prod}}\n"
+    )
+    out = tmp_path / "out"
+    argv = ["--manifest", str(m), "--out", str(out), "--jobs", "1"]
+    assert build_catalog.main([*argv, "--product", "prod"]) == 0
+    assert (out / "whoi_prod.json").exists() and (out / "whoi_prod.csv").exists()
+    assert not (out / "prod.json").exists()
+
+
 # --- check_catalog -----------------------------------------------------------
 
 
