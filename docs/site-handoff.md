@@ -147,13 +147,28 @@ or fonts at runtime. Checked in headless Chrome: every request from
 - **New:** whether `master_id` is an acceptable catalog column (deviation 2),
   and the ERA5 `path_template` (deviation 7).
 
+- **New (2026-11-11):** single-file reanalysis has no time span. The 20CRv3
+  monthly files each cover the full record (1806 to 2015), and the
+  reanalysis builder is path-only, so `time_range` is empty and the browser
+  shows "—" for start and end. Real spans would need the builder to read
+  the time axis (e.g. from `ncinfo`).
+- **New (2026-11-11):** site preview data mixes the synthetic sample with the
+  real 20CRv3 catalog (`summarize_catalog.py --catalog` twice; later
+  catalogs replace earlier rows per file-list shard). The nightly job should
+  pass every enabled catalog from `manifests/catalogs.yaml` (deploy-plan
+  work). On macOS NFS mounts of VAST, HDF5 file locking fails ("NetCDF: HDF
+  error"); the 20CRv3 notebook sets `HDF5_USE_FILE_LOCKING=FALSE` by default.
+  Re-run it with
+  `WHOI_CMIP_DATA_ROOT=~/mnt/cmip6/data uv run quarto render site/notebooks/20crv3.ipynb --execute`.
+
 ## Commands for Brett
 
 ```bash
 uv sync --all-groups
 uv run ruff check && uv run ruff format --check && uv run pytest
 uv run scripts/make_sample_catalog.py --out tests/fixtures
-uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --out site/data
+uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv \
+    --catalog tests/fixtures/whoi_20crv3.csv --out site/data
 uv run quarto render site          # or: uv run quarto preview site
 brew install lychee && lychee --offline --root-dir "$PWD/site/_site" 'site/_site/**/*.html'   # optional, local link check
 ```

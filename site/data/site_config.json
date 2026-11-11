@@ -4,7 +4,7 @@
   "help_email": "HELP_EMAIL_TBD",
   "catalog_path": "CATALOG_PATH_TBD",
   "catalog_version": "sample",
-  "vast_prefix": "/proj/cmip6",
+  "vast_prefix": "/proj/cmip6/data",
   "https_prefix": "HTTPS_PREFIX_TBD",
   "globus_url": "",
   "audience": "internal",

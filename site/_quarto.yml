@@ -23,8 +23,12 @@ website:
         text: Browse
       - href: catalog.qmd
         text: Catalog
-      - href: notebooks/quickstart.ipynb
-        text: Quickstart
+      - text: Notebooks
+        menu:
+          - href: notebooks/quickstart.ipynb
+            text: Quickstart
+          - href: notebooks/20crv3.ipynb
+            text: 20CRv3 monthly means
       - text: Using the data
         menu:
           - href: access.qmd

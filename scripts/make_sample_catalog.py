@@ -6,7 +6,7 @@ Writes to --out:
     sample_data/...        tiny synthetic NetCDF files for one dataset, laid out
                            like the store, so notebooks can load data offline
 
-Every ``path`` starts with --root (default /proj/cmip6). Only the files under
+Every ``path`` starts with --root (default /proj/cmip6/data). Only the files under
 sample_data/ exist; all other rows are path-only. The NetCDF values are
 synthetic and are labelled as such: they are not model output.
 

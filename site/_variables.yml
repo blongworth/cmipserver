@@ -19,10 +19,11 @@ catalog_path: CATALOG_PATH_TBD
 catalog_version: sample
 
 # Data root on HPC and the SMB share. Paths in the catalog start with this.
-vast_prefix: /proj/cmip6
+vast_prefix: /proj/cmip6/data
 # SMB share name/path for Windows and macOS users (TBD, IT).
 smb_path: SMB_PATH_TBD
-# HTTPS download prefix, e.g. <site_url>/data if the VM alias is approved (IT-8..IT-10, C-17).
+# HTTPS download prefix that maps to vast_prefix, e.g. <site_url>/data if the VM
+# aliases /data to /vast/cmip6/data (IT-8..IT-10, C-17).
 https_prefix: HTTPS_PREFIX_TBD
 # Globus collection link; empty until Globus exists (task 6.1, S-4).
 globus_url: ""

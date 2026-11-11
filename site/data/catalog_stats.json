@@ -1,10 +1,25 @@
 {
-  "catalog": "sample_catalog.csv",
-  "n_datasets": 160,
-  "n_files": 1090,
-  "size_tb": 8.659,
+  "catalogs": [
+    {
+      "name": "sample_catalog",
+      "n_datasets": 155,
+      "synthetic": true
+    },
+    {
+      "name": "whoi_20crv3",
+      "n_datasets": 10,
+      "synthetic": false
+    }
+  ],
+  "n_datasets": 165,
+  "n_files": 1079,
+  "size_tb": 8.643,
   "by_collection": {
     "cmip6": 151,
-    "reanalysis": 9
+    "reanalysis": 14
+  },
+  "by_product": {
+    "20crv3": 10,
+    "era5": 4
   }
 }

@@ -1,0 +1,11 @@
+master_id,collection,path,activity_id,institution_id,source_id,experiment_id,member_id,table_id,variable_id,grid_label,product,frequency,level,version,time_range,size_bytes
+reanalysis.20crv3.mon.2m.air,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/2mSI-MO/air.2m.mon.mean.nc,,,,,,,air,,20crv3,mon,2m,v3,,355264098
+reanalysis.20crv3.mon.2m.rhum,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/2mSI-MO/rhum.2m.mon.mean.nc,,,,,,,rhum,,20crv3,mon,2m,v3,,358205965
+reanalysis.20crv3.mon.2m.shum,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/2mSI-MO/shum.2m.mon.mean.nc,,,,,,,shum,,20crv3,mon,2m,v3,,439416633
+reanalysis.20crv3.mon.msl.prmsl,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/miscSI-MO/prmsl.mon.mean.nc,,,,,,,prmsl,,20crv3,mon,msl,v3,,317100213
+reanalysis.20crv3.mon.prs.omega,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/prsSI-MO/omega.mon.mean.nc,,,,,,,omega,,20crv3,mon,prs,v3,,11205726815
+reanalysis.20crv3.mon.prs.uwnd,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/prsSI-MO/uwnd.mon.mean.nc,,,,,,,uwnd,,20crv3,mon,prs,v3,,12942201633
+reanalysis.20crv3.mon.prs.vwnd,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/prsSI-MO/vwnd.mon.mean.nc,,,,,,,vwnd,,20crv3,mon,prs,v3,,14182076971
+reanalysis.20crv3.mon.sfc.lhtfl,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/sfcFlxSI-MO/lhtfl.mon.mean.nc,,,,,,,lhtfl,,20crv3,mon,sfc,v3,,473736819
+reanalysis.20crv3.mon.sfc.shtfl,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/sfcFlxSI-MO/shtfl.mon.mean.nc,,,,,,,shtfl,,20crv3,mon,sfc,v3,,478875390
+reanalysis.20crv3.mon.sfc.prate,reanalysis,/proj/cmip6/data/reanalysis/20crv3/Monthlies/sfcSI-MO/prate.mon.mean.nc,,,,,,,prate,,20crv3,mon,sfc,v3,,493308648

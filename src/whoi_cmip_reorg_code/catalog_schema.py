@@ -88,4 +88,4 @@ SUMMARY_SCHEMA = {
 
 # Default data root; the catalog's ``path`` column starts with this. Notebooks
 # and the site swap it for another prefix (HTTPS, a local copy).
-DEFAULT_DATA_ROOT = "/proj/cmip6"
+DEFAULT_DATA_ROOT = "/proj/cmip6/data"
