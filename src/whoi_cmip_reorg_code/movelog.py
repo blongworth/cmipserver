@@ -10,8 +10,11 @@ Safety rules:
 - The whole manifest is checked first, in order (a path vacated by an earlier
   move may be refilled by a later one). Any conflict blocks execution.
 - Every step is logged as JSON lines (``start`` before, ``done`` after,
-  fsynced). A re-run resumes: finished moves are skipped and a move
-  interrupted between link and unlink is completed.
+  fsynced). A re-run resumes: finished moves are skipped, and a move that
+  was interrupted or failed (e.g. unlink refused, or an NFS retry reporting
+  an error for a step that succeeded) is settled from the filesystem. The
+  ``start`` entry records the source inode, so a file at ``dst`` is only
+  taken as ours if it is that inode; anything else is reported, not touched.
 - Rollback replays the log backwards: moves dst -> src (same no-overwrite
   rule), then removes directories the run created, only if empty.
 """
@@ -75,15 +78,33 @@ def _same_file(a: str, b: str) -> bool:
     return (sa.st_dev, sa.st_ino) == (sb.st_dev, sb.st_ino)
 
 
-def _state(entries: list[dict]) -> dict[tuple[str, str], str]:
-    """Last logged state per (src, dst): 'start', 'done', 'unmoved'..."""
-    st: dict[tuple[str, str], str] = {}
+Ino = tuple[int, int] | None
+
+
+def _state(entries: list[dict]) -> dict[tuple[str, str], tuple[str, Ino]]:
+    """Per (src, dst): last phase ('start', 'fail', 'done', 'unmoved') and the
+    (dev, ino) of src from the latest ``start`` (None in older logs)."""
+    st: dict[tuple[str, str], tuple[str, Ino]] = {}
     for e in entries:
         if e["op"] == "move":
-            st[(e["src"], e["dst"])] = e["phase"]
+            k: tuple[str, str] = (e["src"], e["dst"])
+            ino: Ino = st.get(k, ("", None))[1]
+            if e["phase"] == "start":
+                ino = (e["dev"], e["ino"]) if "ino" in e else None
+            st[k] = (e["phase"], ino)
         elif e["op"] == "unmove" and e["phase"] == "done":
-            st[(e["src"], e["dst"])] = "unmoved"
+            st[(e["src"], e["dst"])] = ("unmoved", None)
     return st
+
+
+def _is_ino(path: str, ino: Ino) -> bool:
+    if ino is None:
+        return False
+    try:
+        s = os.lstat(path)
+    except OSError:
+        return False
+    return (s.st_dev, s.st_ino) == ino
 
 
 @dataclass
@@ -112,23 +133,36 @@ def check(manifest: MoveManifest, log: MoveLog) -> Plan:
         return os.path.lexists(path)
 
     for i, m in enumerate(manifest.moves):
-        s = state.get((m.src, m.dst))
+        s, ino = state.get((m.src, m.dst), (None, None))
         src_on_disk, dst_on_disk = os.path.lexists(m.src), os.path.lexists(m.dst)
         if s == "done":
             p.done += 1
             vacated.add(m.src)
             filled.add(m.dst)
             continue
-        if s == "start":
-            # interrupted: decide from the filesystem
-            if src_on_disk and dst_on_disk and _same_file(m.src, m.dst):
-                p.finish_unlink.append((i, m.src, m.dst))
-            elif not src_on_disk and dst_on_disk:
-                p.finish_log.append((i, m.src, m.dst))
-            elif src_on_disk and not dst_on_disk:
+        if s in ("start", "fail"):
+            # interrupted or failed: decide from the filesystem
+            if src_on_disk and dst_on_disk:
+                if _same_file(m.src, m.dst):
+                    p.finish_unlink.append((i, m.src, m.dst))
+                else:
+                    p.problems.append(
+                        f"#{i} dst exists and is not this file "
+                        f"(refusing to overwrite): {m.dst}"
+                    )
+            elif dst_on_disk:
+                # src gone: the move happened only if dst is the logged inode
+                # (older logs have no inode; trust an interrupted start)
+                if _is_ino(m.dst, ino) or (ino is None and s == "start"):
+                    p.finish_log.append((i, m.src, m.dst))
+                else:
+                    p.problems.append(
+                        f"#{i} src gone and dst is not the moved file: {m.dst}"
+                    )
+            elif src_on_disk:
                 p.todo.append((i, m.src, m.dst, m.kind))
             else:
-                p.problems.append(f"#{i} interrupted move in unknown state: {m.src}")
+                p.problems.append(f"#{i} {s} move, src and dst both missing: {m.src}")
             vacated.add(m.src)
             filled.add(m.dst)
             continue
@@ -188,7 +222,17 @@ def apply(
             break
         try:
             _mkdirs(Path(dst), log, i)
-            log.write(op="move", phase="start", seq=i, src=src, dst=dst, kind=kind)
+            st = os.lstat(src)
+            log.write(
+                op="move",
+                phase="start",
+                seq=i,
+                src=src,
+                dst=dst,
+                kind=kind,
+                dev=st.st_dev,
+                ino=st.st_ino,
+            )
             _link_unlink(src, dst)
         except OSError as exc:
             log.write(op="move", phase="fail", seq=i, src=src, dst=dst, error=str(exc))
@@ -216,15 +260,22 @@ def plan_rollback(log: MoveLog, run_id: str | None = None) -> RollbackPlan:
         if e["op"] == "unmove" and e["phase"] == "done"
     }
     removed = {e["path"] for e in entries if e["op"] == "rmdir"}
+    inos = {k: ino for k, (_, ino) in _state(entries).items()}
     seen: set = set()
     for e in reversed(entries):
-        if e["op"] == "move" and e["phase"] in ("done", "start"):
+        if e["op"] == "move" and e["phase"] in ("done", "start", "fail"):
             k = (e["src"], e["dst"])
             if k in undone or k in seen:
                 continue
             seen.add(k)
-            if e["phase"] == "start" and not os.path.lexists(e["dst"]):
-                continue  # never got linked
+            if e["phase"] != "done":
+                # interrupted or failed: undo only if dst is the moved file
+                src, dst, ino = e["src"], e["dst"], inos.get(k)
+                if not os.path.lexists(dst):
+                    continue  # never got linked
+                ours = _same_file(src, dst) or _is_ino(dst, ino)
+                if not ours and not (ino is None and e["phase"] == "start"):
+                    continue  # dst belongs to something else; leave it
             rp.unmoves.append(k)
         elif e["op"] == "mkdir" and e["path"] not in removed:
             rp.rmdirs.append(e["path"])

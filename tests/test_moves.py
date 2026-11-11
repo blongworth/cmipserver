@@ -287,3 +287,116 @@ def test_plan_reorg(tmp_path):
         mv.dst
         == f"{root}/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/v20190308/{fn}"
     )
+
+
+# --- failed moves: re-run and rollback settle them from the filesystem ---
+
+
+def _fail_once(monkeypatch, name, exc, before=True):
+    """Make os.<name> fail on its first call. before=False runs the real call
+    first, then raises (an NFS retry reporting an error for a step that worked)."""
+    real = getattr(os, name)
+    calls = {"n": 0}
+
+    def wrapped(*a, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            if not before:
+                real(*a, **k)
+            raise exc
+        return real(*a, **k)
+
+    monkeypatch.setattr(os, name, wrapped)
+    return real
+
+
+def _phases(log):
+    return [e["phase"] for e in log.read() if e["op"] == "move"]
+
+
+@pytest.mark.parametrize(
+    "name, exc, before, resolved",
+    [
+        # link done, unlink refused (staging dir not writable)
+        ("unlink", PermissionError(13, "Permission denied"), True, "finish_unlink"),
+        # NFS retried a link that had succeeded
+        ("link", FileExistsError(17, "File exists"), False, "finish_unlink"),
+        # NFS retried an unlink that had succeeded
+        ("unlink", FileNotFoundError(2, "No such file"), False, "finish_log"),
+        # cross-device: nothing happened, retry
+        ("link", OSError(18, "Invalid cross-device link"), True, "todo"),
+    ],
+)
+def test_resume_after_failed_move(
+    tree, tmp_path, monkeypatch, name, exc, before, resolved
+):
+    log = MoveLog(tmp_path / "log.jsonl")
+    m = manifest(_moves(tree))
+    real = _fail_once(monkeypatch, name, exc, before)
+    with pytest.raises(MoveError):
+        apply(m, log, execute=True)
+    monkeypatch.setattr(os, name, real)
+    assert _phases(log) == ["start", "fail"]
+    p = apply(m, log, execute=True)
+    assert not p.problems
+    if resolved == "todo":
+        assert len(p.todo) == 3
+    else:
+        assert len(getattr(p, resolved)) == 1 and len(p.todo) == 2
+    assert not (tree / "a/f0.nc").exists()
+    assert (tree / "b/c/f0.nc").read_bytes() == bytes([0]) * 100
+    assert sorted(x.name for x in (tree / "a").iterdir()) == ["f2.nc"]
+
+
+def test_rollback_after_failed_unlink(tree, tmp_path, monkeypatch):
+    before = tree_state(tree)
+    log = MoveLog(tmp_path / "log.jsonl")
+    real = _fail_once(monkeypatch, "unlink", PermissionError(13, "denied"))
+    with pytest.raises(MoveError):
+        apply(manifest(_moves(tree)), log, execute=True)
+    monkeypatch.setattr(os, "unlink", real)
+    assert (tree / "a/f0.nc").exists() and (tree / "b/c/f0.nc").exists()
+    rp = rollback(log, execute=True)
+    assert not rp.problems
+    assert tree_state(tree) == before
+
+
+def test_foreign_file_at_dst_is_refused_and_kept(tree, tmp_path, monkeypatch):
+    """Someone writes dst between the check and the link: genuine EEXIST."""
+    log = MoveLog(tmp_path / "log.jsonl")
+    m = manifest(_moves(tree))
+    real_link = os.link
+    dst = tree / "b/c/f0.nc"
+
+    def racing_link(src, d, *a, **k):
+        if Path(d) == dst and not dst.exists():
+            dst.write_bytes(b"someone else")
+        return real_link(src, d, *a, **k)
+
+    monkeypatch.setattr(os, "link", racing_link)
+    with pytest.raises(MoveError):
+        apply(m, log, execute=True)
+    monkeypatch.setattr(os, "link", real_link)
+    p = apply(m, log, execute=False)
+    assert any("not this file" in x for x in p.problems)
+    with pytest.raises(MoveError):
+        apply(m, log, execute=True)
+    rp = rollback(log, execute=True)
+    assert not rp.unmoves
+    assert dst.read_bytes() == b"someone else"
+    assert (tree / "a/f0.nc").read_bytes() == bytes([0]) * 100
+
+
+def test_foreign_file_after_src_gone_is_refused(tree, tmp_path, monkeypatch):
+    """Failed move whose src vanished and whose dst is some other file."""
+    log = MoveLog(tmp_path / "log.jsonl")
+    m = manifest(_moves(tree))
+    real = _fail_once(monkeypatch, "link", OSError(18, "cross-device"))
+    with pytest.raises(MoveError):
+        apply(m, log, execute=True)
+    monkeypatch.setattr(os, "link", real)
+    (tree / "a/f0.nc").unlink()
+    (tree / "b/c/f0.nc").write_bytes(b"other")
+    p = apply(m, log, execute=False)
+    assert any("not the moved file" in x for x in p.problems)
+    assert not rollback(log).unmoves

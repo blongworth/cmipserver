@@ -107,7 +107,11 @@ uv run scripts/rollback_moves.py --log $R/moves.jsonl     # dry run; --execute t
 ```
 
 Moves use `link` + `unlink`, so they never overwrite and need the same
-filesystem. Keep the move log; rollback replays it.
+filesystem. Keep the move log; rollback replays it. If a run stops on an
+error (e.g. permission denied on unlink), fix the cause and re-run the same
+`apply_moves.py` command: it settles the stopped move from the filesystem and
+the logged inode, and reports, rather than touches, any file at `dst` that
+isn't the one being moved.
 
 ## 8. Catalog
 
