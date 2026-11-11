@@ -19,5 +19,5 @@ products:
     builder: reanalysis
     spec: products/20crv3.yaml
     output: whoi_20crv3
-    enabled: false
+    enabled: true
     description: NOAA/CIRES/DOE 20th Century Reanalysis V3 (WHOI mirror)

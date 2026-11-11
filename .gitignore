@@ -17,3 +17,5 @@ site/_site/
 
 # Per-run outputs from the rollout ladder (runs/<date>_<level>/)
 runs/
+logs/
+manifests/moves/*.parquet
