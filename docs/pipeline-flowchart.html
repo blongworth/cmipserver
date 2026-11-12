@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WHOI CMIP pipeline flowchart</title>
+<!--
+  Self-contained: inline SVG, vanilla JS and CSS, no network requests.
+  Not part of the Quarto site (not published). Open it directly in a browser.
+  To edit: change the NODES / EDGES objects in the script below. Content comes
+  from scripts/, src/whoi_cmip_reorg_code/, docs/*.md and .github/workflows/check.yml.
+-->
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1f2933; --muted: #5f6b7a; --line: #c9d1da; --lane: #f5f7fa; --lane2: #eef1f5;
+    --ro-f: #dbeafe; --ro-s: #1d4ed8;
+    --stg-f: #fef3c7; --stg-s: #b45309;
+    --wr-f: #fee2e2; --wr-s: #b91c1c;
+    --gate-f: #ede9fe; --gate-s: #6d28d9;
+    --prop-f: #f3f4f6; --prop-s: #4b5563;
+    --ext-f: #ecfdf5; --ext-s: #047857;
+    --edge: #8793a1; --edge-hl: #111827; --focus: #f59e0b; --panel: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1419; --fg: #e6e9ee; --muted: #9aa5b1; --line: #2b3541; --lane: #151b22; --lane2: #1a222b;
+      --ro-f: #1e3a5f; --ro-s: #7db3ff;
+      --stg-f: #4a3510; --stg-s: #f2b84b;
+      --wr-f: #5a1f1f; --wr-s: #ff8a8a;
+      --gate-f: #3a2c63; --gate-s: #b9a2ff;
+      --prop-f: #262c33; --prop-s: #9aa5b1;
+      --ext-f: #123b2c; --ext-s: #5fd3a1;
+      --edge: #6b7785; --edge-hl: #f3f4f6; --panel: #161d25;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg);
+         display: flex; flex-direction: column; }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
+  header h1 { font-size: 16px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; flex: 1 1 100%; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 18px; height: 12px; border-radius: 3px; border: 2px solid; display: inline-block; }
+  .main { flex: 1; min-height: 0; display: flex; }
+  #chart { flex: 1; overflow: auto; }
+  #chart svg { display: block; }
+  .lane-bg { fill: var(--lane); } .lane-bg.alt { fill: var(--lane2); }
+  .lane-label { font-size: 12px; font-weight: 600; fill: var(--muted); }
+  .lane-sub { font-size: 10.5px; font-weight: 400; fill: var(--muted); }
+  .edge { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+  .edge.hl { stroke: var(--edge-hl); stroke-width: 2.4; }
+  .edge.dashed { stroke-dasharray: 5 4; }
+  .node { cursor: pointer; outline: none; }
+  .node rect { stroke-width: 1.6; }
+  .node text { font-size: 11.5px; fill: var(--fg); pointer-events: none; }
+  .node .sub { font-size: 9.5px; fill: var(--muted); }
+  .node.ro rect { fill: var(--ro-f); stroke: var(--ro-s); }
+  .node.stg rect { fill: var(--stg-f); stroke: var(--stg-s); }
+  .node.wr rect { fill: var(--wr-f); stroke: var(--wr-s); stroke-width: 2.6; }
+  .node.gate rect { fill: var(--gate-f); stroke: var(--gate-s); stroke-width: 2.2; }
+  .node.ext rect { fill: var(--ext-f); stroke: var(--ext-s); }
+  .node.prop rect { fill: var(--prop-f); stroke: var(--prop-s); stroke-dasharray: 6 4; }
+  .node:hover rect { filter: brightness(0.96); stroke-width: 2.6; }
+  .node:focus-visible rect { stroke: var(--focus); stroke-width: 3.5; stroke-dasharray: none; }
+  .node.sel rect { stroke-width: 3.6; }
+  aside { position: relative; width: 0; overflow: hidden; border-left: 0 solid var(--line); background: var(--panel); transition: width .15s; flex: none; }
+  aside.open { width: 430px; border-left-width: 1px; overflow: auto; }
+  .inner { width: 430px; padding: 14px 18px 40px; }
+  .inner h2 { font-size: 17px; margin: 0 28px 4px 0; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px; border: 1.5px solid; margin: 0 6px 6px 0; }
+  .badge.ro { border-color: var(--ro-s); } .badge.stg { border-color: var(--stg-s); } .badge.wr { border-color: var(--wr-s); }
+  .badge.gate { border-color: var(--gate-s); } .badge.ext { border-color: var(--ext-s); }
+  .badge.prop { border-color: var(--prop-s); border-style: dashed; }
+  .inner h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 16px 0 4px; }
+  .inner p { margin: 0 0 4px; }
+  .inner ul { margin: 0; padding-left: 18px; }
+  .inner li { margin: 2px 0; }
+  .inner code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--lane2); padding: 0 4px; border-radius: 3px; }
+  .inner .safety { border-left: 3px solid var(--wr-s); padding: 2px 10px; background: var(--lane); }
+  .inner a { color: var(--ro-s); }
+  #close { position: absolute; z-index: 1; right: 10px; top: 8px; border: 0; background: none; font-size: 22px; cursor: pointer; color: var(--muted); }
+  #close:focus-visible, .inner a:focus-visible { outline: 2px solid var(--focus); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 800px) { aside.open { position: fixed; inset: 0 0 0 auto; width: min(430px, 100%); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>WHOI CMIP pipeline</h1>
+  <p>Click a box (or Tab to it and press Enter) for details. Esc closes the panel.</p>
+  <div class="legend" aria-label="Legend">
+    <span><i class="sw" style="background:var(--ro-f);border-color:var(--ro-s)"></i>read-only / dry run / report</span>
+    <span><i class="sw" style="background:var(--stg-f);border-color:var(--stg-s)"></i>writes staging or outputs (<code>--execute</code>)</span>
+    <span><i class="sw" style="background:var(--wr-f);border-color:var(--wr-s);border-width:3px"></i>writes the live store (<code>--execute</code>, after approval)</span>
+    <span><i class="sw" style="background:var(--gate-f);border-color:var(--gate-s)"></i>human gate</span>
+    <span><i class="sw" style="background:var(--prop-f);border-color:var(--prop-s);border-style:dashed"></i>proposed / not built yet</span>
+    <span><i class="sw" style="background:var(--ext-f);border-color:var(--ext-s)"></i>users</span>
+  </div>
+</header>
+<div class="main">
+  <div id="chart"></div>
+  <aside id="panel" aria-live="polite" aria-label="Details"><div class="inner" id="inner"></div></aside>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- content: edit here ---------- */
+
+const KINDS = {
+  ro: "read-only / dry run / report",
+  stg: "writes staging or outputs (with --execute)",
+  wr: "writes the live store (with --execute, after written approval)",
+  gate: "human gate",
+  prop: "proposed, not built yet",
+  ext: "users",
+};
+
+const D = (t, h) => ({ t, h });
+const RUN = "audit-runbook.md";
+const DEP = "deploy-plan.md";
+const SITE = "static-site-plan.md";
+
+const NODES = {
+  scan: {
+    label: ["Scan holdings"], sub: "scan_holdings", col: 0, y: 105, kind: "ro",
+    runs: "HPC. Slurm array, one task per top-level directory (CMIP is split further).",
+    purpose: "Read-only inventory of the store: one row per file with size, mtime, parsed DRS facets and a drs_status (in its DRS location or not). Everything downstream starts from these parquet shards.",
+    inputs: ["The store tree under --root (/proj/cmip6, or a subtree)"],
+    outputs: ["scan/holdings_<tag>.parquet (one per shard)", "summarize_scan: inventory/ totals, datasets, multi_version, conformance, unparsed_*, errors"],
+    files: ["scripts/scan_holdings.py", "scripts/summarize_scan.py", "slurm/scan_holdings.sbatch", "src/.../scan.py (list_shards, scan, make_row)", "src/.../drs.py (facet source of truth)"],
+    flags: ["--root", "--out", "--list-shards", "--shard / --shard-index (defaults to $SLURM_ARRAY_TASK_ID)", "--split (more tasks for big dirs)", "--batch-rows", "summarize_scan: --scan --out --csv --samples"],
+    safety: "Read-only. Climb the rollout ladder (one dataset directory first, then wider); do not start an ad hoc full-store scan.",
+    docs: [D("audit-runbook: Rollout ladder", RUN + "#rollout-ladder"), D("audit-runbook: 1. Scan", RUN + "#1-scan-read-only")],
+  },
+  check_nc: {
+    label: ["check_nc"], sub: "NetCDF health", col: 1, y: 30, kind: "ro",
+    runs: "HPC. Slurm array over the scan shards.",
+    purpose: "Open every .nc listed in the scan (read-only) and record whether it is readable, its global attributes, main variable, time axis, and whether attributes disagree with the filename facets (attr_mismatch). A bad file never stops the run; its problem goes in its row.",
+    inputs: ["scan/ holdings parquet"],
+    outputs: ["ncinfo/ncinfo_<tag>.parquet (nc_status, nc_error, attrs, time axis, attr_mismatch)"],
+    files: ["scripts/check_nc.py", "slurm/check_nc.sbatch", "src/.../ncinfo.py (check_file, check_files, nc_candidates, hdf5_eof)"],
+    flags: ["--scan", "--out", "--list-shards", "--shard / --shard-index", "--prefix (one dataset dir)", "--limit", "--deep"],
+    safety: "Files are opened read-only. HDF5 file locking on VAST was a problem and is resolved (see audit-findings).",
+    docs: [D("audit-runbook: 2. NetCDF check", RUN + "#2-netcdf-check-read-only"), D("audit-findings: HDF5 locking", "audit-findings.md#hdf5-file-locking-on-vast-resolved")],
+  },
+  find_gaps: {
+    label: ["find_gaps"], sub: "missing / overlap", col: 2, y: 180, kind: "ro",
+    runs: "Anywhere (offline). Reads parquet only; a login node is fine.",
+    purpose: "Find missing files, overlaps and duplicates in each dataset's time series from the scan alone, flag uneven experiment/member coverage, and check a list of required combinations.",
+    inputs: ["scan/ holdings parquet", "manifests/core.yaml (optional required set)"],
+    outputs: ["gaps/gap_datasets.parquet", "gaps/gap_issues.parquet", "gaps/partial_coverage.parquet (report only)", "gaps/core_gaps.parquet (with --core)"],
+    files: ["scripts/find_gaps.py", "src/.../gaps.py (find_gaps, partial_coverage, core_gaps)", "manifests/core.yaml"],
+    flags: ["--scan", "--out", "--core"],
+    safety: "Offline, touches no data files. Some gaps are real upstream gaps; see audit-findings for report-only cases.",
+    docs: [D("audit-runbook: 3. Gaps", RUN + "#3-gaps-offline"), D("audit-findings: dataset findings", "audit-findings.md#dataset-findings")],
+  },
+  check_esgf: {
+    label: ["check_esgf"], sub: "compare with ESGF", col: 1, y: 345, kind: "ro",
+    runs: "DTN (needs outbound internet). HPC nodes have none.",
+    purpose: "Query the ESGF search API for every local dataset (all versions) and compare file size and checksum to what is held locally. Finds size mismatches, retracted or superseded versions, and ESGF files missing locally.",
+    inputs: ["scan/ holdings parquet", "ESGF search endpoint (--index-url, no default on purpose)"],
+    outputs: ["esgf/esgf_datasets.parquet", "esgf/esgf_files.parquet", "esgf/esgf_query_errors.parquet (re-run to retry)", "esgf/esgf_compare.parquet", "esgf/esgf_missing_local.parquet", "esgf/esgf_cache.parquet (response cache)"],
+    files: ["scripts/check_esgf.py", "src/.../esgf.py (query_datasets, compare, CachedFetcher)"],
+    flags: ["--scan", "--out", "--index-url (required)", "--source-id (pilot one model)", "--limit-datasets", "--min-interval (rate limit)", "--refresh", "--compare-only"],
+    safety: "Read-only on the store; only outbound requests to the index. Confirm the endpoint before running and do not guess it. Re-runs reuse the cache, so only new datasets hit the network.",
+    docs: [D("audit-runbook: 4. ESGF", RUN + "#4-esgf-dtn-needs-outbound-https")],
+  },
+  verify_checksums: {
+    label: ["verify_checksums"], sub: "sha256, candidates", col: 3, y: 30, kind: "ro",
+    runs: "select: HPC login node (parquet only). hash: Slurm array.",
+    purpose: "Compute sha256 for a candidate set only (files already suspect, plus a per-source sample), and compare with ESGF where a checksum is known. Hashing the whole store is not the goal.",
+    inputs: ["scan/", "ncinfo/", "esgf/esgf_compare.parquet"],
+    outputs: ["checksums/candidates.parquet (select)", "checksums/checksums_<i>of<N>.parquet (hash: sha256, checksum_ok, error, seconds)"],
+    files: ["scripts/verify_checksums.py (subcommands select, hash)", "slurm/verify_checksums.sbatch", "src/.../checksums.py (select_candidates, verify, sha256_file, shard)"],
+    flags: ["select: --scan --ncinfo --esgf --sample-per-source --seed --out", "hash: --candidates --out --n-shards --shard-index"],
+    safety: "Read-only; never modifies files.",
+    docs: [D("audit-runbook: 5. Checksums", RUN + "#5-checksums-candidate-set-only")],
+  },
+  plan_repairs: {
+    label: ["plan_repairs"], sub: "repairs manifest", col: 4, y: 105, kind: "ro",
+    runs: "Anywhere (offline).",
+    purpose: "Combine the audit outputs into a list of repair actions with evidence: redownload (corrupt or wrong size, or missing), quarantine (bad original to move aside), or report_only (needs a human look). Writes a YAML manifest plus a Markdown review sheet.",
+    inputs: ["esgf/", "ncinfo/", "checksums/", "gaps/"],
+    outputs: ["manifests/repairs/<date>.yaml (RepairManifest)", "manifests/repairs/<date>.md (review sheet)"],
+    files: ["scripts/plan_repairs.py", "src/.../repairs.py (plan, summary_markdown)", "src/.../manifest.py (RepairManifest, RepairAction)"],
+    flags: ["--esgf", "--ncinfo", "--checksums", "--gaps", "--out"],
+    safety: "Offline, touches no data files. Review the .md sheet before anything is downloaded.",
+    docs: [D("audit-runbook: 6. Repair plan", RUN + "#6-repair-plan--staging-download")],
+  },
+  download_esgf: {
+    label: ["download_esgf"], sub: "to staging", col: 5, y: 345, kind: "stg",
+    runs: "DTN (or any node with outbound HTTPS), as the service account.",
+    purpose: "Fetch the redownload actions from a repairs manifest into the staging tree, verifying size and checksum. Files land at <staging-root>/<drs_rel_path>.",
+    inputs: ["manifests/repairs/<date>.yaml"],
+    outputs: ["Verified files in the staging tree (not the live store)", "Download log parquet (--log)"],
+    files: ["scripts/download_esgf.py", "src/.../download.py (run, download_one)"],
+    flags: ["--repairs", "--staging-root", "--log", "--execute (default is a dry run)", "--protect"],
+    safety: "Dry run by default. Never writes into the live store; installing the files is a separate reviewed move (plan_moves repairs, then apply_moves).",
+    docs: [D("audit-runbook: 6. Repair plan", RUN + "#6-repair-plan--staging-download")],
+  },
+  plan_product: {
+    label: ["plan_product"], sub: "reanalysis plan", col: 3, y: 255, kind: "ro",
+    runs: "HPC login node (read-only listing and store stat).",
+    purpose: "Plan adding a reanalysis product (ERA5 first, 20CRv3 manifests exist): list what is upstream, stat what the store already has, and write a fetch manifest of only the missing files. Prints a verdict: new, partial, complete or possible_duplicate.",
+    inputs: ["manifests/products/<product>.yaml", "Upstream autoindex listing and HEAD per file", "Store under reanalysis/<product>/", "Optional scan to find same-named files elsewhere"],
+    outputs: ["<out>.parquet (one row per expected file)", "<out>.md (review report)", "manifests/fetch/<date>-<product>.yaml (--fetch-out, missing files only)"],
+    files: ["scripts/plan_product.py", "src/.../products.py (expected_files, remote_status, store_status, verdict, fetch_items)", "manifests/products/20crv3.yaml"],
+    flags: ["--product", "--store-root", "--out", "--fetch-out", "--scan", "--offline", "--workers", "--group", "--variable", "--years"],
+    safety: "Touches no data files. Files already present are never planned; present_differs is report-only. Use L1 first (one small group). Do not start a full-store scan for --scan.",
+    docs: [D("audit-runbook: Adding a reanalysis product", RUN + "#adding-a-reanalysis-product")],
+  },
+  download_product: {
+    label: ["download_product"], sub: "to staging", col: 4, y: 255, kind: "stg",
+    runs: "HPC login node up to 5 GB; above that as a Slurm job (slurm/download_product.sbatch).",
+    purpose: "Download a product fetch manifest into the staging tree under reanalysis/<product>/. Each file is checked: size (or checksum), readable NetCDF with the expected variable and units, and time inside the file's year. Failures are kept as .bad and sha256 is logged.",
+    inputs: ["manifests/fetch/<date>-<product>.yaml"],
+    outputs: ["Verified files under <staging-root>/reanalysis/<product>/", "Download log parquet"],
+    files: ["scripts/download_product.py", "slurm/download_product.sbatch", "src/.../download.py", "src/.../products.py (check_fetched)"],
+    flags: ["--fetch", "--staging-root", "--log", "--execute (default is a dry run)", "--protect"],
+    safety: "Dry run by default (always on the login node first). Never writes into the live store. Resubmit to resume after a timeout.",
+    docs: [D("audit-runbook: Adding a reanalysis product", RUN + "#adding-a-reanalysis-product")],
+  },
+  plan_moves: {
+    label: ["plan_moves"], sub: "move manifest", col: 6, y: 105, kind: "ro",
+    runs: "HPC (touches no data files).",
+    purpose: "Write a move manifest for review, UNAPPROVED. Three modes: repairs (quarantine bad originals, install staged replacements), install (staged reanalysis files into reanalysis/<product>/), reorg (non-DRS files into the DRS layout).",
+    inputs: ["repairs: repairs manifest + staging", "install: fetch manifest + staging", "reorg: scan + ncinfo"],
+    outputs: ["manifests/moves/<date>-<kind>.yaml (MoveManifest, approved_by / approved_on empty)", "Same-name .parquet report of every candidate (planned, unmappable, collision, ...)"],
+    files: ["scripts/plan_moves.py", "src/.../moves.py (plan_repair_moves, plan_install_moves, plan_reorg)", "src/.../manifest.py (MoveManifest)"],
+    flags: ["repairs: --repairs --staging-root --quarantine-root --store-root --drs-root --verify --out", "install: --fetch --staging-root --store-root --out", "reorg: --scan --ncinfo --drs-root --out"],
+    safety: "Plans only. Review the manifest and the report; collisions and unmappable files must be understood before approval.",
+    docs: [D("audit-runbook: 7. Moves", RUN + "#7-moves-written-approval-required"), D("audit-runbook: 7b. Reorg", RUN + "#7b-reorg-of-non-drs-files-written-approval-required")],
+  },
+  approval: {
+    label: ["Human approval"], sub: "Brett signs off", col: 7, y: 105, kind: "gate",
+    runs: "By hand, in the manifest YAML.",
+    purpose: "Brett reviews the move manifest and report, then fills in approved_by and approved_on in the YAML by hand. Without both fields, apply_moves --execute refuses to run.",
+    inputs: ["Unapproved move manifest and its report"],
+    outputs: ["Approved move manifest"],
+    files: ["src/.../manifest.py (MoveManifest.approved_by, approved_on)"],
+    flags: [],
+    safety: "This gate is the only way live-store writes get authorised. Nobody else (and no agent) fills these fields.",
+    docs: [D("audit-runbook: 7. Moves", RUN + "#7-moves-written-approval-required")],
+  },
+  apply_moves: {
+    label: ["apply_moves"], sub: "+ rollback_moves", col: 8, y: 105, kind: "wr",
+    runs: "HPC, as the account allowed to write the store.",
+    purpose: "Apply an approved move manifest: quarantine bad files, install staged files, or reorganise into DRS. Every step is written to an append-only JSONL log, so a re-run resumes. rollback_moves replays the log newest-first to undo.",
+    inputs: ["Approved move manifest", "--log (append-only JSONL move log)"],
+    outputs: ["Files moved in the live store", "Move log (needed for rollback)"],
+    files: ["scripts/apply_moves.py", "scripts/rollback_moves.py", "src/.../movelog.py (check, apply, MoveLog, plan_rollback, rollback)"],
+    flags: ["apply: --manifest --log --execute --limit", "rollback: --log --run-id --execute"],
+    safety: "The only stage that changes the store. Dry run by default; --execute needs approval fields, and refuses if a move would overwrite or lacks its source. Moves use link + unlink, so nothing is overwritten and src/dst must share a filesystem. Run dry run, then --execute --limit 2, then the rest; rehearse rollback first. Keep the log. Rescan after reorg so ncinfo and the catalog match the final paths.",
+    docs: [D("audit-runbook: 7. Moves", RUN + "#7-moves-written-approval-required"), D("audit-runbook: 7b. Reorg", RUN + "#7b-reorg-of-non-drs-files-written-approval-required")],
+  },
+  build_catalog: {
+    label: ["build_catalog"], sub: "intake-esm", col: 8, y: 445, kind: "ro",
+    runs: "HPC. Nightly scheduling is proposed (slurm/nightly.sbatch does not exist yet); the script exists.",
+    purpose: "Build intake-esm catalogs for CMIP6 and reanalysis from paths only (no data files opened). With --manifest each product uses its builder: cmip6 parses DRS paths, reanalysis matches paths against the product manifest.",
+    inputs: ["The store (paths)", "manifests/catalogs.yaml", "ncinfo/ (optional, to exclude files check_nc flagged)"],
+    outputs: ["<out>/<name>.csv and <name>.json (written to a temp file, then renamed)", "<out>/<name>_invalid.parquet (non-DRS or excluded files, for review)"],
+    files: ["scripts/build_catalog.py", "src/.../catalog/ (cmip6.py, reanalysis.py, io.py)", "src/.../catalog_schema.py (CATALOG_SCHEMA)", "manifests/catalogs.yaml"],
+    flags: ["--manifest", "--product", "--drs-root", "--name", "--root", "--out", "--ncinfo", "--exclude-pattern", "--jobs"],
+    safety: "Read-only on the store. Run check_catalog on the result before it replaces the live catalog.",
+    docs: [D("audit-runbook: 8. Catalog", RUN + "#8-catalog"), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
+  },
+  check_catalog: {
+    label: ["check_catalog"], sub: "gate before publish", col: 9, y: 445, kind: "ro",
+    runs: "HPC.",
+    purpose: "Validate a built catalog: columns and types match CATALOG_SCHEMA, paths unique, key columns not null, sampled paths exist, intake-esm opens it and loads a few sample datasets, and the dataset count has not dropped more than --max-drop versus the last good catalog.",
+    inputs: ["Built catalog JSON", "--previous: last good catalog"],
+    outputs: ["Exit code 0 (all pass) or 1", "--report JSON of the results"],
+    files: ["scripts/check_catalog.py", "src/.../catalog_schema.py"],
+    flags: ["--catalog", "--previous", "--sample-paths", "--sample-datasets", "--max-drop", "--seed", "--report"],
+    safety: "Reports only; never changes anything. A failure should stop the nightly build and keep the previous site live.",
+    docs: [D("audit-runbook: 8. Catalog", RUN + "#8-catalog"), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
+  },
+  summarize: {
+    label: ["Site data"], sub: "summarize + config", col: 10, y: 445, kind: "stg",
+    runs: "HPC (or locally against the sample catalog).",
+    purpose: "Turn the catalog into what the static site needs: a dataset-level summary and stats for the OJS browser, per-shard file lists, vendored JS/CSS/fonts checked against pinned hashes, and a site_config.json from _variables.yml.",
+    inputs: ["Catalog CSV", "site/_variables.yml", "site/vendor/vendor.yml"],
+    outputs: ["site/data/catalog_summary.json (+ .parquet)", "site/data/catalog_stats.json", "site/data/files/<shard>.json", "site/data/site_config.json", "site/vendor/*"],
+    files: ["scripts/summarize_catalog.py", "scripts/write_site_config.py", "scripts/vendor_js.py", "src/.../catalog_schema.py (SUMMARY_SCHEMA)", "scripts/make_sample_catalog.py (offline sample for development)"],
+    flags: ["summarize_catalog: --catalog --out --root --parquet", "vendor_js: --update (rewrite hashes after a version bump)", "write_site_config: none (run by Quarto as the pre-render step)"],
+    safety: "Reads the catalog and writes only under site/. The summary never contains absolute paths; prefixes come from config. Unresolved hosts, emails and prefixes stay placeholders in _variables.yml. vendor_js verifies each download's sha256 and never executes anything.",
+    docs: [D("static-site-plan: data contracts", SITE + "#5a-data-contracts-so-the-site-and-the-catalog-scripts-agree"), D("site-handoff: vendored libraries", "site-handoff.md#browser-upgrade-vendored-libraries-2026-11-05")],
+  },
+  render: {
+    label: ["quarto render"], sub: "site/_site", col: 11, y: 445, kind: "stg",
+    runs: "HPC (nightly, proposed) or locally.",
+    purpose: "Render the Quarto site: pages, the OJS dataset browser over the summary, built-in search. Notebooks use freeze: auto; they are executed by hand on HPC and the frozen output is committed.",
+    inputs: ["site/ sources", "site/data/", "site/vendor/", "site/_freeze/ (frozen notebook output)"],
+    outputs: ["site/_site/ (the static site)"],
+    files: ["site/_quarto.yml (pre-render: scripts/write_site_config.py)", "site/*.qmd", "site/_variables.yml"],
+    flags: ["uv run quarto render site", "Quarto 1.10.19 (same as CI)"],
+    safety: "Nightly renders should use the committed _freeze/ and fail if Quarto tries to execute a notebook. Production values (catalog_version, audience, catalog_path, https_prefix) come from the build, not the repo placeholders.",
+    docs: [D("static-site-plan", SITE), D("deploy-plan: nightly build rules", DEP + "#4-hpc")],
+  },
+  publish: {
+    label: ["publish_site"], sub: "proposed", col: 12, y: 445, kind: "prop",
+    runs: "HPC. Proposed: scripts/publish_site.sh does not exist yet.",
+    purpose: "Copy _site/ to the VAST release directory as releases/<UTC stamp>/, write BUILD_OK (stamp, commit, catalog version, file count, checksum), then update LATEST. Keep the last 14 releases.",
+    inputs: ["site/_site/"],
+    outputs: ["<site dir>/releases/<stamp>/ with BUILD_OK", "<site dir>/LATEST"],
+    files: ["scripts/publish_site.sh (to write)", "slurm/nightly.sbatch (to write: runs every step, set -euo pipefail, mail on FAIL)"],
+    flags: ["--publish (otherwise a dry run)"],
+    safety: "Proposal pending approval. Writes only to the site directory on VAST, outside /proj/cmip6. HPC never connects to the VM: the VM pulls.",
+    docs: [D("deploy-plan: 1. Overview", DEP + "#1-overview"), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
+  },
+  pull_site: {
+    label: ["VM: pull + Apache"], sub: "proposed", col: 12, y: 645, kind: "prop",
+    runs: "WHOI-managed Apache VM (Ubuntu), VAST mounted read-only. Proposed: infra/ does not exist yet.",
+    purpose: "Every 15 minutes, pull_site.sh finds a new LATEST with BUILD_OK, rsyncs it, checks the file count, runs a smoke test and switches the staging symlink. It promotes to current unless HOLD is set. Apache serves the site and read-only HTTPS downloads of .nc files.",
+    inputs: ["VAST release directory (read-only mount)", "VAST data mount for /data/"],
+    outputs: ["/srv/cmip/current (cmip.whoi.edu)", "/srv/cmip/staging (WHOI-only)", "/data/ -> read-only VAST mount, .nc only"],
+    files: ["infra/vm/pull_site.sh (--promote, --rollback <stamp>)", "infra/vm/smoke_test.sh", "infra/vm/cmip-pull.{service,timer}", "infra/apache/cmip.conf"],
+    flags: ["pull_site.sh --promote", "pull_site.sh --rollback <stamp>", "HOLD file blocks promotion"],
+    safety: "Proposal pending approval and IT security review. No directory listing, rate limits per connection and IP, security headers, fail2ban. Keeps 7 releases. Until go-live it runs alongside the current server.",
+    docs: [D("deploy-plan: 5. VM", DEP + "#5-vm-ubuntu-2404"), D("deploy-plan: 5.2 Apache", DEP + "#52-apache"), D("static-site-plan: 4.8 downloads", SITE + "#48-download-access-for-users-without-vast-access")],
+  },
+  users: {
+    label: ["Users"], sub: "browse, page, download", col: 13, y: 645, kind: "ext",
+    runs: "Browsers, the cluster, the SMB share.",
+    purpose: "PIs, postdocs and students browse the dataset browser, open a dataset page and get the data: on the cluster or SMB by VAST path (and the intake-esm catalog), or elsewhere by HTTPS download from the VM. Globus is planned for bulk transfers.",
+    inputs: ["The static site", "/data/ downloads", "intake-esm catalog"],
+    outputs: ["Data in their own workflows", "Problem reports and data requests (GitHub issue forms or mailto:)"],
+    files: ["site/browse.qmd", "site/dataset.qmd", "site/access.qmd", "site/download-guide.qmd", "site/_variables.yml (prefixes, audience)"],
+    flags: [],
+    safety: "What the Get data panel shows depends on the audience setting (internal vs external), which is an open decision. Large external requests should go to Globus once it exists.",
+    docs: [D("static-site-plan: 4.8 downloads", SITE + "#48-download-access-for-users-without-vast-access"), D("site-handoff: open questions", "site-handoff.md#open-questions--proposed-decisions")],
+  },
+  actions: {
+    label: ["GitHub Actions"], sub: "checks only", col: 10, y: 545, kind: "ro",
+    runs: "GitHub-hosted runner, on every push and pull request.",
+    purpose: "Check the repo: lint, format, tests, YAML validation, a Quarto render from the committed _freeze/ output (notebooks are not executed) and an offline link check of the rendered site.",
+    inputs: ["The pushed commit"],
+    outputs: ["Pass/fail status"],
+    files: [".github/workflows/check.yml"],
+    flags: ["uv sync --all-groups --locked", "uv run ruff check; ruff format --check", "uv run pytest", "uv run quarto render site", "lychee --offline link check"],
+    safety: "contents: read only. It never deploys; deploys come from the HPC nightly job and the VM pull.",
+    docs: [D("static-site-plan: 4.7 build and deploy", SITE + "#47-build-container-and-deploy")],
+  },
+};
+
+const EDGES = [
+  ["scan", "check_nc"], ["scan", "find_gaps"], ["scan", "check_esgf"],
+  ["check_nc", "verify_checksums"], ["check_esgf", "verify_checksums"],
+  ["check_nc", "plan_repairs"], ["find_gaps", "plan_repairs"], ["check_esgf", "plan_repairs"], ["verify_checksums", "plan_repairs"],
+  ["plan_repairs", "download_esgf"], ["plan_repairs", "plan_moves"], ["download_esgf", "plan_moves"],
+  ["plan_product", "download_product"], ["download_product", "plan_moves"],
+  ["plan_moves", "approval"], ["approval", "apply_moves"],
+  ["apply_moves", "build_catalog"], ["build_catalog", "check_catalog"], ["check_catalog", "summarize"],
+  ["summarize", "render"], ["render", "publish"], ["publish", "pull_site", true], ["pull_site", "users"],
+];
+
+const LANES = [
+  { name: "VAST / HPC", sub: "audit, repair, reorg", y: 0, h: 320 },
+  { name: "DTN", sub: "internet access", y: 320, h: 100 },
+  { name: "HPC nightly build", sub: "service account; slurm/nightly.sbatch proposed", y: 420, h: 100 },
+  { name: "Repo / GitHub", sub: "", y: 520, h: 100 },
+  { name: "VM + users", sub: "Apache, cmip.whoi.edu", y: 620, h: 100 },
+];
+
+/* ---------- rendering ---------- */
+
+const NS = "http://www.w3.org/2000/svg"; // XML namespace identifier, not a network request
+const W = 120, H = 50, X0 = 160, STEP = 135, LANE_W = 140;
+const px = (n) => X0 + n.col * STEP;
+
+function s(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function h(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  for (const k of kids) e.append(k);
+  return e;
+}
+
+const maxCol = Math.max(...Object.values(NODES).map((n) => n.col));
+const totalW = X0 + maxCol * STEP + W + 30;
+const totalH = LANES[LANES.length - 1].y + LANES[LANES.length - 1].h;
+const svg = s("svg", { width: totalW, height: totalH, viewBox: `0 0 ${totalW} ${totalH}`, role: "group", "aria-label": "Pipeline flowchart" });
+const defs = s("defs", {}, svg);
+const mk = s("marker", { id: "arr", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+s("path", { d: "M0,0 L10,5 L0,10 z", fill: "#8793a1" }, mk);
+
+LANES.forEach((l, i) => {
+  s("rect", { x: 0, y: l.y, width: totalW, height: l.h, class: "lane-bg" + (i % 2 ? " alt" : "") }, svg);
+  const t = s("text", { x: 10, y: l.y + 24, class: "lane-label" }, svg);
+  t.textContent = l.name;
+  if (l.sub) {
+    const words = l.sub.length > 24 ? [l.sub.slice(0, l.sub.lastIndexOf(" ", 24)), l.sub.slice(l.sub.lastIndexOf(" ", 24) + 1)] : [l.sub];
+    words.forEach((w, j) => { s("text", { x: 10, y: l.y + 40 + j * 13, class: "lane-sub" }, svg).textContent = w; });
+  }
+});
+
+const edgeEls = [];
+for (const [a, b, dashed] of EDGES) {
+  const A = NODES[a], B = NODES[b];
+  let d;
+  if (A.col === B.col) {
+    const x = px(A) + W / 2;
+    d = A.y < B.y ? `M${x},${A.y + H} L${x},${B.y - 2}` : `M${x},${A.y} L${x},${B.y + H + 2}`;
+  } else {
+    const x1 = px(A) + W, y1 = A.y + H / 2, x2 = px(B) - 2, y2 = B.y + H / 2;
+    const dx = Math.max(30, (x2 - x1) / 2);
+    d = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+  }
+  const p = s("path", { d, class: "edge" + (dashed ? " dashed" : ""), "marker-end": "url(#arr)" }, svg);
+  edgeEls.push({ a, b, el: p });
+}
+
+const nodeEls = {};
+for (const [id, n] of Object.entries(NODES)) {
+  const g = s("g", {
+    class: `node ${n.kind}`, tabindex: 0, role: "button", "data-id": id,
+    "aria-label": `${n.label.join(" ")}: ${KINDS[n.kind]}. Press Enter for details.`,
+    transform: `translate(${px(n)},${n.y})`,
+  }, svg);
+  s("rect", { width: W, height: H, rx: 7 }, g);
+  const lines = n.label;
+  lines.forEach((ln, i) => {
+    const t = s("text", { x: W / 2, y: (n.sub ? 21 : 29) + i * 13, "text-anchor": "middle" }, g);
+    t.textContent = ln;
+  });
+  if (n.sub) s("text", { x: W / 2, y: 38, "text-anchor": "middle", class: "sub" }, g).textContent = n.sub;
+  nodeEls[id] = g;
+  g.addEventListener("click", () => select(id));
+  g.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(id); }
+  });
+}
+document.getElementById("chart").appendChild(svg);
+
+/* ---------- panel ---------- */
+
+const panel = document.getElementById("panel");
+const inner = document.getElementById("inner");
+let current = null;
+
+function section(title, content) {
+  if (!content || (Array.isArray(content) && !content.length)) return null;
+  const wrap = document.createDocumentFragment();
+  wrap.append(h("h3", {}, title));
+  if (Array.isArray(content)) {
+    wrap.append(h("ul", {}, ...content.map((c) => h("li", {}, codeify(c)))));
+  } else {
+    wrap.append(h("p", {}, content));
+  }
+  return wrap;
+}
+function codeify(text) { // wrap --flags and paths in <code> without using innerHTML
+  const frag = document.createDocumentFragment();
+  const re = /(--[a-z][a-z-]*|[\w./<>{}-]+\.(?:py|sh|sbatch|yaml|yml|qmd|md|parquet|json|csv)\b|[\w.]+\/[\w./<>{}*-]*)/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) frag.append(text.slice(last, m.index));
+    frag.append(h("code", {}, m[0]));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) frag.append(text.slice(last));
+  return frag;
+}
+
+function render(id) {
+  const n = NODES[id];
+  inner.replaceChildren();
+  inner.append(
+    h("button", { id: "close", "aria-label": "Close panel" }, "×"),
+    h("h2", { tabindex: -1, id: "ptitle" }, n.label.join(" ")),
+    h("span", { class: `badge ${n.kind}` }, KINDS[n.kind]),
+  );
+  const parts = [
+    section("Purpose", n.purpose), section("Runs on", n.runs), section("Inputs", n.inputs), section("Outputs", n.outputs),
+    section("Key files and functions", n.files), section("Flags", n.flags),
+  ];
+  for (const p of parts) if (p) inner.append(p);
+  if (n.safety) {
+    inner.append(h("h3", {}, "Safety"), h("p", { class: "safety" }, n.safety));
+  }
+  if (n.docs?.length) {
+    inner.append(h("h3", {}, "Docs"), h("ul", {}, ...n.docs.map((d) => h("li", {}, h("a", { href: d.h }, d.t)))));
+  }
+  const before = EDGES.filter((e) => e[1] === id).map((e) => e[0]);
+  const after = EDGES.filter((e) => e[0] === id).map((e) => e[1]);
+  const goto = (ids) => ids.map((i) => h("a", { href: "#" + i, style: "margin-right:10px" }, NODES[i].label.join(" ")));
+  if (before.length) inner.append(h("h3", {}, "Comes after"), h("p", {}, ...goto(before)));
+  if (after.length) inner.append(h("h3", {}, "Feeds"), h("p", {}, ...goto(after)));
+  inner.querySelector("#close").addEventListener("click", () => select(null));
+}
+
+function select(id, fromHash = false) {
+  if (id && !NODES[id]) id = null;
+  if (current && nodeEls[current]) nodeEls[current].classList.remove("sel");
+  edgeEls.forEach((e) => e.el.classList.remove("hl"));
+  const prev = current;
+  current = id;
+  if (id) {
+    render(id);
+    nodeEls[id].classList.add("sel");
+    edgeEls.filter((e) => e.a === id || e.b === id).forEach((e) => e.el.classList.add("hl"));
+    panel.classList.add("open");
+    nodeEls[id].scrollIntoView({ block: "nearest", inline: "center" });
+    if (!fromHash && location.hash !== "#" + id) history.pushState(null, "", "#" + id);
+  } else {
+    panel.classList.remove("open");
+    inner.replaceChildren();
+    if (!fromHash && location.hash) history.pushState(null, "", location.pathname + location.search);
+    if (prev && nodeEls[prev]) nodeEls[prev].focus();
+  }
+}
+
+window.addEventListener("hashchange", () => select(location.hash.slice(1) || null, true));
+window.addEventListener("keydown", (e) => { if (e.key === "Escape" && current) select(null); });
+if (location.hash) select(location.hash.slice(1), true);
+</script>
+</body>
+</html>
