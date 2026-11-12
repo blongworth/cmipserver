@@ -54,6 +54,7 @@ HOLDINGS_SCHEMA = {
     "institution_id": pl.String,
     "facet_parse_ok": pl.Boolean,
     "drs_status": pl.String,
+    "version_scheme": pl.String,
     "drs_depth": pl.Int32,
     "expected_rel_path": pl.String,
 }

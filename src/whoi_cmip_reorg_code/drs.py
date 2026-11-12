@@ -48,7 +48,10 @@ FILENAME_RE = re.compile(
     r"(?:_(?P<time_start>\d+)-(?P<time_end>\d+)(?P<clim>-clim)?)?"
     r"\.nc$"
 )
-VERSION_RE = re.compile(r"^v\d{8}$")
+# DRS version dirs are ``vYYYYMMDD``. The WHOI store also uses plain numeric
+# dirs (``.../gn/1/``). Both count as a valid version dir (so they are not
+# reorganized); ``version_scheme`` records which one a path uses.
+VERSION_RE = re.compile(r"^(v\d{8}|\d+)$")
 MIP_ERA = "cmip6"
 
 DRS_STATUSES = (
@@ -59,6 +62,13 @@ DRS_STATUSES = (
     "path_filename_mismatch",
     "ok",
 )
+
+
+def version_scheme(version: str | None) -> str | None:
+    """``"date"`` for ``vYYYYMMDD``, ``"numeric"`` for ``1``, else None."""
+    if version is None or not VERSION_RE.match(version):
+        return None
+    return "numeric" if version.isdigit() else "date"
 
 
 def parse_filename(name: str) -> dict[str, str | None] | None:
@@ -95,7 +105,7 @@ def parse_path_facets(
 ) -> dict[str, str | None]:
     """Facets recoverable from the directory path.
 
-    ``version`` is the deepest ``vYYYYMMDD`` directory, if any. ``activity_id``
+    ``version`` is the deepest version directory (``vYYYYMMDD`` or numeric), if any. ``activity_id``
     and ``institution_id`` are only returned when the nine directories directly
     above the file look like a DRS path: version dir is ``vYYYYMMDD`` and (if
     filename facets are given) the six shared facets agree with the filename.
@@ -169,6 +179,7 @@ def drs_check(rel_path: str) -> dict:
 
     return {
         "drs_status": status,
+        "version_scheme": version_scheme(pf["version"]),
         "drs_depth": len(dirs),
         "expected_rel_path": expected,
     }

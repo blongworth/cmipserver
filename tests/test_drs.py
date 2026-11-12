@@ -116,6 +116,7 @@ def test_path_facets_mismatch_withholds_activity():
         (DRS.replace("v20190308", "latest"), "bad_version_dir", 9),
         (DRS.replace("/Amon/", "/Omon/"), "path_filename_mismatch", 9),
         (DRS, "ok", 9),
+        (DRS.replace("v20190308", "1"), "ok", 9),
     ],
 )
 def test_drs_check(rel, status, depth):
@@ -132,3 +133,14 @@ def test_expected_rel_path():
         "v20190308/" + FN
     )
     assert drs_check("flat/" + FN)["expected_rel_path"] is None
+
+
+def test_numeric_version_is_ok_and_noted():
+    rel = DRS.replace("v20190308", "1")
+    c = drs_check(rel)
+    assert c["drs_status"] == "ok"
+    assert c["version_scheme"] == "numeric"
+    assert c["expected_rel_path"] == rel  # unchanged: nothing to reorganize
+    assert drs_check(DRS)["version_scheme"] == "date"
+    assert drs_check("README.txt")["version_scheme"] is None
+    assert drs_check(DRS.replace("v20190308", "latest"))["version_scheme"] is None

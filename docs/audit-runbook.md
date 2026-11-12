@@ -14,7 +14,15 @@ read-only or dry-run by default. Keep each level's outputs in
 | L3 | one odd top-level shard | Slurm, 1 task | odd paths reviewed, no new error classes |
 | L4 | full store | Slurm array `%20` | — |
 
-Below, `R=runs/$(date +%F)_L1` etc. and `ROOT=/proj/cmip6/data/cmip6`. Use that
+Set these in every new shell (an unset `$R` expands to `/scan` and fails):
+
+```bash
+export ROOT=/proj/cmip6/data/cmip6
+export R=runs/$(date +%F)_L1     # _L2, _L3, ... for later levels
+mkdir -p $R
+```
+
+Use that
 root, not `/proj/cmip6`: shards are the top-level dirs under the root, and
 `/proj/cmip6` would make `data/` one giant shard and scan `bin/`, `etc/`,
 `var/` and `tmp/` too. Reanalysis (`/proj/cmip6/data/reanalysis`) is scanned
@@ -79,7 +87,21 @@ re-run with `--core manifests/core.yaml` (offline, from the existing scan).
 
 ## 4. ESGF (DTN; needs outbound HTTPS)
 
-`--index-url` has no default. Confirm the search endpoint first.
+**Postponed (Phase B): versioning.** The store uses numeric version dirs
+(`.../gn/1/`), which the DRS check accepts as `ok` (scan column
+`version_scheme` = `numeric`; `vYYYYMMDD` = `date`), so `reorg` never moves
+them. Phase A does not depend on this. Do not run steps 4-6 on numeric-version
+data until it is settled. Today they match nothing: every file gets
+`version_not_on_esgf` and `superseded`, there are no repairs or checksum
+candidates, and missing-file detection is empty (fails safe, but useless).
+Options when we pick it up:
+
+- Treat numeric local versions as unknown in `esgf.py` compare (match by name,
+  prefer size match, then latest). Caveats: a valid older version shows as
+  `size_mismatch`; repairs install to `gn/v<date>/` beside `gn/1/`; no
+  missing-file detection.
+- Map `1` to an ESGF version using the old server's file lists, if they
+  record it (not yet checked).
 
 ```bash
 uv run scripts/check_esgf.py --scan $R/scan --out $R/esgf --index-url <URL> --source-id CESM2
