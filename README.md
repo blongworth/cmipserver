@@ -5,14 +5,14 @@ Tools for inventorying and reorganizing the WHOI CMIP6 holdings.
 ## Holdings scan (read-only)
 
 ```bash
-# one shard per top-level directory
-uv run scripts/scan_holdings.py --root /proj/cmip6 --list-shards
-uv run scripts/scan_holdings.py --root /proj/cmip6 --out scan/ --shard CMIP
+# one shard per top-level directory under the CMIP6 root (activities)
+uv run scripts/scan_holdings.py --root /proj/cmip6/data/cmip6 --list-shards
+uv run scripts/scan_holdings.py --root /proj/cmip6/data/cmip6 --out scan/ --shard CMIP
 
 # all shards on Slurm (see header of slurm/scan_holdings.sbatch)
 mkdir -p logs
-N=$(uv run scripts/scan_holdings.py --root /proj/cmip6 --list-shards | wc -l)
-sbatch --array=0-$((N - 1))%20 --export=ALL,ROOT=/proj/cmip6,OUT=$PWD/scan \
+N=$(uv run scripts/scan_holdings.py --root /proj/cmip6/data/cmip6 --list-shards | wc -l)
+sbatch --array=0-$((N - 1))%20 --export=ALL,ROOT=/proj/cmip6/data/cmip6,OUT=$PWD/scan \
     slurm/scan_holdings.sbatch
 
 # inventory outputs (totals, datasets, multi-version, DRS conformance, unparsed)

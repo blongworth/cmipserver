@@ -14,7 +14,11 @@ read-only or dry-run by default. Keep each level's outputs in
 | L3 | one odd top-level shard | Slurm, 1 task | odd paths reviewed, no new error classes |
 | L4 | full store | Slurm array `%20` | — |
 
-Below, `R=runs/$(date +%F)_L1` etc. and `ROOT=/proj/cmip6`.
+Below, `R=runs/$(date +%F)_L1` etc. and `ROOT=/proj/cmip6/data/cmip6`. Use that
+root, not `/proj/cmip6`: shards are the top-level dirs under the root, and
+`/proj/cmip6` would make `data/` one giant shard and scan `bin/`, `etc/`,
+`var/` and `tmp/` too. Reanalysis (`/proj/cmip6/data/reanalysis`) is scanned
+separately, only if needed. Do not scan the full store outside this root.
 
 ## HPC setup (once per account)
 
@@ -49,6 +53,10 @@ uv run scripts/summarize_scan.py --scan $R/scan --out $R/inventory --csv
 
 L4: `slurm/scan_holdings.sbatch` (see its header).
 
+Cross-check the L4 totals against the old server's file lists
+(`/proj/cmip6/tmp/cmip6/nc-file-list.txt`, `json-file-list.txt`). They stand in
+for the unbuilt Solr export.
+
 ## 2. NetCDF check (read-only)
 
 ```bash
@@ -61,8 +69,13 @@ Output `nc_status`: ok / empty / not_hdf5_or_nc / truncated / header_error / rea
 ## 3. Gaps (offline)
 
 ```bash
-uv run scripts/find_gaps.py --scan $R/scan --out $R/gaps --core manifests/core.yaml
+uv run scripts/find_gaps.py --scan $R/scan --out $R/gaps    # no --core yet
 ```
+
+`manifests/core.yaml` is empty until Brett writes it from the inventory
+(`datasets.csv`, `partial_coverage`). Until then, time-chunk gaps and
+`partial_coverage` still work; `core_gaps` is skipped. After it is filled in,
+re-run with `--core manifests/core.yaml` (offline, from the existing scan).
 
 ## 4. ESGF (DTN; needs outbound HTTPS)
 
@@ -97,14 +110,19 @@ uv run scripts/download_esgf.py ... --execute
 
 ```bash
 uv run scripts/plan_moves.py repairs --repairs manifests/repairs/<date>.yaml \
-    --staging-root /proj/cmip6/tmp/staging --quarantine-root <QUARANTINE> \
-    --store-root /proj/cmip6 --drs-root <DRS_ROOT> --verify \
+    --staging-root /proj/cmip6/tmp/staging --quarantine-root /proj/cmip6/tmp/quarantine \
+    --store-root /proj/cmip6/data --drs-root /proj/cmip6/data/cmip6 --verify \
     --out manifests/moves/<date>-repairs.yaml
 uv run scripts/apply_moves.py --manifest manifests/moves/<date>-repairs.yaml --log $R/moves.jsonl
 # Brett: set approved_by / approved_on in the YAML, then
 uv run scripts/apply_moves.py ... --execute --limit 2     # one dataset first
 uv run scripts/rollback_moves.py --log $R/moves.jsonl     # dry run; --execute to undo
 ```
+
+Create the quarantine dir once before the first repair move
+(`mkdir /proj/cmip6/tmp/quarantine`; a data-store write, run as Brett's
+account). Quarantined files land at `<quarantine>/<path relative to
+/proj/cmip6/data>`.
 
 Moves use `link` + `unlink`, so they never overwrite and need the same
 filesystem. Keep the move log; rollback replays it. If a run stops on an
@@ -113,10 +131,26 @@ error (e.g. permission denied on unlink), fix the cause and re-run the same
 the logged inode, and reports, rather than touches, any file at `dst` that
 isn't the one being moved.
 
+## 7b. Reorg of non-DRS files (written approval required)
+
+Moves files that `drs_status` flags as not in their DRS location to
+`<drs-root>/<expected path>`. Needs no ESGF or staging. Same approval,
+`--limit` and rollback flow as step 7; rehearse rollback first.
+
+```bash
+uv run scripts/plan_moves.py reorg --scan $R/scan --ncinfo $R/ncinfo \
+    --drs-root /proj/cmip6/data/cmip6 --out manifests/moves/<date>-reorg.yaml
+# Brett: set approved_by / approved_on, then
+uv run scripts/apply_moves.py --manifest manifests/moves/<date>-reorg.yaml --log $R/moves.jsonl
+uv run scripts/apply_moves.py ... --execute --limit 2
+```
+
+Rescan after the moves so `--ncinfo` and the catalog match the final paths.
+
 ## 8. Catalog
 
 ```bash
-uv run scripts/build_catalog.py --drs-root <DRS_ROOT> --root <DRS_ROOT>/CMIP/NCAR/CESM2 \
+uv run scripts/build_catalog.py --drs-root /proj/cmip6/data/cmip6 --root /proj/cmip6/data/cmip6/CMIP/NCAR/CESM2 \
     --ncinfo $R/ncinfo --out $R/catalog
 uv run scripts/check_catalog.py --catalog $R/catalog/whoi_cmip6.json --report $R/catalog/check.json
 uv run scripts/summarize_catalog.py --catalog $R/catalog/whoi_cmip6.csv --out site/data
@@ -191,8 +225,8 @@ can't, ask whether there is a transfer partition (`sinfo -s`).
 
 ## Placeholders to confirm
 
-- `<DRS_ROOT>`: `/proj/cmip6/data/cmip6` (data lives in `/proj/cmip6/data/`;
+- DRS root: `/proj/cmip6/data/cmip6` (data lives in `/proj/cmip6/data/`;
   checked on the mounted store, 2026-11-10).
-- `<QUARANTINE>`: path and owner (service account?). Staging is settled:
-  `/proj/cmip6/tmp/staging`.
+- Quarantine: `/proj/cmip6/tmp/quarantine` (same filesystem as the data;
+  create once before the first repair move). Staging: `/proj/cmip6/tmp/staging`.
 - ESGF `--index-url`.
