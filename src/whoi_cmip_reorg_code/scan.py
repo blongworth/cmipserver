@@ -15,7 +15,7 @@ import resource
 import shutil
 import stat as stat_mod
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -93,10 +93,34 @@ def peak_rss_mb() -> float:
     return peak / (1024**2 if sys.platform == "darwin" else 1024)
 
 
-def list_shards(root: str | os.PathLike) -> list[str]:
+def list_shards(root: str | os.PathLike, split: Iterable[str] = ()) -> list[str]:
     """Sorted top-level directories of ``root``, plus ``_root_files`` if there
-    are non-directory entries (files, symlinks) directly under root."""
+    are non-directory entries (files, symlinks) directly under root.
+
+    Each directory named in ``split`` (a path relative to ``root``, at any
+    depth, e.g. ``CMIP`` or ``CMIP/EC-Earth-Consortium``) is replaced by its
+    subdirectories so one huge directory can be spread over several tasks.
+    Loose non-directory entries directly in a split dir get a
+    ``<dir>/_root_files`` shard, so nothing is skipped.
+    """
     root = _norm_root(root)
+    split = {p.strip("/") for p in split}
+    used: set[str] = set()
+    shards: list[str] = []
+
+    def expand(rel: str) -> None:
+        if rel not in split:
+            shards.append(rel)
+            return
+        used.add(rel)
+        with os.scandir(os.path.join(root, rel)) as it:
+            kids = sorted(it, key=lambda e: e.name)
+        for e in kids:
+            if e.is_dir(follow_symlinks=False):
+                expand(f"{rel}/{e.name}")
+        if any(not e.is_dir(follow_symlinks=False) for e in kids):
+            shards.append(f"{rel}/{ROOT_FILES_SHARD}")
+
     dirs, has_files = [], False
     with os.scandir(root) as it:
         for e in it:
@@ -104,7 +128,12 @@ def list_shards(root: str | os.PathLike) -> list[str]:
                 dirs.append(e.name)
             else:
                 has_files = True
-    shards = sorted(dirs)
+    for d in sorted(dirs):
+        expand(d)
+    if split - used:
+        raise ValueError(
+            f"--split dir(s) not found under {root}: {sorted(split - used)}"
+        )
     if has_files:
         shards.append(ROOT_FILES_SHARD)
     return shards
@@ -180,14 +209,20 @@ def iter_entries(root: str, shard: str | None) -> Iterator[tuple]:
 
     ``shard=None`` walks everything; a directory name walks that top-level
     directory (or a nested directory, e.g. ``CMIP/NCAR/CESM2``, for small test
-    scans; paths stay relative to ``root``); ``_root_files`` yields only non-directory entries of root.
+    scans; paths stay relative to ``root``); ``_root_files`` yields only non-directory entries of root (``CMIP/_root_files``: of ``CMIP``).
     """
-    if shard == ROOT_FILES_SHARD:
+    if shard is not None and (
+        shard == ROOT_FILES_SHARD or shard.endswith("/" + ROOT_FILES_SHARD)
+    ):
+        parent = shard[: -len(ROOT_FILES_SHARD)].strip("/")
+        if ".." in parent.split("/") or os.path.isabs(parent):
+            raise ValueError(f"shard {shard!r} must be a relative path under {root}")
+        base = os.path.join(root, parent) if parent else root
         try:
-            with os.scandir(root) as it:
+            with os.scandir(base) as it:
                 entries = list(it)
         except OSError as exc:
-            yield ("error", "scandir", root, exc)
+            yield ("error", "scandir", base, exc)
             return
         for e in entries:
             try:

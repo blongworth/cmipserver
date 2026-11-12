@@ -59,7 +59,22 @@ uv run scripts/scan_holdings.py --root $ROOT --out $R/scan --shard CMIP/NCAR/CES
 uv run scripts/summarize_scan.py --scan $R/scan --out $R/inventory --csv
 ```
 
-L4: `slurm/scan_holdings.sbatch` (see its header).
+L4: `slurm/scan_holdings.sbatch` (see its header). `CMIP` is 92% of the files
+and `CMIP/EC-Earth-Consortium` 60%, so split them over more tasks (each
+shard is one task; the biggest left is about 106k files):
+
+```bash
+SPLIT="CMIP:CMIP/EC-Earth-Consortium"; args=(); IFS=: read -ra d <<< "$SPLIT"
+for x in "${d[@]}"; do args+=(--split "$x"); done
+uv run scripts/scan_holdings.py --root $ROOT --list-shards "${args[@]}"   # review
+N=$(uv run scripts/scan_holdings.py --root $ROOT --list-shards "${args[@]}" | wc -l)
+mkdir -p logs
+sbatch --array=0-$((N - 1))%20 --export=ALL,ROOT=$ROOT,OUT=$PWD/$R/scan,SPLIT="$SPLIT" \
+    slurm/scan_holdings.sbatch
+```
+
+Keep scan outputs and logs out of `$ROOT` (run `mkdir`/`sbatch` from the repo,
+not from inside the store).
 
 Cross-check the L4 totals against the old server's file lists
 (`/proj/cmip6/tmp/cmip6/nc-file-list.txt`, `json-file-list.txt`). They stand in

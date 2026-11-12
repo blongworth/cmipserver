@@ -41,10 +41,18 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         help="index into --list-shards (default: $SLURM_ARRAY_TASK_ID)",
     )
+    ap.add_argument(
+        "--split",
+        action="append",
+        default=[],
+        metavar="DIR",
+        help="replace this top-level dir by its subdirs in the shard list "
+        "(repeatable, e.g. --split CMIP); use the same value for every task",
+    )
     ap.add_argument("--batch-rows", type=int, default=100_000)
     args = ap.parse_args(argv)
 
-    shards = list_shards(args.root)
+    shards = list_shards(args.root, args.split)
     if args.list_shards:
         for s in shards:
             print(s)

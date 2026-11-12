@@ -186,3 +186,50 @@ def test_cli_nested_shard(tree, tmp_path):
     args = ["--root", str(tree), "--out", str(out), "--shard", "CMIP/NCAR"]
     assert scan_holdings.main(args) == 0
     assert (out / "holdings_CMIP__NCAR.parquet").exists()
+
+
+def test_list_shards_split(tree):
+    shards = list_shards(tree, split=["CMIP"])
+    assert "CMIP" not in shards
+    assert "CMIP/NCAR" in shards
+    assert shards[-1] == ROOT_FILES_SHARD
+
+
+def test_split_shards_cover_tree(tree, tmp_path):
+    out = tmp_path / "out"
+    full = pl.read_parquet(scan(tree, tmp_path / "full")["holdings"])
+    for s in list_shards(tree, split=["CMIP"]):
+        scan(tree, out, shard=s)
+    parts = pl.read_parquet(sorted(out.glob("holdings_*.parquet")))
+    assert sorted(parts["rel_path"]) == sorted(full["rel_path"])
+
+
+def test_split_loose_files_get_own_shard(tree, tmp_path):
+    (tree / "CMIP" / "stray.txt").write_text("x")
+    shards = list_shards(tree, split=["CMIP"])
+    assert "CMIP/_root_files" in shards
+    res = scan(tree, tmp_path / "out", shard="CMIP/_root_files")
+    assert pl.read_parquet(res["holdings"])["rel_path"].to_list() == ["CMIP/stray.txt"]
+    out = tmp_path / "all"
+    full = pl.read_parquet(scan(tree, tmp_path / "full")["holdings"])
+    for s in shards:
+        scan(tree, out, shard=s)
+    parts = pl.read_parquet(sorted(out.glob("holdings_*.parquet")))
+    assert sorted(parts["rel_path"]) == sorted(full["rel_path"])
+
+
+def test_split_unknown_dir(tree):
+    with pytest.raises(ValueError):
+        list_shards(tree, split=["nope"])
+
+
+def test_split_nested(tree, tmp_path):
+    shards = list_shards(tree, split=["CMIP", "CMIP/NCAR"])
+    assert "CMIP/NCAR" not in shards
+    assert "CMIP/NCAR/CESM2" in shards
+    out = tmp_path / "out"
+    full = pl.read_parquet(scan(tree, tmp_path / "full")["holdings"])
+    for s in shards:
+        scan(tree, out, shard=s)
+    parts = pl.read_parquet(sorted(out.glob("holdings_*.parquet")))
+    assert sorted(parts["rel_path"]) == sorted(full["rel_path"])
