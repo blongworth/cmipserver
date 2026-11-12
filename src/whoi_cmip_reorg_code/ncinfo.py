@@ -27,6 +27,11 @@ import polars as pl
 
 from whoi_cmip_reorg_code import drs
 
+# Files are opened read-only. HDF5 file locking fails on VAST/NFS mounts and
+# makes good files report ``header_error``. Must be set before HDF5 loads
+# (netCDF4 is imported lazily below).
+os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
+
 NC_STATUSES = (
     "empty",
     "not_hdf5_or_nc",
