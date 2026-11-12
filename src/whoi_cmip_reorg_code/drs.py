@@ -65,10 +65,13 @@ DRS_STATUSES = (
 
 
 def version_scheme(version: str | None) -> str | None:
-    """``"date"`` for ``vYYYYMMDD``, ``"numeric"`` for ``1``, else None."""
+    """``"date"`` for ``vYYYYMMDD``, ``"bare_date"`` for ``YYYYMMDD`` (no ``v``),
+    ``"numeric"`` for other digit-only dirs such as ``1``, else None."""
     if version is None or not VERSION_RE.match(version):
         return None
-    return "numeric" if version.isdigit() else "date"
+    if version.startswith("v"):
+        return "date"
+    return "bare_date" if len(version) == 8 else "numeric"
 
 
 def parse_filename(name: str) -> dict[str, str | None] | None:

@@ -144,3 +144,11 @@ def test_numeric_version_is_ok_and_noted():
     assert drs_check(DRS)["version_scheme"] == "date"
     assert drs_check("README.txt")["version_scheme"] is None
     assert drs_check(DRS.replace("v20190308", "latest"))["version_scheme"] is None
+
+
+def test_bare_date_version_is_its_own_scheme():
+    rel = DRS.replace("v20190308", "20190308")
+    c = drs_check(rel)
+    assert c["drs_status"] == "ok"
+    assert c["version_scheme"] == "bare_date"
+    assert drs_check(DRS.replace("v20190308", "12"))["version_scheme"] == "numeric"
