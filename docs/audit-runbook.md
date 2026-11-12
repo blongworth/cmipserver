@@ -4,6 +4,8 @@ Commands for the HPC steps, in order. Every data-touching script is
 read-only or dry-run by default. Keep each level's outputs in
 `runs/<date>_<level>/` (gitignored) so levels can be compared.
 
+Record anything the runs turn up in `audit-findings.md`.
+
 ## Rollout ladder
 
 | Level | Target | Where | Gate |

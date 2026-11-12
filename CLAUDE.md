@@ -9,6 +9,8 @@ Code for reorganizing and cataloguing the WHOI CMIP6 holdings on VAST
 - Site: `site/` is its own Quarto project. Plan: `docs/static-site-plan.md`
   (read it before working on the site). Hand-off notes: `docs/site-handoff.md`.
   Hosting and nightly build: `docs/deploy-plan.md` (proposal).
+- Audit: `docs/audit-runbook.md` (HPC steps, rollout ladder);
+  `docs/audit-findings.md` (what the audit found, open decisions).
 
 ## Project
 
