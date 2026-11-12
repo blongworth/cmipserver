@@ -23,7 +23,7 @@ import os
 import sys
 import time
 
-from whoi_cmip_reorg_code.scan import list_shards, scan
+from whoi_cmip_reorg_code.scan import list_shards, peak_rss_mb, scan
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     dt = time.monotonic() - t0
     print(
         f"shard={shard or 'all'} rows={res['n_rows']} errors={res['n_errors']} "
-        f"elapsed={dt:.1f}s -> {res['holdings']}",
+        f"elapsed={dt:.1f}s peak_rss={peak_rss_mb():.0f}MB -> {res['holdings']}",
         file=sys.stderr,
     )
     return 0

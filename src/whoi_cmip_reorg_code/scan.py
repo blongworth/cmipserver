@@ -11,8 +11,10 @@ file, so memory stays bounded regardless of tree size.
 from __future__ import annotations
 
 import os
+import resource
 import shutil
 import stat as stat_mod
+import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,6 +83,14 @@ def _norm_root(root: str | os.PathLike) -> str:
 
 def _rel(root: str, path: str) -> str:
     return path[len(root) :].lstrip(os.sep)
+
+
+def peak_rss_mb() -> float:
+    """This process's peak resident memory in MB (excludes file cache, unlike
+    Slurm's MaxRSS, which counts page cache against the job's cgroup)."""
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # Linux reports KiB, macOS bytes.
+    return peak / (1024**2 if sys.platform == "darwin" else 1024)
 
 
 def list_shards(root: str | os.PathLike) -> list[str]:

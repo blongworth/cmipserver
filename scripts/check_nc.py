@@ -26,7 +26,7 @@ from pathlib import Path
 import polars as pl
 
 from whoi_cmip_reorg_code.ncinfo import check_files, nc_candidates
-from whoi_cmip_reorg_code.scan import holdings_tags, pick_tag
+from whoi_cmip_reorg_code.scan import holdings_tags, peak_rss_mb, pick_tag
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -71,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     rate = res["n_rows"] / dt if dt else 0.0
     print(
         f"shard={tag} files={res['n_rows']} elapsed={dt:.1f}s ({rate:.1f}/s) "
-        f"status={res['counts']} -> {res['out']}",
+        f"peak_rss={peak_rss_mb():.0f}MB status={res['counts']} -> {res['out']}",
         file=sys.stderr,
     )
     return 0
