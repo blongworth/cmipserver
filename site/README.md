@@ -23,8 +23,11 @@ uv run quarto render site      # or: uv run quarto preview site
   downloads and checks them; after bumping a version, run it with `--update`
   to record the new hashes, then commit the files. `theme.scss` and
   `fonts.css` stop cosmo from loading Google Fonts.
-- Notebooks (`notebooks/*.ipynb`) use `freeze: auto`. Re-execute them where
-  the catalog is reachable and commit `_freeze/`; CI renders from frozen output.
+- Notebooks (`notebooks/*.ipynb`) are committed without outputs (quarto writes
+  outputs back into them, so strip before committing). `quarto render` executes
+  them where the catalog is reachable (hydra, or a Mac with the mount) and
+  caches results in `_freeze/` (`freeze: auto`; untracked and ignored). CI
+  renders with `--no-execute`, so its pages have code but no output.
   Set `WHOI_CMIP_CATALOG` (and optionally `WHOI_CMIP_DATA_ROOT`) to point the
   quickstart at another catalog.
 - Remove `old_site_url` from `_variables.yml` and the "Old site" navbar entry in

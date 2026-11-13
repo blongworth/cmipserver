@@ -9,8 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
-# Quarto (site/_freeze/ is committed on purpose)
+# Quarto (site/_freeze/ is generated on render; notebooks are committed without outputs)
 .quarto/
+site/_freeze/
 _site/
 site/.quarto/
 site/_site/

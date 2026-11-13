@@ -40,9 +40,10 @@ jobs:
         with:
           version: 1.10.19
 
-      # Renders from committed _freeze/ output; notebooks are not executed.
+      # Notebooks are committed without outputs and need the store, so CI renders
+      # without executing them.
       - name: Render site
-        run: uv run quarto render site
+        run: uv run quarto render site --no-execute
 
       - name: Link check
         uses: lycheeverse/lychee-action@v2
