@@ -1,6 +1,8 @@
 """Summarize intake-esm catalog CSVs into the site's dataset-level summary.
 
---catalog may be given more than once. A later catalog replaces every row of
+--catalog may be given more than once. --catalog-dir DIR (with --products)
+adds DIR/<output>.csv for every enabled product in the manifest, after any
+--catalog, so the nightly site build needs no hard-coded list. A later catalog replaces every row of
 earlier catalogs in the same file-list shard (collection + source_id or
 product), so ``--catalog sample.csv --catalog whoi_20crv3.csv`` swaps the
 sample's synthetic 20CRv3 for the real one and keeps the rest of the sample.
@@ -181,13 +183,23 @@ def product_info(
     return out
 
 
+def enabled_catalogs(manifest: str, catalog_dir: str) -> list[str]:
+    """CSV path of every enabled product in a catalogs manifest, in its order."""
+    m = load(manifest, CatalogsManifest)
+    return [str(Path(catalog_dir) / f"{p.output}.csv") for p in m.products if p.enabled]
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
         "--catalog",
         action="append",
-        required=True,
+        default=[],
         help="intake-esm catalog CSV; repeat to combine (later ones win per shard)",
+    )
+    ap.add_argument(
+        "--catalog-dir",
+        help="with --products: add <dir>/<output>.csv for each enabled product",
     )
     ap.add_argument("--out", required=True, help="output directory")
     ap.add_argument("--root", default=DEFAULT_DATA_ROOT, help="data root prefix")
@@ -196,6 +208,15 @@ def main(argv: list[str] | None = None) -> int:
         "--products", help="catalogs.yaml: write products.json for the dataset page"
     )
     args = ap.parse_args(argv)
+    if args.catalog_dir:
+        if not args.products:
+            ap.error("--catalog-dir needs --products")
+        args.catalog += enabled_catalogs(args.products, args.catalog_dir)
+    if not args.catalog:
+        ap.error("give --catalog and/or --catalog-dir")
+    missing = [c for c in args.catalog if not Path(c).is_file()]
+    if missing:
+        ap.error(f"missing catalogs: {missing}")
 
     prefix = args.root.rstrip("/") + "/"
     catalogs = []

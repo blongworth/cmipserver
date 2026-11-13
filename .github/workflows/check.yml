@@ -29,6 +29,10 @@ jobs:
       - name: Test
         run: uv run pytest
 
+      # shellcheck comes from the dev group (shellcheck-py)
+      - name: Shellcheck
+        run: uv run shellcheck scripts/*.sh infra/vm/*.sh infra/apache/*.sh slurm/site_build.sbatch
+
       - name: Validate YAML
         run: >
           uv run python -c "import sys, yaml, pathlib;
@@ -50,3 +54,8 @@ jobs:
         with:
           args: --offline --no-progress --root-dir "${{ github.workspace }}/site/_site" "site/_site/**/*.html"
           fail: true
+
+      # The Apache vhosts (infra/apache) on this disposable runner: syntax,
+      # downloads, ranges, access rules, headers. Never run on the VM.
+      - name: Apache config
+        run: sudo CI=true infra/apache/ci_test.sh site/_site

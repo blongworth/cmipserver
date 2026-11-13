@@ -1,140 +1,190 @@
 # Plan: make cmip.whoi.edu live
 
-Date: 2026-11-06. Status: **proposal, not started.** Steps 6–8 of
-`docs/static-site-plan.md` (tasks 4.1, 5.7, 5.8, 5.13, 6.2, 6.4).
+Date: 2026-11-13 (replaces the 2026-11-06 proposal). Status: **approved
+design; scripts written, nothing deployed.** Steps 6–8 of
+`docs/static-site-plan.md` (tasks 5.7, 5.8, 5.13, 6.2, 6.4). Day-to-day
+operations: `docs/runbook-site.md`.
 
-**Needs approval:** the VM **pulls** each build from VAST instead of HPC
-pushing it over SSH (static-site-plan §2, A.2). No deploy key, no HPC-to-VM
-connection (IT-10 goes away), and the VM runs only Apache and rsync. The push
-variant is in the appendix; everything else is the same.
+Decided (2026-11-13): the VM **pulls** releases from VAST; site builds run
+**nightly and on demand**; **no staging host** (local preview, a smoke test
+before every switch, and one-command rollback instead); **no containers** in
+production (§6).
 
 ## 1. Overview
 
 ```
-HPC nightly job (service account, fresh checkout of main)
-  build_catalog.py -> check_catalog.py -> summarize_catalog.py -> quarto render
-  publish_site.sh  -> VAST <site dir>/releases/<stamp>/ + BUILD_OK, then LATEST
-
-VM (Ubuntu, Apache), VAST mounted read-only:
-  /vast/cmip6      <- /proj/cmip6 (data)
-  /vast/cmip-site  <- <site dir> (outside /proj/cmip6)
-  pull_site.sh (every 15 min): copy new release -> smoke test -> staging -> current
-  https://cmip.whoi.edu/       -> /srv/cmip/current
-  https://cmip.whoi.edu/data/  -> /vast/cmip6 (.nc only, no listing, rate limited)
-  staging site                 -> /srv/cmip/staging (WHOI-only)
-
-GitHub Actions: checks only.
+HPC: build_catalog.sbatch (existing; slow; nightly or as needed) -> catalog/live/*.csv
+HPC: site_build.sbatch    (minutes; nightly via scrontab AND by hand any time)
+       git worktree of origin/main -> summarize_catalog.py (live CSVs)
+       -> write_site_config.py --production -> quarto render --profile production
+       -> publish_site.sh -> <VAST site dir>/releases/<UTC stamp>/ + BUILD_OK, then LATEST
+VM:  cmip-pull.timer (every 5 min) -> pull_site.sh
+       new LATEST with BUILD_OK? -> rsync to /srv/cmip/releases/<stamp>
+       -> file count + SHA256SUMS + smoke_test.sh -> atomic swap of /srv/cmip/current
+Apache: /             -> /srv/cmip/current/site
+        /data/<p>.nc  -> /vast/cmip6/data/<p>.nc (read-only, rate-limited)
+GitHub Actions: checks only (lint, tests, shellcheck, render, links, Apache vhosts).
 ```
 
-Catalogs in the nightly job: the enabled ones, today `cmip6` and `20crv3`
-(`build_catalog.py --manifest`). Non-CMIP6 products (ERA5, then one or two
-ocean products; `docs/audit-runbook.md`, "Non-CMIP6 trees") are enabled in
-`manifests/catalogs.yaml` after their HPC check, but **how often they are
-checked and rebuilt is undecided**: some may run on a schedule, some on
-demand, per product. Until that is settled, nothing here assumes they are
-rebuilt nightly; the summary uses each product's latest checked CSV. Generic products
-(`builder: generic`) need `--ncinfo` pointing at the `check_nc.py` output for
-their tree; files with no ncinfo row are left out (invalid) until
-`check_nc.py` is re-run on them. `summarize_catalog.py` gets one `--catalog`
-per enabled product's CSV plus `--products manifests/catalogs.yaml` for the
-dataset pages' citations and the Other holdings page. That page
-(`site/holdings.qmd`) lists the products that are not catalogued; its file
-counts (`site/data/holdings.json`) come from `summarize_other.py --site-json`
-and change only when the inventory is re-run.
+The site build is separate from the catalog build. A page edit does not wait
+for a 12 h catalog crawl: **deploy now** is
 
-## 2. Decisions needed
+```bash
+sbatch --export=ALL,SITE_DIR=<VAST site dir>,PUBLISH=1 slurm/site_build.sbatch
+```
 
-| Decision | ID | Blocks |
+and the site is live within about 5 minutes of the job ending. The nightly
+run picks up catalog changes. A failed build never writes `LATEST`, so the
+site stays on the last good release.
+
+Catalogs: `site_build.sbatch` passes `--catalog-dir catalog/live --products
+manifests/catalogs.yaml` to `summarize_catalog.py`, which reads
+`<output>.csv` for every enabled product (today `cmip6`, `20crv3`). Enabling a
+product in the manifest is enough; there is no list in the job. How often
+non-CMIP6 products are checked and rebuilt is still undecided (regular or on
+demand, per product); the site build uses each product's latest checked CSV
+in `catalog/live`. `site/data/holdings.json` (Other holdings page) comes from
+`summarize_other.py --site-json` and is committed when the inventory is re-run.
+
+## 2. Decisions
+
+| Decision | ID | Status / blocks |
 |---|---|---|
-| Pull or push deploy | new | Scripts, IT requests |
-| Public or WHOI-only | PI-4 | Access rules, TLS, IT review |
-| VAST paths on the site | PI-5 | External build (§5.3) |
-| Catalog path on VAST | C-4 | `catalog_path`, nightly job |
+| Pull or push deploy | — | **Pull** (2026-11-13) |
+| Staging host | — | **None** (2026-11-13) |
+| Public or WHOI-only | PI-4 | Open. Blocks access rules, TLS route (§3), IT review |
+| TLS certificate | IT-9 | Open (§3). Blocks announcement |
+| VM owner and patching | IT-8 | Open. What is 10.128.43.19? (§7) |
+| VAST paths on the site | PI-5 | Open. External build (§5.3) |
+| Catalog path on VAST | C-4 | `catalog_path` keeps its current value |
 | Rate limits, security review | C-17 | Go-live |
-| VM owner and patching | IT-8 | VM setup |
-| TLS certificate | IT-9 | VM setup |
-| Staging host name or port | — | VM setup |
-| `_variables.yml` placeholders: `github_repo`, `help_email`, `catalog_path`, `https_prefix` (proposal `https://cmip.whoi.edu/data`) | — | Rollout |
+| `_variables.yml` placeholders: `github_repo`, `help_email`, `smb_path` | — | Stay `_TBD` until decided; the build lists them on stderr |
+| `https_prefix` | — | `<site_url>/data` in `site/_production.yml` (interim `http://`, §3a) |
 | Snapshot naming (not blocking) | C-12 | — |
 
-## 3. Requests (drafts for Brett to send)
+## 3. HTTPS certificates (IT-9)
 
-- **Storage:** a VAST site directory outside `/proj/cmip6`, writable by the
-  HPC service account. Export it and `/proj/cmip6` read-only to the VM.
-- **HPC:** a service account for a nightly job (`scrontab` or cron), with
-  outbound HTTPS to GitHub.
-- **IT:** DNS for `cmip.whoi.edu`; firewall 443/80 per PI-4, SSH from admin
-  hosts only; TLS certificate; staging name; security review (C-17); VM
-  patching (IT-8); uptime monitoring; optional mail relay for alerts.
+Checked 2026-11-13 (read-only, from a Mac on the VPN):
+
+- `cmip.whoi.edu` already resolves: an A record to **10.128.43.19**, a
+  private address with a matching PTR. Ports 80 and 443 time out. A VM or
+  reservation may exist with no web server or no firewall opening.
+- `cmip6.whoi.edu` (128.128.216.85, public) is **HTTP only**, Apache 2.4.29 on
+  Ubuntu 18.04 (EOL), WordPress. No certificate to reuse.
+- `www.whoi.edu` uses an **SSL.com** certificate (WHOI's commercial CA).
+  `whoi.edu` has **no CAA records**, so Let's Encrypt is not blocked by policy.
+- With only a private IP, Let's Encrypt **HTTP-01 cannot work**.
+
+| If PI-4 is... | Certificate | Renewal |
+|---|---|---|
+| WHOI-only (private IP, as now) | SSL.com **ACME with EAB** if IT has it (`certbot` with EAB credentials). Otherwise an IT-issued SSL.com certificate. | auto / yearly by hand |
+| Public (public IP + firewall 80/443) | Let's Encrypt `certbot --apache -d cmip.whoi.edu` (HTTP-01). Confirm IT allows it. | auto (`certbot.timer`) |
+| Either, if IT gives one DNS record | `_acme-challenge.cmip.whoi.edu` CNAME to an acme-dns zone (or a TXT API): Let's Encrypt DNS-01 with a private IP | auto |
+
+A yearly manual certificate needs a calendar reminder. Whatever the route,
+monitoring checks expiry and alerts at 21 days left.
+
+### 3a. Interim HTTP (before the certificate)
+
+`https://whoi.edu` sends `Strict-Transport-Security: max-age=31536000;
+includeSubDomains` (not preloaded). Anyone who loaded `whoi.edu` in the last
+year has `cmip.whoi.edu` forced to HTTPS by their browser; with no
+certificate they get a hard error. So plain HTTP works for some people and
+not others: **not announceable**. `wget`, `curl`, `xarray`/`fsspec` and
+intake ignore HSTS, so `/data/` downloads work over HTTP.
+
+- **Allowed:** a WHOI-only soft launch for Brett and a few test users, browsing
+  `http://10.128.43.19/` (an IP is not covered by HSTS) or a fresh browser
+  profile.
+- **Config:** `infra/apache/cmip-http-interim.conf` (`setup.sh` default): the
+  same site on `:80`, no `https` redirect, **no HSTS** (HSTS before TLS works
+  locks users out for its max-age). The production build uses
+  `site_url: http://cmip.whoi.edu` and `https_prefix:
+  http://cmip.whoi.edu/data` (`site/_production.yml`, and `site-url` in
+  `site/_quarto-production.yml`; a test keeps them equal).
+- **Cutover:** install the certificate; `sudo infra/vm/setup.sh --https`
+  (enables `cmip.conf`: 443 plus the 80→443 redirect); switch both files to
+  `https://`, merge, and run the site build. HSTS starts at `max-age=300`;
+  raise it to a year after a week without problems.
 
 ## 4. HPC
 
-**Environment (project space, service account):**
+**Environment (service account, project space):** Quarto **1.10.19** on
+`PATH` (the job refuses another version; bump it with CI), `uv`, and a clone
+of this repo used only for `git fetch` (public repo or read-only deploy key).
 
-- Quarto 1.10.19 (same as CI), `uv`, a repo clone used only for `git fetch`.
-- GitHub read access: public repo or a read-only deploy key.
+**`slurm/site_build.sbatch`** (header has usage and the `scrontab` line):
 
-**Nightly build rules:**
+1. `git fetch`; `git worktree add --detach <tmp> origin/main`. Real
+   `site/data/` and production settings are written only in the worktree,
+   which is removed at exit.
+2. `summarize_catalog.py --catalog-dir $CATALOG_DIR --products
+   manifests/catalogs.yaml --out site/data` (or `CATALOGS=...` for the
+   sample catalog).
+3. `write_site_config.py --production site/_production.yml --set
+   catalog_version=<date of the newest catalog CSV>`: rewrites
+   `_variables.yml` in the worktree (comments kept), so shortcodes and
+   `data/site_config.json` agree.
+4. `quarto render site --profile production`. Notebooks execute here, where
+   the catalog is reachable (fresh worktree, so no stale `_freeze/`).
+5. `scripts/publish_site.sh` (dry run unless `PUBLISH=1`): copies `_site/` to
+   `releases/.tmp-<stamp>/site/`, adds `site/build.json` (stamp, commit,
+   catalog version; for monitoring), writes `SHA256SUMS` and then `BUILD_OK`
+   (stamp, commit, catalog_version, files, sums_sha256), renames to
+   `releases/<stamp>/`, then replaces `LATEST` by rename. Keeps 10 releases.
+   Refuses a destination under `/proj/cmip6`.
 
-- Build in a fresh checkout (`git worktree add --detach <tmp> origin/main`),
-  so writing real `site/data/` never dirties the clone.
-- Production settings (`catalog_version` = build date, `audience`,
-  `catalog_path`, `https_prefix`) come from the build: a Quarto profile
-  plus a production values file read by `write_site_config.py`.
-- Notebooks are executed by the nightly render on HPC, where the catalog is
-  reachable (fresh checkout, so no stale `_freeze/`). They are committed without
-  outputs; CI renders with `--no-execute`.
-
-**Code to write (in this repo):**
-
-| File | Runs on | Does |
-|---|---|---|
-| `scripts/build_catalog.py` (4.1) | HPC | ecgtools scan -> catalog CSV + JSON with `master_id`, `size_bytes`; write temp, then rename |
-| `scripts/check_catalog.py` | HPC | Fail on schema errors or large swings vs the last catalog (e.g. >5% fewer datasets). Report, never fix. |
-| `slurm/nightly.sbatch` | HPC | All steps, `set -euo pipefail`, `--mail-type=FAIL` |
-| `scripts/publish_site.sh` | HPC | `_site/` -> `releases/<UTC stamp>/`; write `BUILD_OK` (stamp, commit, catalog version, file count, checksum), then `LATEST`. Keep 14. Dry run unless `--publish`. |
-| `infra/vm/pull_site.sh` | VM | New `LATEST` with `BUILD_OK` -> rsync to `/srv/cmip/releases/<stamp>/`, check count, smoke test, switch `staging` symlink; promote to `current` unless `HOLD`. Keep 7. Also `--promote`, `--rollback <stamp>`. |
-| `infra/vm/smoke_test.sh` | VM | Key pages exist; summary and config JSON parse; rows > 0; `vendor/` hashes match |
-| `infra/vm/cmip-pull.{service,timer}` | VM | Every 15 min as `cmipsite` |
-| `infra/apache/cmip.conf` (5.13) | VM | §5.2, for IT review |
-| `docs/runbook-site.md` (6.4) | — | §7 |
-
-Tests: pytest for `check_catalog.py` and `publish_site.sh --dry-run`;
-`shellcheck` in CI.
+Resources: 2 CPUs, 8 GB, 1 h, `--mail-type=FAIL`.
 
 ## 5. VM (Ubuntu 24.04+)
 
+Everything on the VM is in the repo under `infra/`. `infra/vm/setup.sh`
+(idempotent; by hand or by IT) rebuilds it from scratch.
+
 ### 5.1 System
 
-```bash
-sudo apt install apache2 rsync libapache2-mod-qos unattended-upgrades fail2ban
-sudo a2enmod ssl headers ratelimit qos && sudo a2dissite 000-default
-sudo useradd --system --home /srv/cmip --shell /usr/sbin/nologin cmipsite
-sudo install -d -o cmipsite -g www-data -m 2755 /srv/cmip /srv/cmip/releases
-```
-
-- `/etc/fstab`: `/vast/cmip6` and `/vast/cmip-site`, `ro,nosuid,nodev,noexec`.
-  Check that `www-data` can read a `.nc` file and `cmipsite` can read releases.
-- `ufw`: 443 and 80 per PI-4; 22 from admin hosts.
+- Packages: `apache2 rsync python3 certbot python3-certbot-apache
+  unattended-upgrades`; with `--public` also `libapache2-mod-qos fail2ban`.
+- `/etc/fstab` (IT; `setup.sh` checks, does not edit):
+  `/vast/cmip6` ← `/proj/cmip6` and `/vast/cmip-site` ← the VAST site dir,
+  both `ro,nosuid,nodev,noexec`.
+- User `cmipsite` (system, no shell, group `www-data`) owns `/srv/cmip`.
+  `cmip-pull.timer` runs `pull_site.sh` as `cmipsite` every 5 minutes: no
+  root, no sudo; the unit can write only `/srv/cmip`.
+- `pull_site.sh` copies with `rsync -rlt`, then `chmod go=rX`, so Apache can
+  read the release whatever its modes on VAST; it refuses symlinks, checks
+  the file count and every checksum, runs `smoke_test.sh`, and only then
+  renames the release into place and swaps `current` (`ln -sfn` + `mv -T`).
+  A failed release is recorded in `FAILED` and not retried (one alert, not
+  one every 5 minutes). Keeps 5 releases plus the live one.
+- Firewall (IT): 80/443 per PI-4; 22 from admin hosts only.
 
 ### 5.2 Apache
 
-- `:80` redirects to `https://`.
-- `/` -> `/srv/cmip/current`: `Options -Indexes SymLinksIfOwnerMatch`,
-  `AllowOverride None`. Verify only the docroot symlink is followed.
-- `/data` -> `/vast/cmip6`: `Options -Indexes -FollowSymLinks`,
-  `Require all denied`, then allow `\.nc$` only. `application/x-netcdf`,
-  range requests on, no compression.
-- Rate limits (tune from logs): `mod_ratelimit` 20 MB/s per connection,
-  `mod_qos` 10 connections per IP.
-- Headers: HSTS, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
-  CSP `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'`
-  (Quarto's OJS runtime and inline scripts need the `unsafe-*`).
-- Cache: `vendor/`, `site_libs/` long; HTML and `data/` `max-age=300`.
-- Staging: same, docroot `/srv/cmip/staging`, WHOI-only, `X-Robots-Tag: noindex`.
-- Access per PI-4: `Require all granted`, or `Require ip <WHOI ranges from IT>`
-  or WHOI SSO.
-- fail2ban on the access log; agree log retention (logs hold IPs).
+`infra/apache/common.conf` (shared) is included by `cmip.conf` (HTTPS) or
+`cmip-http-interim.conf` (§3a). `infra/apache/ci_test.sh` checks both in CI
+with real requests.
+
+- `/` → `/srv/cmip/current/site`: `-Indexes +SymLinksIfOwnerMatch` (only the
+  `current` link, owned by `cmipsite` like its target), `AllowOverride None`.
+- Downloads: `AliasMatch "^/data/(.+\.nc)$" /vast/cmip6/data/$1`. Only `.nc`
+  URLs reach VAST, because `/data/` is also the site's own data directory
+  (`site_config.json`, the catalog summary); a plain `Alias /data` would hide
+  it. `/vast/cmip6/data`: `Options None` (no listing, no symlinks),
+  `.nc` only, `application/x-netcdf`, byte ranges on, no compression,
+  `mod_ratelimit` 20 MB/s per connection. `/data/` → 403; non-`.nc` → 404.
+  Symlinked files in the store are not served; check the catalog has none
+  before go-live.
+- `mod_qos` 10 connections per IP only if public (commented in `cmip.conf`).
+- Headers: `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  CSP `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval';
+  style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors
+  'none'` (Quarto's OJS runtime needs the `unsafe-*`). HSTS only on 443.
+- Cache: HTML, JSON, XML 5 minutes; `vendor/` and `site_libs/` 1 day (their
+  paths carry no version); `.nc` 1 day.
+- Access per PI-4: `Require all granted` behind a WHOI-only address, or
+  `Require ip <WHOI ranges>` if public.
+- Logs hold IPs; agree retention with IT (C-17). fail2ban only if public.
 
 ### 5.3 External build (if PI-5 says no VAST paths)
 
@@ -142,51 +192,69 @@ Drop `vast_prefix` from `site_config.json` when `audience: external`, make
 the `vast_prefix` text on `about`, `access`, `catalog`, `index` depend on the
 audience, and give external users an HTTPS catalog instead of the prefix swap.
 
-### 5.4 TLS
+## 6. Containers: not in production
 
-Public: `certbot --apache -d cmip.whoi.edu`. WHOI-only: IT certificate or
-ACME DNS challenge (IT-9).
+- The VM serves static files and a read-only mount from Apache. A container
+  would add a runtime, image rebuilds for CVEs, and NFS bind mounts with UID
+  mapping, for nothing `apt` plus unattended-upgrades doesn't cover. IT also
+  patches plain Ubuntu VMs more easily than Docker hosts (IT-8).
+- The build is already reproducible: `uv.lock` plus a pinned Quarto (same
+  version as CI). HPC has no Docker; Apptainer would be one more thing to
+  update.
+- Later, if installing Quarto on HPC becomes a problem: an Apptainer image for
+  the **build only**. Not now.
 
-## 6. Rollout
+## 7. Requests to IT/HPC (drafts for Brett; not sent)
 
-1. HPC dry runs with the sample catalog; then `publish_site.sh --publish`.
-2. Staging only, manual promotion (`pull_site.sh --promote`); run §8 checks.
-3. Real catalog when the reorganization allows (5.7); check size and load
-   time at ~28k datasets (C-6).
-4. IT security review (C-17).
-5. DNS (6.2); production live. `cmip6.whoi.edu` untouched until 6.3.
-6. After two clean weeks, automatic promotion (`HOLD` stops it).
-7. Announcement (draft for Brett).
+1. **VM:** What is 10.128.43.19 (`cmip.whoi.edu`)? Is it ours? We need Ubuntu
+   24.04, 2 vCPU / 4 GB / 20 GB, IT patching (IT-8), SSH from admin hosts.
+2. **TLS (IT-9):** Is SSL.com ACME with EAB available for `cmip.whoi.edu`? Or
+   can IT add a CNAME for `_acme-challenge.cmip.whoi.edu` so Let's Encrypt
+   DNS-01 works? If neither, please issue a certificate. `whoi.edu` sends
+   HSTS with `includeSubDomains`, so plain HTTP fails in many browsers: this
+   blocks launch.
+3. **Network (PI-4):** internal only, or a public IP with 80/443 open.
+4. **Storage:** a VAST site directory outside `/proj/cmip6`, writable by the
+   HPC service account; export it and `/proj/cmip6` **read-only** to the VM.
+5. **HPC:** a service account with `scrontab` and outbound HTTPS to GitHub.
+6. **Monitoring:** uptime check, certificate expiry (21 days), and
+   `build.json` older than 48 h; an optional mail relay for
+   `cmip-pull.service` failures (`OnFailure=` in the unit).
 
-## 7. Operations
+## 8. Rollout
 
-- **Rollback:** `pull_site.sh --rollback <stamp>` (sets `HOLD`; remove to resume).
-- **Page edits:** merge to `main`, live next night; urgent: run the job by hand.
-- **Alerts:** Slurm mail on failure; build date older than 48 h (uptime check
-  or HPC check); VM pull errors in `journalctl -u cmip-pull`.
-- **Upgrades:** Quarto on HPC and CI together (recheck OJS library versions
-  in `browse.qmd`); `vendor_js.py --update`; Ubuntu via unattended-upgrades.
-- **Disk:** tens of MB per release; 14 on VAST, 7 on the VM.
-- **Logs:** usage summaries from Apache logs (static-site-plan §4.9).
+1. Done 2026-11-13 (local): `publish_site.sh` dry run and publish, then
+   `pull_site.sh` and `smoke_test.sh`, against a production-profile render of
+   the live catalogs; Apache vhosts checked in an Ubuntu 24.04 container.
+2. HPC: `site_build.sbatch` with the sample catalog (dry run), then with
+   `PUBLISH=1` to the VAST site dir.
+3. VM (once IT delivers): `sudo infra/vm/setup.sh` (interim HTTP vhost, timer).
+   Check the first pull and smoke test. Soft launch to test users by IP.
+4. Certificate: `setup.sh --https`, rebuild with `https://` URLs, HSTS 300 s
+   → 1 year after a week.
+5. Go-live checks (§9). IT security review (C-17), then the announcement
+   (draft for Brett). `cmip6.whoi.edu` stays up until task 6.3.
 
-## 8. Go-live checks
+## 9. Go-live checks
 
-- Headers present; `http://` redirects.
+- `http://` redirects to `https://`; headers present (CI checks these on
+  the vhost; repeat on the VM).
 - A dataset page's `.nc` link downloads; `curl -r 0-99` returns 206.
-- `/data/` directory and non-`.nc` file return 403.
+- `/data/` returns 403; a non-`.nc` store path returns 404.
 - Rate limits trigger.
-- Headless Chrome: filters, counts, URL state, dataset links, no other hosts.
+- Headless Chrome: filters, counts, URL state, dataset links, no other
+  hosts, no CSP errors in the console.
 - Off-site access matches PI-4.
-- Rollback and back works.
+- `pull_site.sh --rollback <stamp>` and `--resume` round trip.
 - A broken build leaves `LATEST` alone and the site on the last good release.
 
-## Appendix: push variant
+## Appendix: push variant (not chosen)
 
 - No VAST site directory or `/vast/cmip-site` mount.
-- `publish_site.sh` runs
-  `rsync -a --delete --delay-updates _site/ cmipdeploy@cmip.whoi.edu:releases/<stamp>/`.
+- `publish_site.sh` would `rsync -a --delete --delay-updates _site/
+  cmipdeploy@cmip.whoi.edu:releases/<stamp>/`.
 - VM user `cmipdeploy`, key limited in `authorized_keys`:
   `command="/usr/bin/rrsync -wo /srv/cmip/incoming",restrict ssh-ed25519 ...`.
-  The VM timer still smoke-tests and switches symlinks, so the key can't
-  change the live site directly.
-- Needs IT-10 and protection of the key on HPC.
+  The VM timer still checks and switches, so the key can't change the live
+  site directly.
+- Needs an HPC-to-VM SSH opening (IT-10) and protection of the key on HPC.

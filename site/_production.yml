@@ -1,0 +1,11 @@
+# Production values for _variables.yml. slurm/site_build.sbatch writes them into
+# _variables.yml in its throwaway worktree (write_site_config.py --production),
+# together with catalog_version (the date of the newest live catalog CSV).
+# Keys not listed here keep their _variables.yml value; _TBD placeholders stay
+# until they are decided (docs/deploy-plan.md, §2).
+#
+# Interim HTTP (docs/deploy-plan.md, §3a): http:// until the TLS certificate is
+# installed. At the cutover switch both values to https:// together with
+# website.site-url in _quarto-production.yml (tests check they agree).
+site_url: http://cmip.whoi.edu
+https_prefix: http://cmip.whoi.edu/data

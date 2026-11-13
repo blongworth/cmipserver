@@ -1,0 +1,11 @@
+# Run cmip-pull.service every 5 minutes. A run with nothing new does nothing.
+[Unit]
+Description=Check VAST for a new cmip.whoi.edu site release every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+RandomizedDelaySec=30
+Unit=cmip-pull.service
+
+[Install]
+WantedBy=timers.target

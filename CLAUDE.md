@@ -8,7 +8,8 @@ Code for reorganizing and cataloguing the WHOI CMIP6 holdings on VAST
 - Scripts: `scripts/` (holdings scan, sample catalog, site summary).
 - Site: `site/` is its own Quarto project. Plan: `docs/static-site-plan.md`
   (read it before working on the site). Hand-off notes: `docs/site-handoff.md`.
-  Hosting and nightly build: `docs/deploy-plan.md` (proposal).
+  Hosting and nightly build: `docs/deploy-plan.md` (approved design, not yet
+  deployed); operations: `docs/runbook-site.md`. VM files in `infra/`.
 - Audit: `docs/audit-runbook.md` (HPC steps, rollout ladder);
   `docs/audit-findings.md` (what the audit found, open decisions).
 

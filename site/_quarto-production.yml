@@ -1,0 +1,6 @@
+# Quarto profile for the production build (slurm/site_build.sbatch):
+#   uv run quarto render site --profile production
+# Keep site-url equal to site_url in _production.yml (interim http://, see
+# docs/deploy-plan.md, §3a).
+website:
+  site-url: http://cmip.whoi.edu
