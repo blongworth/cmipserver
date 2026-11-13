@@ -92,17 +92,57 @@ reviewed rename is needed; do not loosen the parser.
 - `FIO-QLNM/FIO-ESM-2-0/piControl` (1): `thetao_Omon_PCMDI-test-1-0_piControl-withism_r3i1p1f1_…`,
   a test file for a different model and experiment.
 
-### Zero-byte files (open, Phase B repair worklist)
-82 new `.nc` files of 0 bytes, all dated Feb 3 2022: `CAS-ESM2-0` (34),
-`SAM0-UNICON` (40), `FGOALS-g3` (8; not inspected). Seen on `CAS-ESM2-0` and
-`SAM0-UNICON`; more may exist in files both lists share (SAM0-UNICON has 44
-zero-byte files in all). `check_nc` should report them as `empty`.
+### Zero-byte files: 14,462 `empty` (open, Phase B repair worklist)
+L4 `check_nc`: 14,462 of 732,134 files (2.0%) are 0 bytes, `nc_status = empty`:
+`EC-Earth3-CC` 14,378, `SAM0-UNICON` 44, `CAS-ESM2-0` 33, `KACE-1-0-G` 4,
+`CESM2-WACCM` 3. `EC-Earth3-CC` is in `1pctCO2` (7,427 of 16,176 files) and
+`abrupt-4xCO2` (6,950 of 16,176), single-year monthly files such as
+`ts_Amon_EC-Earth3-CC_abrupt-4xCO2_r1i1p1f1_gr_186401-186412.nc`; `piControl`,
+`amip` and `historical` are fine (1 empty `historical` file).
+All 14,378 `EC-Earth3-CC` files are dated 2022-02-03 (12,652) or 2022-02-04
+(1,726), and the `CAS-ESM2-0`/`SAM0-UNICON` samples checked were dated
+2022-02-03: one bulk event (failed copy/restore?) on those two days. Not
+checked for the other groups.
+`find_gaps` ignores size, so empty files count as present and hide real gaps
+(it reads filenames only).
+Open: re-fetch from ESGF (Phase B), after the versioning question.
+
+### 9 other files only in the scan, not in the 2022 list (report-only)
+`FGOALS-g3` (8) and `ScenarioMIP/CAS-ESM2-0` (1) are non-empty and `ok`; the
+other 73 files only in the scan (`CAS-ESM2-0` 33, `SAM0-UNICON` 40) are the
+empty ones above.
+
+### KACE-1-0-G tasmax/tasmin: daily data labelled `Amon` (report-only)
+`attr_mismatch` (4 files, `historical` and `ssp585` `tasmax`/`tasmin`): filename
+and directory say `Amon`, the file's `table_id` attribute says `day`. Together
+with the 4 `path_filename_mismatch` files (`…_day_…` in `Amon` dirs) the
+`KACE-1-0-G` `tasmax`/`tasmin` holdings mix table labels. The 3 other
+`attr_mismatch` files are the `SAM0-UNICON` random-suffix `fx` files
+(`grid_label`). Total `attr_mismatch`: 7 of 732,134.
 
 ### SAM0-UNICON piControl `Amon/tasmax`: 9 files gone since 2022 (open)
 `…_054101-055012.nc` through `…_062101-063012.nc` are in the 2022 file list but
 not in the store (the directory now starts at 063101). Removed or moved after
 Feb 2022; not searched for elsewhere. Check with Brett whether this was
 deliberate.
+
+### Overlaps (370 datasets) and gaps (106 datasets) in L4 (open, Phase B)
+Filename-based (`find_gaps`, no `--core`, empty files counted as present).
+Overlaps: `NorESM2-MM` 97, `TaiESM1` 59, `FGOALS-f3-L` 53, `FGOALS-g3` 34,
+`ScenarioMIP/NorESM2-LM` 21, then about 20 more models with 1-16 each. Gaps:
+`NorESM2-LM` 19, `SAM0-UNICON` 12, `CESM2-WACCM-FV2` 10, `E3SM-1-0` 9,
+`CESM2-FV2` 8, `IITM-ESM` 7, `CNRM-CM6-1-HR` 6, `TaiESM1` 6, `GISS-E2-1-G` 5, and
+about 12 more. Counts for the biggest overlap groups equal the counts
+recomputed from the 2022 file list, so they predate the reorganization.
+Typical overlap: two files in one `/1/` directory covering nearly the same
+span (`000101-001012` beside `000102-001012` in `NorESM2-MM`; `185001-199912`
+beside `185001-200912` in `FGOALS-f3-L`). Likely cause: more than one ESGF
+version of a variable downloaded into the single `1` directory, not
+corruption; not confirmed. Gaps are real missing time chunks (examples:
+`CIESM` ssp585 `rtmt` 210012 -> 402901; `GISS-E2-1-G` lig127k 299912 -> 310001).
+Not yet looked at: whether any of the 106 gaps are false (the `julian` calendar,
+3,728 files, was not checked). Open: need ESGF to decide which overlapping file
+to keep and which gaps are upstream.
 
 ## Level log
 
@@ -111,4 +151,5 @@ deliberate.
 | L1 | CESM2 historical r1i1p1f1 Amon tas | 1 `.nc` | ok | locking bug found |
 | L2 | `CMIP/NCAR/CESM2` | 5,166 `.nc` | all ok | count equals old list; 19.8 files/s; peak RSS 213 MB |
 | L3 | `PMIP`, `CFMIP` | 3,227 `.nc` | all ok | counts equal old list; 25.6 files/s (PMIP); 0 attribute mismatches |
-| L4 scan | `CMIP6` root, 41-43 shards | 732,134 `.nc` | not run yet | 763,175 entries, 162 TB, 31,072 datasets; 729,910 `ok`, 2,216 `bad_filename`, 8 `path_filename_mismatch`; +651 `.nc` vs 2022 list (660 only in scan, 9 only in list) |
+| L4 scan | `CMIP6` root, 41-43 shards | 732,134 `.nc` | see below | 763,175 entries, 162 TB, 31,072 datasets; 729,910 `ok`, 2,216 `bad_filename`, 8 `path_filename_mismatch`; +651 `.nc` vs 2022 list (660 only in scan, 9 only in list) |
+| L4 check_nc | same | 732,134 `.nc` | 717,672 ok, 14,462 empty | 7 `attr_mismatch`; calendars incl. `julian` (3,728) and `360_day` (12,869); gaps (filename-only): 27,546 ok, 3,137 fixed, 370 overlap, 106 gap |
