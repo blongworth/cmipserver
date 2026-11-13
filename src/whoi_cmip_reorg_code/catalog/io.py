@@ -13,8 +13,16 @@ from whoi_cmip_reorg_code.catalog_schema import CATALOG_SCHEMA, master_id_expr
 INVALID_SCHEMA = {"path": pl.String, "reason": pl.String}
 
 
-def esm_descriptor(csv_name: str, catalog_id: str, description: str) -> dict:
-    """intake-esm (esmcat 0.1.0) descriptor for a ``CATALOG_SCHEMA`` CSV."""
+def esm_descriptor(
+    csv_name: str,
+    catalog_id: str,
+    description: str,
+    time_dim: str = "time",
+) -> dict:
+    """intake-esm (esmcat 0.1.0) descriptor for a ``CATALOG_SCHEMA`` CSV.
+
+    ``time_dim``: the dimension files are joined along (BRAN:
+    ``ocean_time``)."""
     return {
         "esmcat_version": "0.1.0",
         "id": catalog_id,
@@ -39,7 +47,7 @@ def esm_descriptor(csv_name: str, catalog_id: str, description: str) -> dict:
                     "type": "join_existing",
                     "attribute_name": "time_range",
                     "options": {
-                        "dim": "time",
+                        "dim": time_dim,
                         "coords": "minimal",
                         "compat": "override",
                     },
@@ -54,6 +62,7 @@ def write_catalog(
     out_dir: str | os.PathLike,
     name: str,
     description: str,
+    time_dim: str = "time",
 ) -> tuple[Path, Path]:
     """Write ``<name>.csv`` and ``<name>.json`` to ``out_dir`` (temp file, then
     rename each). ``df`` must have exactly the ``CATALOG_SCHEMA`` columns."""
@@ -67,7 +76,11 @@ def write_catalog(
     tmp_csv, tmp_js = csv.with_name(csv.name + ".tmp"), js.with_name(js.name + ".tmp")
     df.write_csv(tmp_csv)
     tmp_js.write_text(
-        json.dumps(esm_descriptor(csv.name, name, description), indent=2) + "\n"
+        json.dumps(
+            esm_descriptor(csv.name, name, description, time_dim),
+            indent=2,
+        )
+        + "\n"
     )
     tmp_csv.replace(csv)
     tmp_js.replace(js)

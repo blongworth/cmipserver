@@ -69,7 +69,27 @@ GLOBAL_ATTRS = (
     "sub_experiment_id",
     "grid_label",
     "license",
+    # Generic attributes for non-CMIP products (provenance, citation).
+    "title",
+    "source",
+    "institution",
+    "product",
+    "dataset",
+    "references",
+    "citation",
+    "licence",
+    "history",
 )
+# Long attributes (``history`` grows with every tool run) are cut to this.
+ATTR_MAX_CHARS = 500
+# Names tried, in order, for the time coordinate before the axis/units search.
+TIME_NAMES = ("time", "valid_time")
+_TIME_STEP_DAYS = {
+    "second": 1 / 86400,
+    "minute": 1 / 1440,
+    "hour": 1 / 24,
+    "day": 1.0,
+}
 
 NCINFO_SCHEMA = {
     "path": pl.String,
@@ -82,11 +102,14 @@ NCINFO_SCHEMA = {
     **{f"attr_{a}": pl.String for a in GLOBAL_ATTRS},
     "main_var": pl.String,
     "main_var_units": pl.String,
+    "data_vars": pl.List(pl.String),
+    "time_name": pl.String,
     "n_time": pl.Int64,
     "time_units": pl.String,
     "time_calendar": pl.String,
     "time_first": pl.String,
     "time_last": pl.String,
+    "time_step_days": pl.Float64,
     "attr_mismatch": pl.String,
     "attr_mismatch_detail": pl.String,
 }
@@ -162,15 +185,16 @@ def _read_addrs(buf: bytes, off: int, size: int, n: int) -> tuple[int, ...] | No
     return tuple(struct.unpack_from(fmt, buf, off + i * size)[0] for i in range(n))
 
 
-def _main_var(ds, fn_var: str | None) -> str | None:
+def _main_var(ds, fn_var: str | None, data_vars: list[str] | None = None) -> str | None:
     """Pick the main data variable: ``variable_id`` attr, then the filename's
-    variable, then the non-coordinate, non-bounds variable with most dims."""
+    variable, then the data variable (``data_vars``, else any non-coordinate,
+    non-bounds variable) with most dims."""
     names = list(ds.variables)
     attr = getattr(ds, "variable_id", None)
     for cand in (attr, fn_var):
         if isinstance(cand, str) and cand in ds.variables:
             return cand
-    data = [
+    data = data_vars or [
         n for n in names if n not in ds.dimensions and not n.endswith(_BOUNDS_SUFFIXES)
     ]
     if not data:
@@ -178,24 +202,90 @@ def _main_var(ds, fn_var: str | None) -> str | None:
     return max(data, key=lambda n: (len(ds.variables[n].dimensions), -names.index(n)))
 
 
+def _data_vars(ds) -> list[str]:
+    """Non-coordinate variables, in file order.
+
+    Drops dimension coordinates, bounds, string variables, scalars, and
+    anything a variable names in its ``coordinates`` or ``bounds`` attribute.
+    If any variable left has two or more dims, 1-D ones (``year``, ``month``,
+    ``latitude(y)``) are auxiliary and dropped too; otherwise (a time series
+    like ``co2mass``) they are kept."""
+    aux: set[str] = set()
+    for v in ds.variables.values():
+        for a in ("coordinates", "bounds"):
+            val = getattr(v, a, None)
+            if isinstance(val, str):
+                aux.update(val.split())
+    cands = [
+        n
+        for n, v in ds.variables.items()
+        if n not in ds.dimensions
+        and n not in aux
+        and not n.endswith(_BOUNDS_SUFFIXES)
+        and v.ndim > 0
+        and v.dtype is not str
+    ]
+    if any(ds.variables[n].ndim >= 2 for n in cands):
+        cands = [n for n in cands if ds.variables[n].ndim >= 2]
+    return cands
+
+
 def _attr_str(ds, name: str) -> str | None:
     v = getattr(ds, name, None)
     if v is None:
         return None
-    return v if isinstance(v, str) else str(v)
+    v = v if isinstance(v, str) else str(v)
+    return v[:ATTR_MAX_CHARS]
+
+
+def time_var(ds) -> str | None:
+    """Name of the time coordinate: ``time``, ``valid_time`` (new CDS ERA5),
+    else a 1-D dimension coordinate with ``axis = T``, ``standard_name =
+    time``, or units ``<unit> since <date>`` (BRAN ``ocean_time``)."""
+    for n in TIME_NAMES:
+        if n in ds.variables:
+            return n
+    for n, v in ds.variables.items():
+        if n not in ds.dimensions or v.ndim != 1:
+            continue
+        units = getattr(v, "units", None)
+        if (
+            getattr(v, "axis", None) == "T"
+            or getattr(v, "standard_name", None) == "time"
+            or (isinstance(units, str) and " since " in units)
+        ):
+            return n
+    return None
+
+
+def _step_days(vals, units: str | None) -> float | None:
+    """Median time step in days, from raw values and ``<unit>s since ...``."""
+    import numpy as np
+
+    if units is None or len(vals) < 2:
+        return None
+    unit = units.split(" since ")[0].strip().lower().rstrip("s")
+    factor = _TIME_STEP_DAYS.get(unit)
+    if factor is None:
+        return None
+    return float(np.median(np.diff(np.asarray(vals, dtype="float64")))) * factor
 
 
 def _time_info(ds) -> dict:
     out = {
+        "time_name": None,
         "n_time": None,
         "time_units": None,
         "time_calendar": None,
         "time_first": None,
         "time_last": None,
+        "time_step_days": None,
     }
-    if "time" not in ds.variables:
+    name = time_var(ds)
+    if name is None:
         return out
-    t = ds.variables["time"]
+    t = ds.variables[name]
+    out["time_name"] = name
     out["n_time"] = int(t.shape[0]) if t.ndim else 1
     out["time_units"] = getattr(t, "units", None)
     out["time_calendar"] = getattr(t, "calendar", None)
@@ -204,6 +294,8 @@ def _time_info(ds) -> dict:
     import cftime
 
     t.set_auto_mask(False)
+    if t.ndim == 1 and out["n_time"] > 1:
+        out["time_step_days"] = _step_days(t[:], out["time_units"])
     vals = [t[0], t[-1]] if t.ndim else [t[...], t[...]]
     for key, v in zip(("time_first", "time_last"), vals):
         v = float(v)
@@ -237,13 +329,13 @@ def _attr_mismatch(attrs: dict, fn: dict | None) -> tuple[str | None, str | None
     return ",".join(bad), "; ".join(detail)
 
 
-def _deep_read(ds, var: str) -> None:
+def _deep_read(ds, var: str, tname: str | None = "time") -> None:
     v = ds.variables[var]
     if v.ndim == 0:
         v[...]
-    elif "time" in v.dimensions and v.shape[v.dimensions.index("time")] > 0:
+    elif tname in v.dimensions and v.shape[v.dimensions.index(tname)] > 0:
         idx = [slice(None)] * v.ndim
-        idx[v.dimensions.index("time")] = -1
+        idx[v.dimensions.index(tname)] = -1
         v[tuple(idx)]
     else:
         v[(-1,) * v.ndim]
@@ -294,7 +386,8 @@ def check_file(
     try:
         for a in GLOBAL_ATTRS:
             row[f"attr_{a}"] = _attr_str(ds, a)
-        var = _main_var(ds, fn["variable_id"] if fn else None)
+        row["data_vars"] = _data_vars(ds)
+        var = _main_var(ds, fn["variable_id"] if fn else None, row["data_vars"])
         row["main_var"] = var
         if var is not None:
             row["main_var_units"] = getattr(ds.variables[var], "units", None)
@@ -305,7 +398,7 @@ def check_file(
         row["attr_mismatch"], row["attr_mismatch_detail"] = _attr_mismatch(row, fn)
         if deep and var is not None:
             try:
-                _deep_read(ds, var)
+                _deep_read(ds, var, row["time_name"])
             except NC_ERRORS as exc:
                 msg = f"{type(exc).__name__}: {exc}"
                 status = "truncated" if "HDF" in msg else "read_error"

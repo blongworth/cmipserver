@@ -1,0 +1,252 @@
+# ERA5 as held on the store (schema: whoi_cmip_reorg_code.manifest.ProductManifest).
+# Catalog-only (no source): files were fetched by several people with the CDS
+# scripts in /proj/cmip6/data/era5/download-scripts; nothing here is planned or
+# downloaded. Catalogued in place under the root in catalogs.yaml
+# (/proj/cmip6/data/era5/reanalysis); no file is renamed or moved.
+#
+# Layout (checked on the mounted store, 2026-11-13):
+#   <single-levels|pressure-levels>/<1hr|3hr|6hr|daily|monthly-means>/<variable>/<file>
+# Variable dirs use CDS request names (2m_temperature); the NetCDF variable is
+# the ECMWF short name (t2m). variable_id in the catalog is the CDS name.
+#
+# Two grids:
+# - long-name dirs: 0.25 deg (1440 x 721), 37 pressure levels;
+# - short-name dirs (3hr/*, pressure-levels/6hr/Z): 1 deg (360 x 181), from
+#   a different download. mfd is a regional subset (160 x 76), Z has 3 levels
+#   (200, 500, 850 hPa). They get level tokens "sfc-1deg" / "plev-1deg" /
+#   "plev3-1deg" so they never join a 0.25 deg dataset. Single-variable
+#   short names are aliased to their CDS names; multi-variable files (tcw:
+#   tcw+tcwv, uv10m: u10+v10, uvq: u+v+q, vert-int: six fluxes) keep the
+#   dir name as variable_id.
+#
+# Two file formats: files from the old CDS (to Dec 2022) use dim "time";
+# files from the new CDS (2022 monthly means re-fetched Aug 2026, all
+# 2023-2025 files) use "valid_time" plus "number" and "expver" variables.
+# A dataset that spans both can't be joined on one time dim by intake-esm
+# (see docs/audit-findings.md, "Non-CMIP6 holdings").
+#
+# Not catalogued (invalid, for review): stray files that match no group
+# (single-levels/monthly-means/evaporation/x.nc, a partial 2022 file).
+# *.nc.lck lock files are not .nc and are not crawled.
+schema_version: 1
+product: era5
+title: ECMWF ERA5 reanalysis (WHOI holdings)
+version: v1
+# CONFIRM (Brett): reference to cite, and the dataset DOIs for the site.
+citation: >-
+  Hersbach, H. et al. (2020) The ERA5 global reanalysis. Q. J. R. Meteorol.
+  Soc. 146, 1999-2049, doi:10.1002/qj.3803. Datasets: ERA5 hourly data on
+  single levels (doi:10.24381/cds.adbb2d47) and pressure levels
+  (doi:10.24381/cds.bd0915c6); ERA5 monthly averaged data on single levels
+  (doi:10.24381/cds.f17050d7) and pressure levels (doi:10.24381/cds.6860a573).
+acknowledgment: >-
+  Contains modified Copernicus Climate Change Service information. Neither
+  the European Commission nor ECMWF is responsible for any use that may be
+  made of the Copernicus information or data it contains.
+# CONFIRM (Brett): licence text as currently shown on the CDS dataset pages.
+license: Licence to use Copernicus Products (Copernicus Climate Change Service)
+groups:
+  # hourly, one file per day (1979-2022; geopotential 2023-2025)
+  - remote_dir: single-levels/1hr
+    frequency: 1hr
+    level: sfc
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{date:%Y-%m-%d}_{variable}.nc"
+    variables:
+    - 10m_u_component_of_wind
+    - 10m_v_component_of_wind
+    - 2m_dewpoint_temperature
+    - 2m_temperature
+    - evaporation
+    - geopotential
+    - instantaneous_surface_sensible_heat_flux
+    - mean_direction_of_total_swell
+    - mean_direction_of_wind_waves
+    - mean_period_of_total_swell
+    - mean_period_of_wind_waves
+    - mean_sea_level_pressure
+    - mean_wave_direction
+    - mean_wave_period
+    - mean_zero_crossing_wave_period
+    - peak_wave_period
+    - sea_surface_temperature
+    - significant_height_of_combined_wind_waves_and_swell
+    - significant_height_of_total_swell
+    - significant_height_of_wind_waves
+    - surface_latent_heat_flux
+    - surface_pressure
+    - top_net_thermal_radiation
+    - total_column_rain_water
+    - total_column_water_vapour
+    - total_precipitation
+    - vertical_integral_of_eastward_cloud_frozen_water_flux
+    - vertical_integral_of_eastward_cloud_liquid_water_flux
+    - vertical_integral_of_eastward_water_vapour_flux
+    - vertical_integral_of_northward_cloud_frozen_water_flux
+    - vertical_integral_of_northward_cloud_liquid_water_flux
+    - vertical_integral_of_northward_water_vapour_flux
+    - vertically_integrated_moisture_divergence
+  # hourly, one file per year (new CDS format). geopotential also has daily files for these years (duplicate)
+  - remote_dir: single-levels/1hr
+    frequency: 1hr
+    level: sfc
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{year}_{variable}.nc"
+    years: [2023, 2025]
+    variables:
+    - 10m_u_component_of_wind
+    - 10m_v_component_of_wind
+    - 2m_temperature
+    - geopotential
+    - mean_sea_level_pressure
+    - sea_surface_temperature
+    - surface_latent_heat_flux
+  # 3-hourly, 1 deg, one file per month (1979-2021)
+  - remote_dir: single-levels/3hr
+    frequency: 3hr
+    level: sfc-1deg
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{variable}_{date:%Y-%m}.nc"
+    variables:
+    - T2m
+    - mfd
+    - olr
+    - sp
+    - tcw
+    - uv10m
+    - vert-int
+    aliases:
+      T2m: 2m_temperature
+      mfd: vertically_integrated_moisture_divergence
+      olr: top_net_thermal_radiation
+      sp: surface_pressure
+  # 6-hourly, one file per month (1979-2022)
+  - remote_dir: single-levels/6hr
+    frequency: 6hr
+    level: sfc
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{date:%Y-%m}_{variable}.nc"
+    variables:
+    - 10m_u_component_of_wind
+    - 10m_v_component_of_wind
+    - 2m_dewpoint_temperature
+    - 2m_temperature
+    - evaporation
+    - instantaneous_surface_sensible_heat_flux
+    - mean_sea_level_pressure
+    - sea_surface_temperature
+    - surface_latent_heat_flux
+    - surface_pressure
+    - top_net_thermal_radiation
+    - total_column_rain_water
+    - total_column_water_vapour
+    - total_precipitation
+    - vertical_integral_of_eastward_cloud_frozen_water_flux
+    - vertical_integral_of_eastward_cloud_liquid_water_flux
+    - vertical_integral_of_eastward_water_vapour_flux
+    - vertical_integral_of_northward_cloud_frozen_water_flux
+    - vertical_integral_of_northward_cloud_liquid_water_flux
+    - vertical_integral_of_northward_water_vapour_flux
+    - vertically_integrated_moisture_divergence
+    - volumetric_soil_water_layer_1
+    - volumetric_soil_water_layer_2
+    - volumetric_soil_water_layer_3
+    - volumetric_soil_water_layer_4
+  # daily means, one file per month (2022-2023)
+  - remote_dir: single-levels/daily
+    frequency: day
+    level: sfc
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{variable}_{date:%Y-%m}.nc"
+    variables:
+    - surface_latent_heat_flux
+  # monthly means, one file per year
+  - remote_dir: single-levels/monthly-means
+    frequency: mon
+    level: sfc
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{year}_{variable}.nc"
+    years: [1979, 2025]
+    variables:
+    - 10m_u_component_of_wind
+    - 10m_v_component_of_wind
+    - 2m_dewpoint_temperature
+    - 2m_temperature
+    - evaporation
+    - geopotential
+    - instantaneous_surface_sensible_heat_flux
+    - land_sea_mask
+    - mean_direction_of_total_swell
+    - mean_direction_of_wind_waves
+    - mean_period_of_total_swell
+    - mean_period_of_wind_waves
+    - mean_sea_level_pressure
+    - mean_wave_direction
+    - mean_wave_period
+    - mean_zero_crossing_wave_period
+    - peak_wave_period
+    - sea_surface_temperature
+    - significant_height_of_combined_wind_waves_and_swell
+    - significant_height_of_total_swell
+    - significant_height_of_wind_waves
+    - surface_latent_heat_flux
+    - surface_pressure
+    - surface_sensible_heat_flux
+    - top_net_thermal_radiation
+    - total_column_rain_water
+    - total_column_water_vapour
+    - total_precipitation
+    - vertical_integral_of_eastward_cloud_frozen_water_flux
+    - vertical_integral_of_eastward_cloud_liquid_water_flux
+    - vertical_integral_of_eastward_water_vapour_flux
+    - vertical_integral_of_northward_cloud_frozen_water_flux
+    - vertical_integral_of_northward_cloud_liquid_water_flux
+    - vertical_integral_of_northward_water_vapour_flux
+    - vertically_integrated_moisture_divergence
+    - volumetric_soil_water_layer_1
+    - volumetric_soil_water_layer_2
+    - volumetric_soil_water_layer_3
+    - volumetric_soil_water_layer_4
+  # 3-hourly u, v, q, 1 deg, 37 levels, one file per month (1979-2021)
+  - remote_dir: pressure-levels/3hr
+    frequency: 3hr
+    level: plev-1deg
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{variable}-{date:%Y-%m}.nc"
+    variables:
+    - uvq
+  # 6-hourly geopotential, 1 deg, 200/500/850 hPa, one file per month (1979-2021)
+  - remote_dir: pressure-levels/6hr
+    frequency: 6hr
+    level: plev3-1deg
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{variable}_{date:%Y-%m}.nc"
+    variables:
+    - Z
+    aliases:
+      Z: geopotential
+  # 6-hourly, 37 levels, one file per day (1979-2022)
+  - remote_dir: pressure-levels/6hr
+    frequency: 6hr
+    level: plev
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{date:%Y-%m-%d}_{variable}.nc"
+    variables:
+    - geopotential
+    - specific_humidity
+    - temperature
+    - u_component_of_wind
+    - v_component_of_wind
+  # monthly means, 37 levels, one file per year
+  - remote_dir: pressure-levels/monthly-means
+    frequency: mon
+    level: plev
+    path_template: "{remote_dir}/{variable}/{file}"
+    file_pattern: "{year}_{variable}.nc"
+    years: [1979, 2025]
+    variables:
+    - geopotential
+    - specific_humidity
+    - temperature
+    - u_component_of_wind
+    - v_component_of_wind

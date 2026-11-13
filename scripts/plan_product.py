@@ -97,6 +97,8 @@ def main(argv: list[str] | None = None, remote: products.Remote | None = None) -
         ap.error("--fetch-out needs the remote listing (drop --offline)")
 
     m = load(args.product, ProductManifest)
+    if m.source is None:
+        ap.error(f"{m.product} has no source: it is catalog-only (nothing to plan)")
     exp = products.expected_files(m)
     all_paths = exp["rel_path"].implode()
     if args.group:

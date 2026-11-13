@@ -29,6 +29,10 @@ row = summary.find((d) => d.dataset_id === id) ?? null
 files = row
   ? ((await (await fetch(`data/${row.file_list}`)).json())[id] ?? [])
   : []
+// Citation and licence per non-CMIP6 product (summarize_catalog.py --products).
+// Optional: an older build without products.json shows no citation block.
+products = await fetch("data/products.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({}))
+product = row?.product ? (products[row.product] ?? null) : null
 urls = files.map((f) => `${config.https_prefix}/${row.relative_path}/${f}`)
 isPlaceholder = (v) => !v || /_TBD$/.test(v)
 internal = config.audience === "internal"
@@ -51,7 +55,7 @@ copyBlock = (text, lang = "") => {
 }
 facetLabels = [
   ["collection", "Collection"],
-  ["product", "Reanalysis product"],
+  ["product", "Product"],
   ["frequency", "Frequency"],
   ["level", "Level"],
   ["activity_id", "Activity"],
@@ -84,6 +88,22 @@ row === null
       <tr><th scope="row" class="pe-4">Catalog</th><td>${config.catalog_version}</td></tr>
     </tbody></table>
     <p><a href="${reportUrl(row)}" target="_blank" rel="noopener">Report a problem with this dataset</a></p>`
+```
+
+```{ojs}
+//| echo: false
+product === null
+  ? html`<span></span>`
+  : html`<h3>Cite this product</h3>
+    ${product.description ? html`<p>${product.description}</p>` : ""}
+    <table class="table table-sm w-auto small mb-3"><tbody>
+      <tr><th scope="row" class="pe-4">Citation</th><td>${product.citation ?? html`<em>not recorded yet</em>`}</td></tr>
+      <tr><th scope="row" class="pe-4">License</th><td>${product.license ?? html`<em>not recorded yet</em>`}</td></tr>
+      ${product.acknowledgment
+        ? html`<tr><th scope="row" class="pe-4">Acknowledgment</th><td>${product.acknowledgment}</td></tr>`
+        : ""}
+    </tbody></table>
+    <p class="small">See also <a href="cite.html">How to cite</a>.</p>`
 ```
 
 ```{ojs}

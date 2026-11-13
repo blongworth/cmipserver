@@ -11,9 +11,12 @@ Only reads the catalogs; writes to --out:
     catalog_stats.json        headline counts and the source catalogs
     files/<shard>.json        dataset_id -> file names, one shard per
                               source_id (cmip6) or product (reanalysis)
+    products.json             with --products: product -> description,
+                              citation, license, acknowledgment (dataset page)
 
-``relative_path`` is the dataset directory relative to --root. The summary
-never contains absolute paths; the site adds prefixes from its config.
+``relative_path`` is the dataset directory relative to --root (for non-CMIP6
+products split into year dirs, the directory that holds them all). The
+summary never contains absolute paths; the site adds prefixes from its config.
 
 Example:
     uv run scripts/summarize_catalog.py \\
@@ -25,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -37,6 +41,7 @@ from whoi_cmip_reorg_code.catalog_schema import (
     SUMMARY_SCHEMA,
     dataset_id_expr,
 )
+from whoi_cmip_reorg_code.manifest import CatalogsManifest, ProductManifest, load
 
 GB = 1e9
 # Catalog names (CSV stem, which is also the descriptor id) of synthetic catalogs.
@@ -48,6 +53,10 @@ def shard_expr() -> pl.Expr:
     return pl.format(
         "files/{}.{}.json", "collection", pl.coalesce("source_id", "product")
     )
+
+
+def _common_dir(dirs: list[str]) -> str:
+    return os.path.commonpath(dirs) if len(dirs) > 1 else dirs[0]
 
 
 def summarize(lf: pl.LazyFrame, root: str = DEFAULT_DATA_ROOT) -> pl.LazyFrame:
@@ -66,8 +75,13 @@ def summarize(lf: pl.LazyFrame, root: str = DEFAULT_DATA_ROOT) -> pl.LazyFrame:
             time_end=pl.col("time_end").max(),
             n_files=pl.len(),
             size_gb=(pl.col("size_bytes").sum() / GB).round(3),
-            relative_path=pl.col("relative_path").first(),
+            relative_path=pl.col("relative_path").unique().sort(),
             n_dirs=pl.col("relative_path").n_unique(),
+        )
+        .with_columns(
+            relative_path=pl.col("relative_path").map_elements(
+                _common_dir, return_dtype=pl.String
+            )
         )
         .with_columns(
             dataset_id_expr(),
@@ -112,6 +126,34 @@ def combine(catalogs: list[tuple[str, pl.DataFrame]]) -> pl.DataFrame:
     return out.drop("shard")
 
 
+def product_info(catalogs_yaml: str | Path) -> dict[str, dict]:
+    """{product: {description, citation, license, acknowledgment}} for every
+    non-CMIP6 product in ``catalogs.yaml`` (enabled or not). A reanalysis
+    spec's citation/license/acknowledgment fill in what the entry leaves out.
+    Keys are the catalog ``product`` facet (the spec's ``product`` for
+    reanalysis, the entry ``name`` for generic)."""
+    path = Path(catalogs_yaml)
+    out = {}
+    for p in load(path, CatalogsManifest).products:
+        if p.builder == "cmip6":
+            continue
+        info = {
+            "description": p.description,
+            "citation": p.citation,
+            "license": p.license,
+            "acknowledgment": None,
+        }
+        key = p.name
+        if p.spec:
+            spec = load(path.parent / p.spec, ProductManifest)
+            key = spec.product
+            info["description"] = info["description"] or spec.title
+            for k in ("citation", "license", "acknowledgment"):
+                info[k] = info[k] or getattr(spec, k)
+        out[key] = info
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -123,6 +165,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", required=True, help="output directory")
     ap.add_argument("--root", default=DEFAULT_DATA_ROOT, help="data root prefix")
     ap.add_argument("--parquet", action="store_true", help="also write parquet")
+    ap.add_argument(
+        "--products", help="catalogs.yaml: write products.json for the dataset page"
+    )
     args = ap.parse_args(argv)
 
     prefix = args.root.rstrip("/") + "/"
@@ -144,7 +189,10 @@ def main(argv: list[str] | None = None) -> int:
     rows = combine(catalogs)
     lf = rows.drop("catalog").lazy()
     ds = summarize(lf, args.root).collect()
-    if (n_split := ds.filter(pl.col("n_dirs") > 1).height) > 0:
+    # CMIP6 and reanalysis datasets are one directory each; generic products
+    # may split a dataset over year dirs (relative_path is their parent)
+    split = (pl.col("n_dirs") > 1) & pl.col("collection").is_in(["cmip6", "reanalysis"])
+    if (n_split := ds.filter(split).height) > 0:
         ap.error(f"{n_split} datasets span more than one directory")
     if not ds["dataset_id"].is_unique().all():
         ap.error("duplicate dataset_id across catalogs")
@@ -189,6 +237,10 @@ def main(argv: list[str] | None = None) -> int:
         },
     }
     (out / "catalog_stats.json").write_text(json.dumps(stats, indent=2) + "\n")
+    if args.products:
+        (out / "products.json").write_text(
+            json.dumps(product_info(args.products), indent=2) + "\n"
+        )
     print(json.dumps(stats), file=sys.stderr)
     return 0
 

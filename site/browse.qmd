@@ -67,7 +67,7 @@ ${config.catalog_version === "sample" ? html`<strong>This is a preview catalog: 
 //| echo: false
 facets = [
   ["collection", "Collection"],
-  ["product", "Reanalysis product"],
+  ["product", "Product"],
   ["frequency", "Frequency (reanalysis)"],
   ["level", "Level (reanalysis)"],
   ["activity_id", "Activity"],

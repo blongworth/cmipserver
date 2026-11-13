@@ -21,3 +21,168 @@ products:
     output: whoi_20crv3
     enabled: true
     description: NOAA/CIRES/DOE 20th Century Reanalysis V3 (WHOI mirror)
+
+  # --- Non-CMIP6 holdings, catalogued in place (docs/audit-findings.md,
+  # "Non-CMIP6 holdings"). Disabled until the HPC run: generic products need
+  # the check_nc output for their tree (build_catalog.py --ncinfo), and each
+  # must pass check_catalog.py before it is enabled. A curated product
+  # replaces its generic entry (enabled roots must not overlap).
+  # Citations and licences are drafts: CONFIRM (Brett) before enabling.
+
+  # Tier 2, curated: paths matched against the product manifest.
+  - name: era5
+    root: /proj/cmip6/data/era5/reanalysis
+    builder: reanalysis
+    spec: products/era5.yaml
+    output: whoi_era5
+    enabled: false
+    description: ECMWF ERA5 reanalysis (WHOI holdings; single and pressure levels)
+
+  # Tier 1, generic: facets from file headers.
+  - name: glorys12v1
+    root: /proj/cmip6/data/ocean_reanalysis/glorys12v1
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_glorys12v1
+    enabled: false
+    version: 12v1
+    rules:
+      - {match: "", frequency: day}
+    description: Mercator GLORYS12V1 global ocean reanalysis, daily means, 1/12 deg (CMEMS GLOBAL_MULTIYEAR_PHY_001_030)
+    citation: >-
+      E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics
+      Reanalysis, doi:10.48670/moi-00021. Lellouche, J.-M. et al. (2021)
+      Front. Earth Sci. 9:698876, doi:10.3389/feart.2021.698876.
+    license: Copernicus Marine Service licence (service commitments and licence)
+  - name: glorys12v1_monthly
+    root: /proj/cmip6/data/cmems/GLOBAL_REANALYSIS_PHY_001_030/global-reanalysis-phy-001-030-monthly
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_glorys12v1_monthly
+    enabled: false
+    version: 12v1
+    rules:
+      - {match: "", frequency: mon}
+    description: Mercator GLORYS12V1 global ocean reanalysis, monthly means, 1/12 deg (CMEMS GLOBAL_REANALYSIS_PHY_001_030)
+    citation: >-
+      E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics
+      Reanalysis, doi:10.48670/moi-00021.
+    license: Copernicus Marine Service licence (service commitments and licence)
+  - name: glorys12v1_statics
+    root: /proj/cmip6/data/cmems/GLOBAL_REANALYSIS_PHY_001_030/global-reanalysis-phy-001-030-statics
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_glorys12v1_statics
+    enabled: false
+    version: 12v1
+    description: GLORYS12V1 static fields (coordinates, mask and bathymetry, mean dynamic topography)
+    citation: >-
+      E.U. Copernicus Marine Service Information (CMEMS), doi:10.48670/moi-00021.
+    license: Copernicus Marine Service licence (service commitments and licence)
+  - name: grep_daily
+    root: /proj/cmip6/data/ocean_reanalysis/CMEMS_ENSAMBLE/daily
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_grep_daily
+    enabled: false
+    version: v2
+    rules:
+      - {match: "", frequency: day}
+    description: CMEMS Global Reanalysis Ensemble Product (GREP v2), daily, 1/4 deg; four members (CGLORS, FOAM, GLORYS2V4, ORAS5) in each file (GLOBAL_REANALYSIS_PHY_001_031)
+    citation: >-
+      E.U. Copernicus Marine Service Information (CMEMS). Global Ocean
+      Ensemble Physics Reanalysis, doi:10.48670/moi-00024.
+    license: Copernicus Marine Service licence (service commitments and licence)
+  - name: grep_monthly
+    root: /proj/cmip6/data/ocean_reanalysis/ORAS5/oras5/monthly/global-reanalysis-phy-001-031
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_grep_monthly
+    enabled: false
+    version: v2
+    rules:
+      - {match: "", frequency: mon}
+    description: CMEMS Global Reanalysis Ensemble Product (GREP v2), monthly, 1/4 deg (GLOBAL_REANALYSIS_PHY_001_031; stored under ORAS5/)
+    citation: >-
+      E.U. Copernicus Marine Service Information (CMEMS). Global Ocean
+      Ensemble Physics Reanalysis, doi:10.48670/moi-00024.
+    license: Copernicus Marine Service licence (service commitments and licence)
+  - name: bran2020
+    root: /proj/cmip6/data/ocean_reanalysis/bran2020
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_bran2020
+    enabled: false
+    version: "2020"
+    rules:
+      - {match: "^daily/", frequency: day}
+      - {match: "^monthly/", frequency: mon}
+      # daily files come in north and south halves of the domain
+      - {match: "_north_", level: north}
+      - {match: "_south_", level: south}
+    description: Bluelink ReANalysis BRAN2020 (CSIRO / Bureau of Meteorology), 1/10 deg, daily (north and south halves) and monthly
+    citation: >-
+      Chamberlain, M. A. et al. (2021) Next generation of Bluelink ocean
+      reanalysis with multiscale data assimilation: BRAN2020. Earth Syst. Sci.
+      Data 13, 5663-5688, doi:10.5194/essd-13-5663-2021.
+    license: null   # FILL IN (Brett): BRAN2020 terms of use from the NCI/CSIRO data page
+  - name: soda3122
+    root: /proj/cmip6/data/ocean_reanalysis/sodav3122
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_soda3122
+    enabled: false
+    version: "3_12_2"
+    rules:
+      - {match: "_5dy_", frequency: 5day}
+      - {match: "_mn_", frequency: mon}
+      - {match: "^gridded/", level: reg}
+      - {match: "^original/", level: native}
+    description: Simple Ocean Data Assimilation SODA3.12.2, 5-day and monthly, regridded (reg) and native (or) grids
+    citation: >-
+      Carton, J. A., Chepurin, G. A. and Chen, L. (2018) SODA3: A new ocean
+      climate reanalysis. J. Climate 31, 6967-6983, doi:10.1175/JCLI-D-18-0149.1.
+    license: null   # FILL IN (Brett)
+  - name: hycom_gofs30
+    root: /proj/cmip6/data/ocean_reanalysis/HYCOMvGOFS30
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_hycom_gofs30
+    enabled: false
+    version: GOFS3_0
+    description: HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)
+    citation: null  # FILL IN (Brett): HYCOM reanalysis reference
+    license: null   # FILL IN (Brett)
+  - name: hycom_gofs31
+    root: /proj/cmip6/data/ocean_reanalysis/HYCOMvGOFS31
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_hycom_gofs31
+    enabled: false
+    version: GOFS3_1
+    description: HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH
+    citation: null  # FILL IN (Brett): HYCOM reanalysis reference
+    license: null   # FILL IN (Brett)
+  - name: eccov5
+    root: /proj/cmip6/data/ocean_reanalysis/ECCOv5/Version5/Alpha
+    builder: generic
+    collection: ocean_reanalysis
+    output: whoi_eccov5
+    enabled: false
+    version: v5alpha
+    description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles
+    citation: null  # FILL IN (Brett): ECCO v5 alpha reference
+    license: null   # FILL IN (Brett)
+  - name: prism
+    root: /proj/cmip6/data/prism/netcdf
+    builder: generic
+    collection: observations
+    output: whoi_prism
+    enabled: false
+    rules:
+      # no time coordinate in the files (t dim with year/month variables)
+      - {match: "^monthly/", frequency: mon}
+    description: PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)
+    citation: >-
+      PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.
+    license: null   # FILL IN (Brett): PRISM terms of use

@@ -26,6 +26,15 @@ VM (Ubuntu, Apache), VAST mounted read-only:
 GitHub Actions: checks only.
 ```
 
+Catalogs in the nightly job: every enabled product in
+`manifests/catalogs.yaml` (`build_catalog.py --manifest`). Generic non-CMIP6
+products (`builder: generic`) also need `--ncinfo` pointing at the
+`check_nc.py` output for their tree; files with no ncinfo row are left out
+(invalid) until `check_nc.py` is re-run on them. `summarize_catalog.py` gets one
+`--catalog` per enabled product's CSV (`whoi_cmip6`, `whoi_20crv3`, then
+`whoi_era5`, `whoi_glorys12v1`, ... as they are enabled) plus
+`--products manifests/catalogs.yaml` for the dataset pages' citations.
+
 ## 2. Decisions needed
 
 | Decision | ID | Blocks |

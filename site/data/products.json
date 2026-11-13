@@ -1,0 +1,80 @@
+{
+  "20crv3": {
+    "description": "NOAA/CIRES/DOE 20th Century Reanalysis V3 (WHOI mirror)",
+    "citation": null,
+    "license": null,
+    "acknowledgment": "Support for the Twentieth Century Reanalysis Project version 3 dataset is provided by the U.S. Department of Energy, Office of Science Biological and Environmental Research (BER), by the National Oceanic and Atmospheric Administration Climate Program Office, and by the NOAA Earth System Research Laboratory Physical Sciences Laboratory."
+  },
+  "era5": {
+    "description": "ECMWF ERA5 reanalysis (WHOI holdings; single and pressure levels)",
+    "citation": "Hersbach, H. et al. (2020) The ERA5 global reanalysis. Q. J. R. Meteorol. Soc. 146, 1999-2049, doi:10.1002/qj.3803. Datasets: ERA5 hourly data on single levels (doi:10.24381/cds.adbb2d47) and pressure levels (doi:10.24381/cds.bd0915c6); ERA5 monthly averaged data on single levels (doi:10.24381/cds.f17050d7) and pressure levels (doi:10.24381/cds.6860a573).",
+    "license": "Licence to use Copernicus Products (Copernicus Climate Change Service)",
+    "acknowledgment": "Contains modified Copernicus Climate Change Service information. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains."
+  },
+  "glorys12v1": {
+    "description": "Mercator GLORYS12V1 global ocean reanalysis, daily means, 1/12 deg (CMEMS GLOBAL_MULTIYEAR_PHY_001_030)",
+    "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics Reanalysis, doi:10.48670/moi-00021. Lellouche, J.-M. et al. (2021) Front. Earth Sci. 9:698876, doi:10.3389/feart.2021.698876.",
+    "license": "Copernicus Marine Service licence (service commitments and licence)",
+    "acknowledgment": null
+  },
+  "glorys12v1_monthly": {
+    "description": "Mercator GLORYS12V1 global ocean reanalysis, monthly means, 1/12 deg (CMEMS GLOBAL_REANALYSIS_PHY_001_030)",
+    "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics Reanalysis, doi:10.48670/moi-00021.",
+    "license": "Copernicus Marine Service licence (service commitments and licence)",
+    "acknowledgment": null
+  },
+  "glorys12v1_statics": {
+    "description": "GLORYS12V1 static fields (coordinates, mask and bathymetry, mean dynamic topography)",
+    "citation": "E.U. Copernicus Marine Service Information (CMEMS), doi:10.48670/moi-00021.",
+    "license": "Copernicus Marine Service licence (service commitments and licence)",
+    "acknowledgment": null
+  },
+  "grep_daily": {
+    "description": "CMEMS Global Reanalysis Ensemble Product (GREP v2), daily, 1/4 deg; four members (CGLORS, FOAM, GLORYS2V4, ORAS5) in each file (GLOBAL_REANALYSIS_PHY_001_031)",
+    "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Ensemble Physics Reanalysis, doi:10.48670/moi-00024.",
+    "license": "Copernicus Marine Service licence (service commitments and licence)",
+    "acknowledgment": null
+  },
+  "grep_monthly": {
+    "description": "CMEMS Global Reanalysis Ensemble Product (GREP v2), monthly, 1/4 deg (GLOBAL_REANALYSIS_PHY_001_031; stored under ORAS5/)",
+    "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Ensemble Physics Reanalysis, doi:10.48670/moi-00024.",
+    "license": "Copernicus Marine Service licence (service commitments and licence)",
+    "acknowledgment": null
+  },
+  "bran2020": {
+    "description": "Bluelink ReANalysis BRAN2020 (CSIRO / Bureau of Meteorology), 1/10 deg, daily (north and south halves) and monthly",
+    "citation": "Chamberlain, M. A. et al. (2021) Next generation of Bluelink ocean reanalysis with multiscale data assimilation: BRAN2020. Earth Syst. Sci. Data 13, 5663-5688, doi:10.5194/essd-13-5663-2021.",
+    "license": null,
+    "acknowledgment": null
+  },
+  "soda3122": {
+    "description": "Simple Ocean Data Assimilation SODA3.12.2, 5-day and monthly, regridded (reg) and native (or) grids",
+    "citation": "Carton, J. A., Chepurin, G. A. and Chen, L. (2018) SODA3: A new ocean climate reanalysis. J. Climate 31, 6967-6983, doi:10.1175/JCLI-D-18-0149.1.",
+    "license": null,
+    "acknowledgment": null
+  },
+  "hycom_gofs30": {
+    "description": "HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots, regional subset",
+    "citation": null,
+    "license": null,
+    "acknowledgment": null
+  },
+  "hycom_gofs31": {
+    "description": "HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH",
+    "citation": null,
+    "license": null,
+    "acknowledgment": null
+  },
+  "eccov5": {
+    "description": "ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles",
+    "citation": null,
+    "license": null,
+    "acknowledgment": null
+  },
+  "prism": {
+    "description": "PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)",
+    "citation": "PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.",
+    "license": null,
+    "acknowledgment": null
+  }
+}

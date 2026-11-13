@@ -79,6 +79,8 @@ def test_scan_all(tree, tmp_path):
     assert good["size_bytes"] == 1000
     assert good["nlink"] == 2
     assert good["top_dir"] == "CMIP"
+    st = (tree / DRS_DIR / FN).stat()
+    assert (good["uid"], good["gid"]) == (st.st_uid, st.st_gid)
 
     (hl,) = _rows(df, "hl_" + FN)
     assert hl["inode"] == good["inode"] and hl["dev"] == good["dev"]

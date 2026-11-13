@@ -13,11 +13,16 @@ Daily successors are checked against the standard, noleap, all_leap and
 as contiguous, since the calendar isn't known without opening the file.
 
 Fixed fields (no time range) and climatologies (``-clim``) are not checked.
+
+``header_gaps`` does the same from file headers (``ncinfo`` ``time_first`` /
+``time_last``) for products whose filenames carry no CMIP time range
+(ERA5, ocean reanalyses). It uses the same status vocabulary.
 """
 
 from __future__ import annotations
 
 import re
+import statistics
 from datetime import timedelta
 from itertools import pairwise
 
@@ -41,6 +46,8 @@ GAP_STATUSES = (
     "clim",
     "mixed_time_format",
     "bad_time_label",
+    "mixed_calendar",
+    "no_step",
 )
 
 ISSUES_SCHEMA = {
@@ -339,4 +346,204 @@ def core_gaps(holdings: pl.LazyFrame, core) -> pl.DataFrame:
             "present": pl.Boolean,
         },
         orient="row",
+    )
+
+
+# --- header-based gaps (ncinfo time axis) --------------------------------------
+
+HEADER_ISSUES_COLS = {
+    "kind": pl.String,
+    "prev_name": pl.String,
+    "next_name": pl.String,
+    "prev_end": pl.String,
+    "next_start": pl.String,
+    "delta_days": pl.Float64,
+    "step_days": pl.Float64,
+}
+_ISO = re.compile(r"^(-?\d+)-(\d\d)-(\d\d)(?:[T ](\d\d):(\d\d)(?::(\d\d))?)?")
+
+
+def _cf_date(iso: str, calendar: str | None):
+    """cftime datetime from an ``isoformat()`` string, or None."""
+    import cftime
+
+    m = _ISO.match(iso or "")
+    if m is None:
+        return None
+    y, mo, d, hh, mm, ss = (int(x) if x else 0 for x in m.groups())
+    try:
+        return cftime.datetime(y, mo, d, hh, mm, ss, calendar=calendar or "standard")
+    except ValueError:
+        return None
+
+
+def dataset_dir_expr(col: str = "rel_path") -> pl.Expr:
+    """Directory of ``col`` with year-only path components (``1993``) replaced
+    by ``*``, so a product split into year dirs is one dataset."""
+    return (
+        pl.when(pl.col(col).str.contains("/"))
+        .then(pl.col(col).str.replace(r"/[^/]*$", ""))
+        .otherwise(pl.lit("."))
+        # twice: adjacent year dirs share a "/", so one pass misses every other
+        .str.replace_all(r"(^|/)\d{4}(/|$)", "${1}*${2}")
+        .str.replace_all(r"(^|/)\d{4}(/|$)", "${1}*${2}")
+    )
+
+
+def _days(td) -> float:
+    return td.total_seconds() / 86400
+
+
+def header_gaps(
+    ncinfo: pl.LazyFrame | pl.DataFrame,
+    group_cols: list[str],
+    tolerance: float = 0.5,
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Gaps and overlaps from header time axes. Returns (datasets, issues).
+
+    ``ncinfo`` needs ``rel_path``, ``nc_status``, ``n_time``, ``time_first``,
+    ``time_last``, ``time_calendar``, ``time_step_days`` and the scalar
+    ``group_cols`` (e.g. ``dir`` from ``dataset_dir_expr`` and ``vars``,
+    ``data_vars`` joined). Only ``nc_status == ok`` files are used.
+
+    Files in a group are sorted by ``time_first``. The expected step is the
+    median within-file step; if every file holds one step, the most common
+    spacing of consecutive file starts (ties: the smallest). Between consecutive files ``delta =
+    next_first - prev_last``: same span as the previous file is
+    ``duplicate``, ``delta < (1 - tolerance) * step`` is ``overlap``,
+    ``delta > (1 + tolerance) * step`` is ``gap``. The tolerance absorbs
+    month lengths (28-31 days). Dates are compared in the group's calendar;
+    a group with more than one calendar is ``mixed_calendar`` (the calendar
+    check; ``gregorian``/``standard`` and, from 1583, ``proleptic_gregorian``
+    count as one). Files without a time axis make a ``fixed`` group.
+    """
+    lf = ncinfo.lazy() if isinstance(ncinfo, pl.DataFrame) else ncinfo
+    files = (
+        lf.filter(pl.col("nc_status") == "ok")
+        .with_columns(name=pl.col("rel_path").str.extract(r"([^/]+)$"))
+        .select(
+            *group_cols,
+            "name",
+            "n_time",
+            "time_first",
+            "time_last",
+            "time_calendar",
+            "time_step_days",
+        )
+        .sort(*group_cols, "time_first", "time_last", "name", nulls_last=False)
+        .collect()
+    )
+    ds_rows, issue_rows = [], []
+    for key, g in files.group_by(group_cols, maintain_order=True):
+        keyd = dict(zip(group_cols, key))
+        base = {
+            **keyd,
+            "n_files": g.height,
+            "time_start": None,
+            "time_end": None,
+            "calendar": None,
+            "step_days": None,
+            "n_gaps": 0,
+            "n_overlaps": 0,
+            "n_duplicates": 0,
+        }
+        firsts = g["time_first"].to_list()
+        if all(t is None for t in firsts):
+            ds_rows.append({**base, "gap_status": "fixed"})
+            continue
+        if any(t is None for t in firsts):
+            ds_rows.append({**base, "gap_status": "mixed_time_format"})
+            continue
+        base["time_start"] = min(firsts)
+        base["time_end"] = max(g["time_last"].to_list())
+        cals = {(c or "standard").lower() for c in g["time_calendar"].to_list()}
+        cals = {"standard" if c == "gregorian" else c for c in cals}
+        # proleptic_gregorian equals standard after the 1582 switch
+        if cals == {"standard", "proleptic_gregorian"} and min(firsts) >= "1583":
+            cals = {"standard"}
+        if len(cals) > 1:
+            base["calendar"] = ",".join(sorted(cals))
+            ds_rows.append({**base, "gap_status": "mixed_calendar"})
+            continue
+        cal = cals.pop()
+        base["calendar"] = cal
+        rows = [
+            (n, _cf_date(a, cal), _cf_date(b, cal))
+            for n, a, b in zip(g["name"], firsts, g["time_last"])
+        ]
+        if any(a is None or b is None for _, a, b in rows):
+            ds_rows.append({**base, "gap_status": "bad_time_label"})
+            continue
+        within = [s for s in g["time_step_days"].to_list() if s]
+        between = [
+            round(_days(b[1] - a[1]), 4) for a, b in pairwise(rows) if b[1] != a[1]
+        ]
+        if within:
+            step = statistics.median(within)
+        elif between:
+            # most common spacing (ties: the smallest), so a few big gaps
+            # don't set the step
+            step = min(statistics.multimode(between))
+        else:
+            step = None
+        base["step_days"] = step
+        if len(rows) == 1:
+            ds_rows.append({**base, "gap_status": "ok"})
+            continue
+        no_step = False
+        for (pn, pa, pb), (nn, na, nb) in pairwise(rows):
+            delta = _days(na - pb)
+            if (pa, pb) == (na, nb):
+                kind = "duplicate"
+            elif not step:
+                no_step = True
+                continue
+            elif delta < (1 - tolerance) * step:
+                kind = "overlap"
+            elif delta > (1 + tolerance) * step:
+                kind = "gap"
+            else:
+                continue
+            issue_rows.append(
+                {
+                    **keyd,
+                    "kind": kind,
+                    "prev_name": pn,
+                    "next_name": nn,
+                    "prev_end": pb.isoformat(),
+                    "next_start": na.isoformat(),
+                    "delta_days": delta,
+                    "step_days": step,
+                }
+            )
+            base[
+                {"gap": "n_gaps", "overlap": "n_overlaps"}.get(kind, "n_duplicates")
+            ] += 1
+        status = "no_step" if no_step else "ok"
+        for k, c in (("gap", "n_gaps"), ("overlap", "n_overlaps")):
+            if base[c]:
+                status = k
+                break
+        else:
+            if base["n_duplicates"]:
+                status = "duplicate"
+        ds_rows.append({**base, "gap_status": status})
+    key_schema = {c: files.schema[c] for c in group_cols}
+    ds_schema = {
+        **key_schema,
+        "n_files": pl.Int64,
+        "time_start": pl.String,
+        "time_end": pl.String,
+        "calendar": pl.String,
+        "step_days": pl.Float64,
+        "n_gaps": pl.Int64,
+        "n_overlaps": pl.Int64,
+        "n_duplicates": pl.Int64,
+        "gap_status": pl.String,
+    }
+    return (
+        pl.DataFrame(ds_rows, schema=ds_schema, orient="row"),
+        pl.DataFrame(
+            issue_rows, schema={**key_schema, **HEADER_ISSUES_COLS}, orient="row"
+        ),
     )

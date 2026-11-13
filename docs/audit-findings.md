@@ -208,6 +208,195 @@ Not yet looked at: whether any of the 106 gaps are false (the `julian` calendar,
 3,728 files, was not checked). Open: need ESGF to decide which overlapping file
 to keep and which gaps are upstream.
 
+## Non-CMIP6 holdings
+
+Trees under `/proj/cmip6/data` besides `cmip6/` and `reanalysis/20crv3`:
+`era5/`, `ocean_reanalysis/`, `cmems/`, `prism/`. Seen on the mounted store
+(`~/mnt/cmip6`, read-only) on 2026-11-13: directory listings, X1 scans and
+headers, and header reads of one or two files per product. The full
+inventory and health check (X2-X4) still have to run on HPC
+(`audit-runbook.md`, "Non-CMIP6 trees"); file counts below are from `ls`, not
+from a scan, unless marked X1. Decision (Brett, 2026-11-13): catalog in place,
+no moves; anything below that suggests a move is a **proposal**.
+
+### Classification (open, confirm with Brett)
+
+| Tree / dir | Class | What it is |
+|---|---|---|
+| `era5/reanalysis` | catalog (curated, `products/era5.yaml`) | ERA5 single and pressure levels, 1hr/3hr/6hr/daily/monthly |
+| `era5/quarantine_2022_20260807T140218` | decide | partial 2022 monthly means, replaced (below) |
+| `era5/download-scripts` | exclude | CDS download and merge scripts (provenance) |
+| `ocean_reanalysis/glorys12v1` | catalog | GLORYS12V1 daily means, 1993-2024 |
+| `cmems/GLOBAL_REANALYSIS_PHY_001_030` | catalog | GLORYS12V1 monthly means 1993-2024, plus statics |
+| `ocean_reanalysis/CMEMS_ENSAMBLE/daily` | catalog | GREP v2 daily (4 members per file), 1993-2011 |
+| `ocean_reanalysis/ORAS5/oras5/monthly/global-reanalysis-phy-001-031` | catalog | GREP v2 **monthly** 1993-2019 (not ORAS5) |
+| `ocean_reanalysis/ORAS5/oras5/monthly/oras5` | decide | ORAS5 as yearly `.tar.gz` archives (opa0-4), a few extracted `.nc` |
+| `ocean_reanalysis/bran2020` | catalog | BRAN2020 daily (north/south halves) and monthly |
+| `ocean_reanalysis/sodav3122` | catalog | SODA 3.12.2, 5-day and monthly, regridded and native |
+| `ocean_reanalysis/HYCOMvGOFS30`, `HYCOMvGOFS31` | catalog | HYCOM reanalysis daily snapshots, regional subset |
+| `ocean_reanalysis/ECCOv5` | catalog (decide: alpha) | ECCO v5 alpha, lat-lon and nctiles |
+| `ocean_reanalysis/cfsr932` | decide | CFSR (ds093.2) GRIB converted to `.grb2.nc`, `.gz`, wget scripts, `good/new/old` dirs |
+| `ocean_reanalysis/emu` | exclude | EMU (ECCO Modeling Utilities) install: software, container, inputs |
+| `ocean_reanalysis/NWA_downscaling` | exclude | empty |
+| `prism/netcdf` | catalog | PRISM monthly precipitation, decadal NetCDF 1895-2019 |
+| `prism/bil` | exclude (source) | the PRISM `.bil.zip` the NetCDF was made from |
+| `.DS_Store`, `._*` | exclude | macOS litter (in `data/`, `era5/`, `era5/reanalysis/*`, `ocean_reanalysis/`, `ORAS5/`) |
+
+Every `catalog` entry is in `manifests/catalogs.yaml`, **disabled** until its
+HPC check_nc run and `check_catalog.py` pass.
+
+### ERA5 quarantine: partial 2022 monthly means (resolved: reason; open: delete?)
+`era5/quarantine_2022_20260807T140218/single-levels/monthly-means/<var>/2022_<var>.nc`,
+28 files. Each holds 9 months (2022-01 to 2022-09, dim `time`), written
+2022-12-02/03 by `grib_to_netcdf` (old CDS). The live file at the same path
+under `era5/reanalysis` holds all 12 months (dim `valid_time`, new CDS,
+`cfgrib` history 2026-07-29), mtime 2026-08-07 18:03-18:11, uid 17588 (the
+quarantine dir's owner, created 14:02 the same day). Size and sha256 differ for
+all 28 (`runs/2026-11-13_X3/quarantine/compare.parquet`). The other 11
+monthly-means variables (wave fields) were not quarantined: their 2022 files
+were fetched complete on 2023-01-14. So: someone re-fetched incomplete 2022
+files and kept the old ones aside. Nothing in the quarantine is needed.
+Proposal: delete after the owner confirms. Not catalogued (outside the root).
+
+### ERA5 layout and format (open, affects users)
+- **Two time formats in one dataset.** Old-CDS files use dim `time`
+  (`gregorian`); new-CDS files (2022 monthly means, all 2023-2025 files) use
+  `valid_time` (`proleptic_gregorian`) plus `number` (scalar) and `expver`
+  (string) variables. A dataset spanning 2022 or 2023 has both, so
+  intake-esm's `join_existing` on `time` will fail for it (not yet run;
+  check on HPC). `ncinfo` finds either (`time_name`), and the header gap
+  check treats the calendars as one after 1582: X1 `monthly-means/2m_temperature`
+  is `ok`, 1979-01 to 2025-12, 47 files. Proposal: document a
+  `preprocess=lambda ds: ds.rename(valid_time="time")` for users; do not
+  rewrite files.
+- **Two grids.** Long-name dirs are 0.25 deg (1440 x 721), pressure levels 37.
+  Short-name dirs are 1 deg (360 x 181): `3hr/{T2m,mfd,olr,sp,tcw,uv10m,vert-int}`,
+  `pressure-levels/3hr/uvq` (37 levels), `pressure-levels/6hr/Z` (only 200,
+  500, 850 hPa); `mfd` is a regional subset (160 x 76). The manifest aliases
+  the single-variable ones to CDS names (T2m -> 2m_temperature, sp, olr ->
+  top_net_thermal_radiation (file holds `ttr`), mfd ->
+  vertically_integrated_moisture_divergence, Z -> geopotential) but gives them
+  level `sfc-1deg` / `plev-1deg` / `plev3-1deg`, so they are their own
+  datasets. Grouping them with the 0.25 deg data, as first planned, would mix
+  grids.
+- **Mixed file granularity.** `single-levels/1hr`: daily files 1979-2022,
+  yearly files 2023-2025 for 7 variables. `1hr/geopotential` has **both**
+  daily files for 2023-2025 (1,096) and yearly files for the same years
+  (duplicate). `6hr`: monthly files (single levels) and daily files
+  (pressure levels). `daily/surface_latent_heat_flux`: 2022-2023 only.
+- **Strays.** `monthly-means/evaporation/x.nc`: another partial (9-month)
+  2022 evaporation file, same size as the quarantined one but different bytes
+  (a second download); catalog invalid (matches no group). Proposal: move
+  to the quarantine with the others. `*.nc.lck` lock files from 2023-01-14
+  (e.g. `2023_2m_temperature.nc.lck`): not `.nc`, not crawled.
+- Coverage ends differ by variable: 1hr to 2022-12-31 or 2025, 6hr pressure
+  levels to 2022-10-31, wave variables 2015-2022-10, 3hr 1 deg to 2021-03/05/08.
+
+### Ocean products (open)
+- **GLORYS12V1 monthly: duplicate `_(1).nc` files.** 2019-2021 each have 24
+  files: `mercatorglorys12v1_gl12_mean_YYYYMM.nc` and `..._(1).nc`. Two pairs
+  compared with `cmp` (2019-01, 2019-06): byte-identical, 1.29 GB each; the
+  `(1)` copies are older (2023-11-19 vs 2024-01-22). Likely all 36 pairs
+  (~46 GB). Proposal: quarantine the `(1)` copies after a full checksum pass
+  on HPC. 2024 has only January.
+- **GLORYS12V1 daily: naming and product change.** 1993-2019
+  `mercatorglorys12v1_gl12_mean_YYYYMMDD_RYYYYMMDD.nc`; from 2020
+  `cmems_mod_glo_phy_my_0.083deg_P1D-m_..._YYYY-MM-DD.nc`, and from mid-2021
+  `cmems_mod_glo_phy_myint_...` (interim product, 184 of 2021's files). Check
+  on HPC that variables and units match across the change; record the
+  my/myint switch on the site. 2024: 359 days.
+- **GLORYS daily vs monthly** are different products (daily means vs monthly
+  means of GLOBAL_(MULTIYEAR|REANALYSIS)_PHY_001_030), same grid and
+  variables; both catalogued. Not duplicates.
+- **"ORAS5" dir holds GREP monthly.** `ORAS5/oras5/monthly/global-reanalysis-phy-001-031`
+  is GREP v2 monthly (27 files 1993-2019), catalogued as `grep_monthly`. Real
+  ORAS5 is under `oras5/{ORCA025,r1x1}/<var>/opa0-4/` as yearly `.tar.gz`
+  archives, with a few extracted `.nc` (e.g. `votemper/opa0`,
+  `sossheig/opa0`, `r1x1/sosaline/opa0`); some member dirs are short
+  (`vozocrte/opa2`: 3 archives, `ORCA025/vomecrtn` has no `opa0`). Decide:
+  extract (where?) or leave as archives and list on the site without a
+  catalog.
+- **BRAN2020.** Variables are one file each (`eta_t`, `salt`, `temp`, `u`,
+  `v`); daily files come in `north`/`south` halves (rules set `level`).
+  Daily year dirs are uneven: 1998 has 2,325 files (to day 258), 2000 has 765
+  (to day 85) of a normal 3,285. Time is `ocean_time` (no `axis`/
+  `standard_name`; `ncinfo` finds it by units). `lat` units are
+  `"tcell latitude"` (not CF).
+- **HYCOM.** GOFS 3.0 (`GLBu0.08` expts 190/191, 1992-2012) and 3.1
+  (`GLBv0.08_53x`, 1994-2015). The 3.1 files seen are a NW Atlantic subset
+  (30-60N, 85.04-40W), not global; 3.1 also has `hycom_bottomtempsaltssh_*`
+  files (NETCDF3) beside the 3-D files, and `global/` and `analysis/` dirs
+  (not inspected). Strays: `index.html` (GOFS30/1995), `wget-log`
+  (GOFS31/1994, 2006), a `1992/` dir inside `GOFS30/1999/`. Snapshots, not
+  means (`field_type: instantaneous`).
+- **SODA 3.12.2.** `gridded/` (regridded `_reg_`, 2,774 5-day files + 38
+  monthly) and `original/` (native `_or_`, 2,774 5-day). The monthly file
+  for 2017 runs 2017-01-16 to 2017-12-12 with a 30-day median step; check
+  the calendar of the monthly series on HPC.
+- **GREP daily** holds 4 members x 6 variables per file (`*_cglo`, `*_foam`,
+  `*_glor`, `*_oras`), so its `variable_id` is long; 1993-01-01 to 2011-06-01
+  (5,723 files).
+- **cfsr932**: CFSR (NCAR RDA ds093.2) converted from GRIB with `.grb2.nc`
+  names, some still `.gz`, `pgbhnl` atmospheric files in `air_temp/`,
+  `ocean_var_monthly/{good,new,old}`, `global/` holds only wget scripts.
+  Decide what (if anything) is the product before cataloguing.
+
+### PRISM (report-only)
+`prism/netcdf/monthly`: 13 decadal files, `ppt_monthly_1895-1899.nc` to
+`..._2010-2019.nc` (X1: counts and bytes equal `ls -l`, all `ok`). No time
+coordinate: dims `t, y, x` with `year(t)` and `month(t)`, `latitude(y)`,
+`longitude(x)`, so the header gap check reports `fixed` and the catalog takes
+`frequency: mon` from a rule. The global attrs name a WHOI contact and the
+converter (`aekholm-utils`). `prism/bil/monthly/ppt/<year>/`: 125 year dirs
+(1895-2019), the same span as the NetCDF: `stable_4kmM2` annual zips for the
+early years, `provisional_4kmM3` monthly zips for 2019. So the NetCDF mixes
+PRISM versions (M2 stable, M3 provisional); the catalog uses the default
+version `1` until that is sorted out.
+
+### Owners (open, for Brett)
+uids of the directories (`ls -la`, numeric; names not resolved here):
+`era5/` 12795 (also `cmems/`, `prism/`, single-levels data), `era5/reanalysis`
+and the quarantine 17588, `pressure-levels` and `download-scripts` 15795,
+`ocean_reanalysis/` and `glorys12v1`, `NWA_downscaling` 13493,
+`CMEMS_ENSAMBLE`, HYCOM, `sodav3122` 100747, `ECCOv5`, `ORAS5`, `bran2020`,
+`cfsr932` 16165, `emu` 16360. The X4 scan has per-file `uid`/`gid`
+(`summarize_other.py` writes `owners.parquet`). Draft questions for Brett to
+send (not sent):
+
+1. (uid 17588) The 2022 ERA5 monthly means in `era5/quarantine_2022_20260807T140218`
+   are the 9-month files you replaced on 2026-08-07. OK to delete them? Is
+   `monthly-means/evaporation/x.nc` the same kind of leftover?
+2. (ERA5 owners) The 1 deg short-name dirs (`3hr/*`, `pressure-levels/6hr/Z`,
+   `3hr/uvq`): where and how were they made (CDS grid option, or regridded
+   here)? Is `mfd`'s region intentional? Are `1hr/geopotential` daily files
+   for 2023-2025 still needed beside the yearly ones?
+3. (uid 16165) ORAS5: should the `.tar.gz` archives be extracted for users,
+   and where? Are the short `opa*` member dirs incomplete downloads?
+4. (uid 16165) cfsr932: which files are the product (`ocean_var_monthly/good`
+   vs `new`/`old`), and can the `.gz` and wget scripts go?
+5. (uid 13493 / 100747) GLORYS monthly `_(1).nc` copies: OK to remove after a
+   checksum check? HYCOM: is the NW Atlantic subset the whole holding?
+6. (uid 16165) BRAN2020 1998 and 2000 daily: stopped downloads or intentional?
+7. (uid 16360) `emu`: leave as an install under `ocean_reanalysis`, or move
+   out of the data tree (proposal)?
+8. Licence and citation for each product (drafts in `manifests/catalogs.yaml`,
+   marked FILL IN / CONFIRM).
+
+### Tooling (resolved / open)
+- **`columns_with_iterables` does not work** (resolved by not using it):
+  intake-esm 2025.7.9 with polars 2.1 fails to open a catalog given
+  `columns_with_iterables` (`json_decode() missing ... 'dtype'`, seen in
+  `check_catalog`). Generic catalogs store multi-variable `variable_id` as a
+  comma-joined string; `cat.search(variable_id=...)` needs the exact string.
+  Revisit when intake-esm is fixed.
+- `ncinfo.py`: `data_vars`, `time_name`, `time_step_days` and generic global
+  attrs (`title`, `source`, `institution`, `product`, `dataset`,
+  `references`, `citation`, `licence`, `history` cut to 500 chars). Time is
+  `time`, else `valid_time`, else a dimension coordinate with `axis=T`,
+  `standard_name=time` or `<unit> since` units.
+- A stat-only scan of `ocean_reanalysis/emu` over the SMB mount did not
+  finish in about 30 minutes (>100k entries). Scan non-CMIP trees on HPC.
+
 ## Level log
 
 | Level | Scope | Files | `nc_status` | Notes |
@@ -218,3 +407,5 @@ to keep and which gaps are upstream.
 | L4 scan | `CMIP6` root, 41-43 shards | 732,134 `.nc` | see below | 763,175 entries, 162 TB, 31,072 datasets; 729,910 `ok`, 2,216 `bad_filename`, 8 `path_filename_mismatch`; +651 `.nc` vs 2022 list (660 only in scan, 9 only in list) |
 | L4 check_nc | same | 732,134 `.nc` | 717,672 ok, 14,462 empty | 7 `attr_mismatch`; calendars incl. `julian` (3,728) and `360_day` (12,869); gaps (filename-only): 27,546 ok, 3,137 fixed, 370 overlap, 106 gap |
 | L4 catalog | full `build_catalog.sbatch` | 715,452 files, 31,031 datasets, 161.3 TB | n/a | 16,682 invalid (14,458 excluded as empty, 2,216 `bad_filename`, 8 `path_filename_mismatch`; sum 732,134); crawl 306-415 s on 8 cpus; `whoi_20crv3` 10 datasets; all `check_catalog` checks pass with synchronous dask and `use_cftime=True` |
+| X1 | `prism/netcdf/monthly`; `era5/.../monthly-means/2m_temperature` (laptop, mount) | 13 + 47 `.nc` | all ok (`--deep`) | counts and bytes equal `ls -l` (5,235,175,036 B; 693,964,995 B incl. 1 `.lck`); 1.5 and 0.8 files/s over SMB; ERA5 header gaps `ok` 1979-01 to 2025-12 across `time`/`valid_time`; PRISM `fixed` (no time axis) |
+| X3 (partial) | `era5/{quarantine_*,download-scripts,_root_files}` stat scans; quarantine headers + sha256 | 28 `.nc` (quarantine) | ok | quarantine reason found (above); `ocean_reanalysis/emu` scan >100k entries, unfinished on the laptop; rest of X3, X2, X4 to run on HPC |

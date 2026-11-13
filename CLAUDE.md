@@ -57,6 +57,9 @@ Maintainer: Brett Longworth.
 uv sync --all-groups
 uv run ruff check && uv run ruff format --check && uv run pytest
 L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
-uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data
+# non-CMIP6 products (era5, glorys12v1, bran2020, ...; docs/audit-runbook.md
+# "Non-CMIP6 trees"): add --catalog $L/whoi_<output>.csv for each one enabled
+# in manifests/catalogs.yaml
 uv run quarto render site
 ```

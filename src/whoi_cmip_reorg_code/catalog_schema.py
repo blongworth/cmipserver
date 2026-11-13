@@ -9,6 +9,12 @@ CMIP6 facet names come from ``drs.DRS_DIR_FACETS``. Reanalysis rows use
 are null for them, and vice versa. ``level`` (e.g. ``2m``, ``sfc``, ``prs``)
 separates reanalysis datasets that reuse one variable name at several levels
 (20CRv3 ``air``); ``variable_id`` stays the native NetCDF variable name.
+
+Generic (non-CMIP) products use the same reanalysis facets under their own
+``collection`` (``ocean_reanalysis``, ``observations``). Their files often
+hold several variables, so ``variable_id`` is the names joined with ``,``
+(``thetao,so,zos``) and the id joins them with ``-``. ``level`` may be null
+there.
 """
 
 from __future__ import annotations
@@ -17,7 +23,7 @@ import polars as pl
 
 from whoi_cmip_reorg_code import drs
 
-COLLECTIONS = ("cmip6", "reanalysis")
+COLLECTIONS = ("cmip6", "reanalysis", "ocean_reanalysis", "observations")
 
 # DRS directory facets except version (version is common to all collections).
 CMIP6_FACETS = drs.DRS_DIR_FACETS[:-1]
@@ -39,16 +45,33 @@ CATALOG_SCHEMA = {
 DATASET_KEYS = ["collection", *FACETS, "version"]
 
 
+def variable_token_expr() -> pl.Expr:
+    """``variable_id`` as one id token: ``thetao,so`` becomes ``thetao-so``;
+    characters outside ``[A-Za-z0-9_-]`` (ERA5 ``p84.162``) become ``_``.
+    Plain names are unchanged."""
+    return (
+        pl.col("variable_id")
+        .str.replace_all(",", "-")
+        .str.replace_all(r"[^A-Za-z0-9_-]", "_")
+    )
+
+
 def master_id_expr() -> pl.Expr:
     """ESGF-style unversioned dataset id (ESGF ``master_id``), e.g.
-    ``CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn`` or
-    ``reanalysis.20crv3.3hr.2m.air``."""
+    ``CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn``,
+    ``reanalysis.20crv3.3hr.2m.air`` or
+    ``ocean_reanalysis.bran2020.mon.eta_t`` (null ``level`` left out)."""
     cmip6 = pl.concat_str(
         [pl.lit("CMIP6"), *(pl.col(f) for f in CMIP6_FACETS)], separator="."
     )
     rean = pl.concat_str(
-        [pl.lit("reanalysis"), *(pl.col(f) for f in REANALYSIS_FACETS)],
+        [
+            pl.col("collection"),
+            *(pl.col(f) for f in REANALYSIS_FACETS[:-1]),
+            variable_token_expr(),
+        ],
         separator=".",
+        ignore_nulls=True,
     )
     return (
         pl.when(pl.col("collection") == "cmip6")

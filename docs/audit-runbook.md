@@ -262,6 +262,73 @@ can't, ask whether there is a transfer partition (`sinfo -s`).
   moves are `link` + `unlink`), outside `/proj/cmip6/data`. The download
   scripts refuse a staging root inside or above `/proj/cmip6/data`.
 
+## Non-CMIP6 trees
+
+`/proj/cmip6/data/{era5,ocean_reanalysis,cmems,prism}`: inventoried, audited
+and catalogued **in place** (no moves; reorg ideas go to `audit-findings.md`
+as proposals). Results: `audit-findings.md`, "Non-CMIP6 holdings". Never scan
+with a root above one tree (`data/cmip6` must not be walked again).
+
+Ladder (outputs in `runs/<date>_X<level>/`):
+
+| Level | Target | Gate |
+|---|---|---|
+| X1 | `prism/netcdf/monthly`, `era5/reanalysis/single-levels/monthly-means/2m_temperature` | counts and bytes equal `ls -l`; ncinfo matches the header |
+| X2 | `ocean_reanalysis/bran2020` as one Slurm task | record files/s and RSS; extrapolate |
+| X3 | odd shards: `emu`, `cfsr932`, `ECCOv5`, `ORAS5`, `era5/quarantine_*`, `era5/download-scripts`, `prism/bil` | no new error classes |
+| X4 | all four trees, Slurm arrays | — |
+
+```bash
+D=/proj/cmip6/data; R=runs/$(date +%F)_X4; mkdir -p $R
+for T in era5 ocean_reanalysis cmems prism; do
+  uv run scripts/scan_holdings.py --root $D/$T --list-shards; done
+# era5: split so shards are products; split further if one is slow
+uv run scripts/scan_holdings.py --root $D/era5 --list-shards \
+    --split reanalysis --split reanalysis/single-levels --split reanalysis/pressure-levels
+
+# 1. scan (stat only): one scan dir per tree
+uv run scripts/scan_holdings.py --root $D/prism --out $R/scan_prism --shard netcdf/monthly
+#    arrays: slurm/scan_holdings.sbatch with ROOT=$D/<tree>, OUT=$R/scan_<tree>
+#    (and SPLIT="reanalysis:reanalysis/single-levels:reanalysis/pressure-levels" for era5)
+
+# 2. inventory per product (tree/first --depth dirs), duplicates, owners
+uv run scripts/summarize_other.py --scan $R/scan_era5 --scan $R/scan_ocean_reanalysis \
+    --scan $R/scan_cmems --scan $R/scan_prism --depth era5=3 --out $R/inventory
+
+# 3. headers (read-only opens): data_vars, time axis, generic attrs
+uv run scripts/check_nc.py --scan $R/scan_<tree> --out $R/ncinfo_<tree> --shard <tag> [--deep]
+#    arrays: slurm/check_nc.sbatch with SCAN=$R/scan_<tree>
+
+# 4. gaps from headers (dataset = dir with year dirs folded to *, + data_vars)
+uv run scripts/find_gaps.py --ncinfo $R/ncinfo_<tree> --out $R/gaps_<tree>
+
+# 5. catalogs: enable the product in manifests/catalogs.yaml, then
+uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product bran2020 \
+    --ncinfo $R/ncinfo_ocean_reanalysis --out catalog/next
+uv run scripts/check_catalog.py --catalog catalog/next/whoi_bran2020.json
+uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product era5 --out catalog/next
+```
+
+- Generic products (`builder: generic`) open nothing at build time: they join
+  the crawl to the ncinfo parquet **by absolute path**, so scan, `check_nc`
+  and build must use the same mount prefix (`/proj/cmip6` on HPC, not
+  `~/mnt/cmip6`). A file with no ncinfo row is invalid
+  (`no ncinfo row: run check_nc`), so new files appear after the next
+  `check_nc.py` run.
+- Invariant per product: catalog rows + `<output>_invalid.parquet` rows =
+  `.nc` files under the product root.
+- `frequency`/`level` come from `rules` in `catalogs.yaml` (each facet from
+  the first matching rule that sets it), else from the time step in the
+  headers (`unknown` for one single-step file, `fx` with no time axis).
+- `variable_id` of a generic file is its data variables joined with `,`
+  (`thetao,so,zos`). Open these catalogs with the synchronous dask scheduler
+  and `use_cftime=True`, like the CMIP6 one.
+- ERA5 is curated (`manifests/products/era5.yaml`, catalog-only: no
+  `source`, `{date:%Y-%m-%d}` file patterns, short-name aliases). It runs
+  from paths alone, without `--ncinfo`.
+- Run locally against the mount only for X1-sized pilots: a stat scan of
+  `ocean_reanalysis/emu` over SMB did not finish in 30 min (>100k entries).
+
 ## Placeholders to confirm
 
 - DRS root: `/proj/cmip6/data/cmip6` (data lives in `/proj/cmip6/data/`;

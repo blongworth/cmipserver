@@ -6,7 +6,8 @@
   executable once ``approved_by`` and ``approved_on`` are filled in by hand.
 - ``catalogs.yaml``: products to catalog (hand-written).
 - ``products/<product>.yaml``: a reanalysis product to add: source, groups of
-  files, variables, years (hand-written).
+  files, variables, years (hand-written). Products already on disk with no
+  fetch (ERA5) leave out ``source`` and may use ``{date:...}`` file names.
 - ``fetch/<date>-<product>.yaml``: files to download for a product (generated
   by ``plan_product.py``; only files missing from the store).
 
@@ -208,12 +209,23 @@ class MoveManifest(_Strict):
 
 # Facet values go into dot-separated master_ids and directory names.
 _TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
-_FILE_FIELDS = {"variable", "year"}
+_FILE_FIELDS = {"variable", "year", "date"}
 _PATH_FIELDS = {"remote_dir", "file", "variable", "year", "frequency", "level"}
+# strftime directives allowed in {date:...}, and the digits each matches.
+DATE_DIRECTIVES = {"%Y": r"\d{4}", "%m": r"\d{2}", "%d": r"\d{2}", "%H": r"\d{2}"}
+_DATE_SPEC = re.compile(r"^(?:%[YmdH]|[-_.T]|)+$")
 
 
 def _fields(template: str) -> set[str]:
     return {f for _, f, _, _ in string.Formatter().parse(template) if f is not None}
+
+
+def date_spec(template: str) -> str | None:
+    """The format spec of ``{date:...}`` in ``template``, or None."""
+    for _, f, spec, _ in string.Formatter().parse(template):
+        if f == "date":
+            return spec
+    return None
 
 
 def _token(v: str) -> str:
@@ -247,9 +259,14 @@ class ProductGroup(_Strict):
     remote_dir: str
     frequency: str
     level: str
-    # File name with {variable} and optionally {year} (one file per year).
+    # File name with {variable} and optionally {year} (one file per year) or
+    # {date:<strftime>} (one file per day/month, e.g. {date:%Y-%m-%d}; only
+    # for local products without a source: such groups are not expanded).
     file_pattern: str
     variables: list[str]
+    # On-disk token -> catalog variable_id (e.g. T2m: 2m_temperature). Files
+    # keep their names; only the catalog uses the alias.
+    aliases: dict[str, str] = Field(default_factory=dict)
     # [first, last], inclusive. Overrides the product's years.
     years: tuple[int, int] | None = None
     # Local path under reanalysis/<product>/. Default mirrors the remote:
@@ -286,7 +303,30 @@ class ProductGroup(_Strict):
             )
         if "/" in v:
             raise ValueError(f"file_pattern is a file name, not a path: {v!r}")
+        if {"year", "date"} <= f:
+            raise ValueError(f"file_pattern has both {{year}} and {{date}}: {v!r}")
+        spec = date_spec(v)
+        if "date" in f and (not spec or not _DATE_SPEC.match(spec)):
+            raise ValueError(
+                f"{{date:...}} needs a spec of {sorted(DATE_DIRECTIVES)} and -_.T: {v!r}"
+            )
         return v
+
+    @model_validator(mode="after")
+    def _aliases(self) -> ProductGroup:
+        bad = set(self.aliases) - set(self.variables)
+        if bad:
+            raise ValueError(f"aliases for unknown variables {sorted(bad)}")
+        for a in self.aliases.values():
+            _token(a)
+        return self
+
+    @property
+    def dated(self) -> bool:
+        return "date" in _fields(self.file_pattern)
+
+    def variable_id(self, token: str) -> str:
+        return self.aliases.get(token, token)
 
     @field_validator("path_template")
     @classmethod
@@ -313,7 +353,10 @@ class ProductManifest(_Strict):
     citation: str | None = None
     # Text the provider asks users to put in their acknowledgments.
     acknowledgment: str | None = None
-    source: Source
+    # Data licence / terms of use, shown on the site.
+    license: str | None = None
+    # None: already on disk, catalog only (plan_product refuses it).
+    source: Source | None = None
     years: tuple[int, int] | None = None
     groups: list[ProductGroup]
 
@@ -327,6 +370,10 @@ class ProductManifest(_Strict):
         if not self.groups:
             raise ValueError("at least one group")
         for g in self.groups:
+            if g.dated and self.source is not None:
+                raise ValueError(
+                    f"{g.remote_dir}: {{date}} groups are catalog-only (no source)"
+                )
             yrs = g.years or self.years
             if g.yearly and yrs is None:
                 raise ValueError(f"{g.remote_dir}: {{year}} in file_pattern, no years")
@@ -338,6 +385,7 @@ class ProductManifest(_Strict):
             raise ValueError(f"several files map to the same path: {sorted(dup)[:5]}")
         # One dataset (frequency, level, variable) may come from several groups
         # (e.g. two eras in two dirs), but never with the same year twice.
+        # {date} groups are not expanded, so not checked here.
         seen: dict[tuple, set] = {}
         for r in rows:
             key = (r["frequency"], r["level"], r["variable_id"])
@@ -355,9 +403,13 @@ class ProductManifest(_Strict):
 
     def expand(self) -> list[dict]:
         """One row per file. ``rel_path`` is relative to the store root
-        (``reanalysis/<product>/...``); ``remote_path`` to ``base_url``."""
+        (``reanalysis/<product>/...``); ``remote_path`` to ``base_url``
+        (``url`` is None without a source). ``{date}`` groups are skipped."""
         out = []
+        base_url = self.source.base_url if self.source else None
         for g in self.groups:
+            if g.dated:
+                continue
             units = g.expect.units if g.expect else {}
             for var, year in itertools.product(g.variables, self.group_years(g)):
                 fields = {"variable": var, "year": year}
@@ -372,13 +424,13 @@ class ProductManifest(_Strict):
                 remote = f"{g.remote_dir}/{fname}"
                 out.append(
                     {
-                        "url": self.source.base_url + remote,
+                        "url": base_url and base_url + remote,
                         "remote_path": remote,
                         "rel_path": _check_rel(f"reanalysis/{self.product}/{local}"),
                         "product": self.product,
                         "frequency": g.frequency,
                         "level": g.level,
-                        "variable_id": var,
+                        "variable_id": g.variable_id(var),
                         "year": year,
                         "expect_units": units.get(var),
                     }
@@ -430,20 +482,58 @@ class FetchManifest(_Strict):
 # --- catalogs.yaml -----------------------------------------------------------
 
 
+Collection = Literal["cmip6", "reanalysis", "ocean_reanalysis", "observations"]
+
+
+class PathRule(_Strict):
+    """Generic builder: facets for files whose path (relative to the product
+    root) matches the regex ``match`` (``re.search``). Each facet comes from
+    the first matching rule that sets it."""
+
+    match: str
+    frequency: str | None = None
+    level: str | None = None
+
+    @field_validator("match")
+    @classmethod
+    def _regex(cls, v: str) -> str:
+        re.compile(v)
+        return v
+
+    @field_validator("frequency", "level")
+    @classmethod
+    def _tok(cls, v: str | None) -> str | None:
+        return v if v is None else _token(v)
+
+
 class Product(_Strict):
     name: str
     root: str
-    builder: Literal["cmip6", "reanalysis"]
+    builder: Literal["cmip6", "reanalysis", "generic"]
     # reanalysis: the product manifest, relative to the catalogs.yaml directory
     spec: str | None = None
     output: str
     enabled: bool = True
     description: str | None = None
+    # Default: the builder's own (cmip6 / reanalysis). Required for generic.
+    collection: Collection | None = None
+    # generic only: facet rules, version label, globs never catalogued.
+    rules: list[PathRule] = Field(default_factory=list)
+    version: str | None = None
+    exclude_patterns: list[str] = Field(default_factory=list)
+    # Shown on the site's dataset page (reanalysis: also in the product spec).
+    citation: str | None = None
+    license: str | None = None
 
     @field_validator("root")
     @classmethod
     def _abs(cls, v: str) -> str:
         return _check_abs(v)
+
+    @field_validator("name", "version")
+    @classmethod
+    def _tok(cls, v: str | None) -> str | None:
+        return v if v is None else _token(v)
 
     @model_validator(mode="after")
     def _spec(self) -> Product:
@@ -451,7 +541,17 @@ class Product(_Strict):
             raise ValueError(
                 f"{self.name}: spec is required for, and only for, reanalysis"
             )
+        if self.builder == "generic" and self.collection is None:
+            raise ValueError(f"{self.name}: generic products need a collection")
+        if self.builder != "generic" and (self.rules or self.version):
+            raise ValueError(f"{self.name}: rules and version are for generic only")
+        if self.builder == "cmip6" and self.collection not in (None, "cmip6"):
+            raise ValueError(f"{self.name}: cmip6 builder is collection cmip6")
         return self
+
+    @property
+    def catalog_collection(self) -> str:
+        return self.collection or ("cmip6" if self.builder == "cmip6" else "reanalysis")
 
 
 class CatalogsManifest(_Strict):
@@ -463,6 +563,16 @@ class CatalogsManifest(_Strict):
         names = [p.name for p in self.products]
         if len(names) != len(set(names)):
             raise ValueError("duplicate product names")
+        outs = [p.output for p in self.products]
+        if len(outs) != len(set(outs)):
+            raise ValueError("duplicate outputs")
+        # Two enabled products over one tree would catalog files twice.
+        roots = sorted(
+            (p.root.rstrip("/") + "/", p.name) for p in self.products if p.enabled
+        )
+        for (a, na), (b, nb) in itertools.pairwise(roots):
+            if b.startswith(a):
+                raise ValueError(f"roots overlap: {na} ({a}) contains {nb} ({b})")
         return self
 
 
