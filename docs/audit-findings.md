@@ -44,14 +44,42 @@ dataset. `python -X faulthandler` put the crash inside dask's thread pool:
 `intake_esm _delayed_open_ds` -> `xarray.open_dataset` ->
 `netCDF4_.open_store_variable`, several threads at once. Opening a single file
 with xarray (plain, with dask chunks, and with the synchronous scheduler) works.
-Inference, not tested on a multi-file dataset with the synchronous scheduler
-on hydra: this netCDF4/HDF5 build is not safe for concurrent opens.
+Confirmed on the largest smoke-catalog dataset (a CESM2 `ta850` series, 438,000
+daily steps over many files): default scheduler crashes (exit 135, SIGBUS; the
+first run was exit 139, SIGSEGV), `dask.config.set(scheduler="synchronous")`
+opens it fine. So this netCDF4/HDF5 build is not safe for concurrent opens.
+Environment where it was seen: uv-managed standalone Python 3.14.10
+(`~/.local/share/uv/python/cpython-3.14.10-linux-x86_64-gnu`), `netcdf4`
+1.7.5.1.post1 from a PyPI wheel (bundled HDF5/netCDF-C), xarray 2026.9.0,
+dask 2026.8.0, intake-esm 2025.7.9. Not tested with a system or conda
+`netCDF4`/HDF5 (`module avail netcdf hdf5`), which might not crash; users on
+other builds may see different behaviour. The workaround below does not depend
+on the build.
 `check_catalog.py` now runs the sample opens under
 `dask.config.set(scheduler="synchronous")` and sets `HDF5_USE_FILE_LOCKING=FALSE`.
 Open: `site/catalog.qmd`, `site/browse.qmd` and `site/notebooks/quickstart.ipynb`
 document `to_dataset_dict()`/`to_dask()` with the default scheduler, which users
-on hydra would run. Confirm the crash on a multi-file dataset, then document the
-workaround (synchronous scheduler, locking off) in the site.
+on hydra would run. Document the workaround (synchronous scheduler, locking off) in the site.
+
+How the test was built (by hand on hydra, login node; repeat it after any
+change to the Python, `netcdf4`, dask or xarray versions, or on a module build):
+1. Build a small catalog that includes at least one dataset with many files
+   (the CESM2 smoke catalog does: `build_catalog.py --root .../CMIP/NCAR/CESM2`).
+   A one-file dataset never triggers it, so the first sample runs passed.
+2. Pick the dataset with the most files. Read the CSV with
+   `infer_schema_length=0` (so `version` stays a string), group by
+   `master_id`, `version`, sort by count; the key is `master_id.version`.
+3. In two separate processes (a crash kills the interpreter), with
+   `HDF5_USE_FILE_LOCKING=FALSE` and `python -X faulthandler`:
+   `intake.open_esm_datastore(<catalog json>)[key].to_dask()` with the default
+   scheduler (expect exit 135 or 139 if the bug is present), then the same with
+   `dask.config.set(scheduler="synchronous")` first (expect exit 0).
+   Check `${PIPESTATUS[0]}` for the exit code; a `tail` hides it.
+Not automated: pytest runs on the laptop and in CI, which have different HDF5
+builds and no multi-file VAST data, and my macOS run never crashed. A real
+regression test would need a synthetic multi-file dataset (a few small NetCDF
+files) opened threaded in a subprocess on hydra, asserting a non-crash exit
+code; it would have to be skipped off-HPC.
 
 ### `missing_value` warning (report-only)
 `check_nc --deep` prints a netCDF4 `UserWarning: missing_value not used since it
