@@ -73,5 +73,5 @@ often they are made and how long they are kept is still being decided.
 
 ## Changelog
 
-- **sample**: development catalog generated from synthetic data. Not real
-  holdings.
+- **2026-11-12**: first catalog of the real holdings: CMIP6 (31,031
+  datasets) and 20CRv3 reanalysis.

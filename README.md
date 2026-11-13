@@ -28,13 +28,13 @@ of `not_nc` → `bad_filename` → `wrong_depth` → `bad_version_dir` →
 ## Site
 
 Quarto site for `cmip.whoi.edu` in `site/` (see `site/README.md`,
-`docs/static-site-plan.md`, `docs/site-handoff.md`). Develops against a
-synthetic sample catalog:
+`docs/static-site-plan.md`, `docs/site-handoff.md`). Site data comes from the
+production catalogs:
 
 ```bash
 uv sync --all-groups
-uv run scripts/make_sample_catalog.py --out tests/fixtures
-uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --out site/data
+L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
 uv run quarto render site
 ```
 

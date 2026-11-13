@@ -108,11 +108,6 @@ def test_file_lists_cover_summary(summary):
         assert len(lists[row["dataset_id"]]) == row["n_files"]
 
 
-def test_committed_site_summary_is_current(summary):
-    for name in ("catalog_summary.json", "catalog_stats.json"):
-        assert (SITE / "data" / name).read_text() == (summary / name).read_text()
-
-
 def test_summary_rejects_paths_outside_root(sample, tmp_path):
     with pytest.raises(SystemExit):
         summarize_catalog.main(

@@ -12,7 +12,8 @@ never contains absolute paths; the site adds prefixes from its config.
 
 Example:
     uv run scripts/summarize_catalog.py \\
-        --catalog tests/fixtures/sample_catalog.csv --out site/data
+        --catalog /proj/cmip6/catalog/live/whoi_cmip6.csv \\
+        --catalog /proj/cmip6/catalog/live/whoi_20crv3.csv --out site/data
 """
 
 from __future__ import annotations
@@ -91,13 +92,20 @@ def file_lists(lf: pl.LazyFrame) -> dict[str, dict[str, list[str]]]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--catalog", required=True, help="intake-esm catalog CSV")
+    ap.add_argument(
+        "--catalog",
+        required=True,
+        action="append",
+        help="intake-esm catalog CSV (repeat to combine, e.g. cmip6 + reanalysis)",
+    )
     ap.add_argument("--out", required=True, help="output directory")
     ap.add_argument("--root", default=DEFAULT_DATA_ROOT, help="data root prefix")
     ap.add_argument("--parquet", action="store_true", help="also write parquet")
     args = ap.parse_args(argv)
 
-    lf = pl.scan_csv(args.catalog, schema_overrides=CATALOG_SCHEMA)
+    lf = pl.concat(
+        [pl.scan_csv(c, schema_overrides=CATALOG_SCHEMA) for c in args.catalog]
+    )
     prefix = args.root.rstrip("/") + "/"
     bad = lf.filter(~pl.col("path").str.starts_with(prefix)).select(pl.len())
     if (n_bad := bad.collect().item()) > 0:
@@ -120,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.parquet:
         ds.write_parquet(out / "catalog_summary.parquet")
     stats = {
-        "catalog": Path(args.catalog).name,
+        "catalog": ", ".join(Path(c).name for c in args.catalog),
         "n_datasets": ds.height,
         "n_files": int(ds["n_files"].sum()),
         "size_tb": round(float(ds["size_gb"].sum()) / 1000, 3),
