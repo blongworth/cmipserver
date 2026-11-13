@@ -81,6 +81,16 @@ regression test would need a synthetic multi-file dataset (a few small NetCDF
 files) opened threaded in a subprocess on hydra, asserting a non-crash exit
 code; it would have to be skipped off-HPC.
 
+### Long-run datasets need `use_cftime=True` (open, affects users)
+
+`to_dataset_dict()` on `CMIP6.CMIP.CNRM-CERFACS.CNRM-CM6-1.piControl.r1i1p1f2.Eday.hus850.gr.1`
+(4 files, all `nc_status=ok`) fails with `Cannot combine along dimension 'time'
+with mixed types. Found: DatetimeGregorian, Timestamp`. Years past 2262 do not
+fit pandas datetime64[ns], so some files decode to cftime and others to
+Timestamp. Not a data problem. Fix: `xarray_open_kwargs={"use_cftime": True}`.
+`check_catalog` now passes it; the site docs should say so for piControl and
+other long runs.
+
 ### `missing_value` warning (report-only)
 `check_nc --deep` prints a netCDF4 `UserWarning: missing_value not used since it
 cannot be safely cast to variable data type`. In CESM2 `tas`, `missing_value`

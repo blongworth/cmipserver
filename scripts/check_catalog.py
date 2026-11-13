@@ -130,7 +130,9 @@ def run_checks(
         add("intake_open", len(keys) == n_ds, f"{len(keys)} keys, {n_ds} datasets")
         for key in rng.sample(keys, min(sample_datasets, len(keys))):
             try:
-                cat[key].to_dask()
+                # long runs (piControl past year 2262) mix pandas and cftime
+                # time types unless cftime is forced; users need this too
+                cat[key](xarray_open_kwargs={"use_cftime": True}).to_dask()
                 add("to_dataset_dict", True, key)
             except INTAKE_ERRORS as exc:
                 msg = str(exc).strip().splitlines()[0]
