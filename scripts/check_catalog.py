@@ -26,6 +26,10 @@ import polars as pl
 
 from whoi_cmip_reorg_code.catalog_schema import CATALOG_SCHEMA
 
+# Sample datasets are opened read-only. HDF5 file locking fails on VAST/NFS and
+# makes good files fail to open. Must be set before HDF5 loads (lazy imports).
+os.environ.setdefault("HDF5_USE_FILE_LOCKING", "FALSE")
+
 REQUIRED = ("master_id", "collection", "path", "version")
 
 
@@ -109,9 +113,13 @@ def run_checks(
     else:
         add("dataset_count_vs_previous", True, f"no previous; {n_ds} datasets")
 
+    import dask
     import intake
 
-    with warnings.catch_warnings():
+    # dask's threaded scheduler opens a dataset's files from several threads at
+    # once; on hydra the netCDF4/HDF5 build segfaults (exit 139) when it does.
+    # Open one file at a time.
+    with warnings.catch_warnings(), dask.config.set(scheduler="synchronous"):
         warnings.simplefilter("ignore")
         try:
             cat = intake.open_esm_datastore(str(catalog))

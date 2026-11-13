@@ -38,6 +38,21 @@ Opening files with HDF5 locking on made good files report `header_error`
 `HDF5_USE_FILE_LOCKING=FALSE`). `ncinfo.py` now disables locking for its
 read-only opens. Do the same in any other reader on the mount.
 
+### Threaded dataset opens segfault on hydra (open, affects users)
+`check_catalog` exited 139 (SIGSEGV) on hydra when `to_dask()` opened a sampled
+dataset. `python -X faulthandler` put the crash inside dask's thread pool:
+`intake_esm _delayed_open_ds` -> `xarray.open_dataset` ->
+`netCDF4_.open_store_variable`, several threads at once. Opening a single file
+with xarray (plain, with dask chunks, and with the synchronous scheduler) works.
+Inference, not tested on a multi-file dataset with the synchronous scheduler
+on hydra: this netCDF4/HDF5 build is not safe for concurrent opens.
+`check_catalog.py` now runs the sample opens under
+`dask.config.set(scheduler="synchronous")` and sets `HDF5_USE_FILE_LOCKING=FALSE`.
+Open: `site/catalog.qmd`, `site/browse.qmd` and `site/notebooks/quickstart.ipynb`
+document `to_dataset_dict()`/`to_dask()` with the default scheduler, which users
+on hydra would run. Confirm the crash on a multi-file dataset, then document the
+workaround (synchronous scheduler, locking off) in the site.
+
 ### `missing_value` warning (report-only)
 `check_nc --deep` prints a netCDF4 `UserWarning: missing_value not used since it
 cannot be safely cast to variable data type`. In CESM2 `tas`, `missing_value`
