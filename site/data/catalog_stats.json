@@ -1,9 +1,9 @@
 {
   "catalogs": [
     {
-      "name": "sample_catalog",
-      "n_datasets": 155,
-      "synthetic": true
+      "name": "whoi_cmip6",
+      "n_datasets": 31031,
+      "synthetic": false
     },
     {
       "name": "whoi_20crv3",
@@ -11,15 +11,14 @@
       "synthetic": false
     }
   ],
-  "n_datasets": 165,
-  "n_files": 1079,
-  "size_tb": 8.643,
+  "n_datasets": 31041,
+  "n_files": 715462,
+  "size_tb": 161.387,
   "by_collection": {
-    "cmip6": 151,
-    "reanalysis": 14
+    "cmip6": 31031,
+    "reanalysis": 10
   },
   "by_product": {
-    "20crv3": 10,
-    "era5": 4
+    "20crv3": 10
   }
 }

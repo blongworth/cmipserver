@@ -7,16 +7,15 @@ Static site for `cmip.whoi.edu`. Plan: `../docs/static-site-plan.md`.
 
 ```bash
 # from the repo root
-uv run scripts/make_sample_catalog.py --out tests/fixtures
-uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv \
-    --catalog tests/fixtures/whoi_20crv3.csv --out site/data
+L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
 uv run quarto render site      # or: uv run quarto preview site
 ```
 
 - `_variables.yml` holds hosts, prefixes, and addresses. `_TBD` values are
   placeholders. The pre-render step copies the browser's settings into
   `data/site_config.json`.
-- `data/` holds the small committed catalog summary (sample for now).
+- `data/` holds the committed catalog summary (CMIP6 + reanalysis, ~60 MB).
 - `vendor/` holds pinned third-party JavaScript, CSS, and fonts (Tom Select,
   Tabulator, Arquero, the OJS stdlib pieces the browser uses, and the cosmo
   font), so pages load nothing from CDNs. `vendor/vendor.yml` lists each file

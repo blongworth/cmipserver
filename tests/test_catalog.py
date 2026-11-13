@@ -132,18 +132,6 @@ def test_file_lists_cover_summary(summary):
         assert len(lists[row["dataset_id"]]) == row["n_files"]
 
 
-def test_committed_site_summary_is_current(summary):
-    for name in ("catalog_summary.json", "catalog_stats.json"):
-        assert (SITE / "data" / name).read_text() == (summary / name).read_text()
-    committed = sorted(p.name for p in (SITE / "data" / "files").glob("*.json"))
-    fresh = sorted(p.name for p in (summary / "files").glob("*.json"))
-    assert committed == fresh
-    for name in fresh:
-        assert (SITE / "data" / "files" / name).read_text() == (
-            summary / "files" / name
-        ).read_text()
-
-
 def test_real_20crv3_fixture_matches_schema():
     df = pl.read_csv(TCR_CSV, schema_overrides=CATALOG_SCHEMA)
     assert df.columns == list(CATALOG_SCHEMA)

@@ -17,8 +17,8 @@ never contains absolute paths; the site adds prefixes from its config.
 
 Example:
     uv run scripts/summarize_catalog.py \\
-        --catalog tests/fixtures/sample_catalog.csv \\
-        --catalog tests/fixtures/whoi_20crv3.csv --out site/data
+        --catalog /proj/cmip6/catalog/live/whoi_cmip6.csv \\
+        --catalog /proj/cmip6/catalog/live/whoi_20crv3.csv --out site/data
 """
 
 from __future__ import annotations

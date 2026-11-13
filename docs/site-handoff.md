@@ -166,9 +166,8 @@ or fonts at runtime. Checked in headless Chrome: every request from
 ```bash
 uv sync --all-groups
 uv run ruff check && uv run ruff format --check && uv run pytest
-uv run scripts/make_sample_catalog.py --out tests/fixtures
-uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv \
-    --catalog tests/fixtures/whoi_20crv3.csv --out site/data
+L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
 uv run quarto render site          # or: uv run quarto preview site
 brew install lychee && lychee --offline --root-dir "$PWD/site/_site" 'site/_site/**/*.html'   # optional, local link check
 ```
