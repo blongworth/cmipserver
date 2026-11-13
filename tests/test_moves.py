@@ -400,3 +400,19 @@ def test_foreign_file_after_src_gone_is_refused(tree, tmp_path, monkeypatch):
     p = apply(m, log, execute=False)
     assert any("not the moved file" in x for x in p.problems)
     assert not rollback(log).unmoves
+
+
+def test_identity_needs_size_and_mtime(tmp_path):
+    """A new file can reuse a freed inode number (Linux does at once); the
+    logged size and mtime tell it apart. Older logs hold only (dev, ino)."""
+    from whoi_cmip_reorg_code.movelog import _ident, _is_ino
+
+    f = tmp_path / "f.nc"
+    f.write_bytes(b"data")
+    st = os.lstat(f)
+    assert _is_ino(str(f), _ident(st))
+    assert _is_ino(str(f), (st.st_dev, st.st_ino))  # older log
+    reused = (st.st_dev, st.st_ino, st.st_size + 1, st.st_mtime_ns)
+    assert not _is_ino(str(f), reused)
+    assert not _is_ino(str(tmp_path / "missing"), _ident(st))
+    assert not _is_ino(str(f), None)

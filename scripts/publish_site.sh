@@ -91,6 +91,8 @@ fi
 mkdir -p "$releases"
 trap 'rm -rf "$tmp"' EXIT
 
+# GNU rsync creates only the last missing directory
+mkdir -p "$tmp/site"
 rsync -rlt "$src/" "$tmp/site/"
 printf '{"stamp": "%s", "commit": "%s", "catalog_version": "%s"}\n' \
     "$stamp" "$commit" "$catalog_version" >"$tmp/site/build.json"

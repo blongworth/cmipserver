@@ -11,9 +11,22 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import dask
 import numpy as np
 import pytest
 import xarray as xr
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _dask_synchronous():
+    """Open files one at a time, as check_catalog.py does.
+
+    intake-esm opens a dataset's files from dask's thread pool; the netCDF4
+    wheel on Linux is not thread-safe and segfaults (exit 139) in CI.
+    """
+    with dask.config.set(scheduler="synchronous"):
+        yield
+
 
 DRS = "CMIP/NCAR/CESM2/historical/r1i1p1f1"
 V = "v20190308"

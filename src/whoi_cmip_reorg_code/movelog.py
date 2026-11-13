@@ -13,8 +13,9 @@ Safety rules:
   fsynced). A re-run resumes: finished moves are skipped, and a move that
   was interrupted or failed (e.g. unlink refused, or an NFS retry reporting
   an error for a step that succeeded) is settled from the filesystem. The
-  ``start`` entry records the source inode, so a file at ``dst`` is only
-  taken as ours if it is that inode; anything else is reported, not touched.
+  ``start`` entry records the source's inode, size and mtime, so a file at
+  ``dst`` is only taken as ours if all of them match (a bare inode number can
+  be reused by a new file); anything else is reported, not touched.
 - Rollback replays the log backwards: moves dst -> src (same no-overwrite
   rule), then removes directories the run created, only if empty.
 """
@@ -78,19 +79,30 @@ def _same_file(a: str, b: str) -> bool:
     return (sa.st_dev, sa.st_ino) == (sb.st_dev, sb.st_ino)
 
 
-Ino = tuple[int, int] | None
+# (dev, ino, size, mtime_ns) of src at start; (dev, ino) in older logs
+Ino = tuple[int, ...] | None
+
+
+def _ident(s: os.stat_result) -> tuple[int, int, int, int]:
+    return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns)
 
 
 def _state(entries: list[dict]) -> dict[tuple[str, str], tuple[str, Ino]]:
     """Per (src, dst): last phase ('start', 'fail', 'done', 'unmoved') and the
-    (dev, ino) of src from the latest ``start`` (None in older logs)."""
+    identity of src from the latest ``start`` (see ``Ino``; None in the oldest
+    logs)."""
     st: dict[tuple[str, str], tuple[str, Ino]] = {}
     for e in entries:
         if e["op"] == "move":
             k: tuple[str, str] = (e["src"], e["dst"])
             ino: Ino = st.get(k, ("", None))[1]
             if e["phase"] == "start":
-                ino = (e["dev"], e["ino"]) if "ino" in e else None
+                keys = (
+                    ("dev", "ino", "size", "mtime_ns")
+                    if "size" in e
+                    else ("dev", "ino")
+                )
+                ino = tuple(e[x] for x in keys) if "ino" in e else None
             st[k] = (e["phase"], ino)
         elif e["op"] == "unmove" and e["phase"] == "done":
             st[(e["src"], e["dst"])] = ("unmoved", None)
@@ -104,7 +116,7 @@ def _is_ino(path: str, ino: Ino) -> bool:
         s = os.lstat(path)
     except OSError:
         return False
-    return (s.st_dev, s.st_ino) == ino
+    return _ident(s)[: len(ino)] == ino
 
 
 @dataclass
@@ -232,6 +244,8 @@ def apply(
                 kind=kind,
                 dev=st.st_dev,
                 ino=st.st_ino,
+                size=st.st_size,
+                mtime_ns=st.st_mtime_ns,
             )
             _link_unlink(src, dst)
         except OSError as exc:

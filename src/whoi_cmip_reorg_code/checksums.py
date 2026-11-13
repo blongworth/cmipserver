@@ -73,8 +73,14 @@ def select_candidates(
             .collect()
         )
     if sample_per_source > 0:
+        # healthy files only: already-flagged ones would bias the sample's
+        # failure rate (they are hashed anyway)
+        flagged = pl.concat([p.select("path") for p in parts]) if parts else None
+        healthy = (
+            files if flagged is None else files.join(flagged, on="path", how="anti")
+        )
         parts.append(
-            files.filter(pl.col("source_id").is_not_null())
+            healthy.filter(pl.col("source_id").is_not_null())
             .sort("path")
             .with_columns(
                 _r=pl.col("path").hash(seed).rank("ordinal").over("source_id")
