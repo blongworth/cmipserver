@@ -22,6 +22,8 @@ dataset id from the [browser](browse.qmd), and follow the
 For reanalysis, cite the product's own reference (for ERA5:
 Hersbach et al., 2020, <https://doi.org/10.1002/qj.3803>), and include any
 acknowledgment the provider requests.
+Each non-CMIP6 dataset page shows its product's citation and license;
+products not in the catalog have theirs on [Other holdings](holdings.qmd).
 
 ### NOAA-CIRES-DOE Twentieth Century Reanalysis version 3 (20CRv3)
 

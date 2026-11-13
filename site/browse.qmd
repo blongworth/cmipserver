@@ -54,7 +54,8 @@ html`<p>Catalog <strong>${config.catalog_version}</strong>: ${stats.n_datasets.t
 ${stats.n_files.toLocaleString()} files, ${stats.size_tb.toLocaleString()} TB.
 Filter with the boxes on the left, then pick rows in the table. The
 <strong>Get data</strong> panel uses the rows you pick, or every matching dataset if you
-pick none.
+pick none. Products not in the catalog are listed on
+<a href="holdings.html">Other holdings</a>.
 ${config.catalog_version === "sample" ? html`<strong>This is a preview catalog: datasets from a synthetic sample are not real.</strong>` : ""}</p>
 <p class="small text-body-secondary">Data sources: ${stats.catalogs.map((c, i) => html`${i ? "; " : ""}<code>${c.name}</code> (${c.n_datasets.toLocaleString()} datasets${c.synthetic ? html`, <strong>synthetic sample</strong>` : ""})`)}.</p>`
 ```

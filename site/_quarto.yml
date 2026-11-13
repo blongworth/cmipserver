@@ -23,6 +23,8 @@ website:
         text: Browse
       - href: catalog.qmd
         text: Catalog
+      - href: holdings.qmd
+        text: Other holdings
       - text: Notebooks
         menu:
           - href: notebooks/quickstart.ipynb

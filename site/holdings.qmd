@@ -1,0 +1,60 @@
+---
+title: "Other holdings"
+toc: false
+---
+
+These products are on the WHOI store but are **not in the intake catalog**,
+so they are not on the [Browse](browse.qmd) page. Open the files directly on
+the HPC cluster at the path shown (see [Access](access.qmd)). Some may be
+added to the catalog later. Cite each product as given below; see also
+[How to cite](cite.qmd).
+
+```{ojs}
+//| echo: false
+//| output: false
+// Served from site/vendor/ (see vendor/vendor.yml) instead of jsDelivr.
+vendor = (p) => new URL(`vendor/${p}`, document.baseURI).href
+htl = require(vendor("htl/htl.min.js"))
+html = htl.html
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+config = FileAttachment("data/site_config.json").json()
+// products.json: summarize_catalog.py --products (curated, every build).
+// holdings.json: summarize_other.py --site-json (measured, when the
+// inventory is re-run). Either may be missing in an older build.
+getJson = (p, empty) => fetch(p).then((r) => (r.ok ? r.json() : empty)).catch(() => empty)
+products = getJson("data/products.json", {})
+holdings = getJson("data/holdings.json", {products: {}})
+rows = Object.entries(products)
+  .filter(([, p]) => !p.catalogued && p.path)
+  .map(([name, p]) => ({name, ...p, inv: holdings.products?.[name] ?? null}))
+  .sort((a, b) => a.path.localeCompare(b.path))
+```
+
+```{ojs}
+//| echo: false
+fmt = (x, d = 0) => x.toLocaleString(undefined, {maximumFractionDigits: d})
+none = html`<em>not recorded yet</em>`
+html`<p class="small text-body-secondary">${rows.length} products.
+${holdings.generated
+  ? `File counts and sizes from the inventory of ${holdings.generated}.`
+  : "File counts and sizes are not available yet."}</p>
+${rows.map((r) => html`<div class="holding mb-4">
+  <h3 id="${r.name}" class="h5 mb-1"><code>${r.name}</code></h3>
+  <p class="mb-1">${r.description ?? ""}</p>
+  <table class="table table-sm w-auto small mb-1"><tbody>
+    <tr><th scope="row" class="pe-4">Path</th><td><code style="word-break: break-all;">${config.vast_prefix}/${r.path}</code></td></tr>
+    <tr><th scope="row" class="pe-4">Years</th><td>${r.years ?? "—"}</td></tr>
+    <tr><th scope="row" class="pe-4">Files</th><td>${r.inv
+      ? `${fmt(r.inv.n_nc)} NetCDF${r.inv.n_other ? `, ${fmt(r.inv.n_other)} other` : ""}; ${fmt(r.inv.size_tb, 2)} TB`
+      : "—"}</td></tr>
+    ${r.caveats ? html`<tr><th scope="row" class="pe-4">Caveats</th><td>${r.caveats}</td></tr>` : ""}
+    <tr><th scope="row" class="pe-4">Citation</th><td>${r.citation ?? none}</td></tr>
+    <tr><th scope="row" class="pe-4">License</th><td>${r.license ?? none}</td></tr>
+    ${r.acknowledgment ? html`<tr><th scope="row" class="pe-4">Acknowledgment</th><td>${r.acknowledgment}</td></tr>` : ""}
+  </tbody></table>
+</div>`)}`
+```

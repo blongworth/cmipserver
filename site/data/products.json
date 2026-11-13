@@ -3,78 +3,150 @@
     "description": "NOAA/CIRES/DOE 20th Century Reanalysis V3 (WHOI mirror)",
     "citation": null,
     "license": null,
-    "acknowledgment": "Support for the Twentieth Century Reanalysis Project version 3 dataset is provided by the U.S. Department of Energy, Office of Science Biological and Environmental Research (BER), by the National Oceanic and Atmospheric Administration Climate Program Office, and by the NOAA Earth System Research Laboratory Physical Sciences Laboratory."
+    "acknowledgment": "Support for the Twentieth Century Reanalysis Project version 3 dataset is provided by the U.S. Department of Energy, Office of Science Biological and Environmental Research (BER), by the National Oceanic and Atmospheric Administration Climate Program Office, and by the NOAA Earth System Research Laboratory Physical Sciences Laboratory.",
+    "catalogued": true,
+    "path": "reanalysis/20crv3",
+    "years": null,
+    "caveats": null
   },
   "era5": {
     "description": "ECMWF ERA5 reanalysis (WHOI holdings; single and pressure levels)",
     "citation": "Hersbach, H. et al. (2020) The ERA5 global reanalysis. Q. J. R. Meteorol. Soc. 146, 1999-2049, doi:10.1002/qj.3803. Datasets: ERA5 hourly data on single levels (doi:10.24381/cds.adbb2d47) and pressure levels (doi:10.24381/cds.bd0915c6); ERA5 monthly averaged data on single levels (doi:10.24381/cds.f17050d7) and pressure levels (doi:10.24381/cds.6860a573).",
     "license": "Licence to use Copernicus Products (Copernicus Climate Change Service)",
-    "acknowledgment": "Contains modified Copernicus Climate Change Service information. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains."
+    "acknowledgment": "Contains modified Copernicus Climate Change Service information. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains.",
+    "catalogued": false,
+    "path": "era5/reanalysis",
+    "years": "1979-2025 (end varies by variable)",
+    "caveats": "Files from 2022-2023 on use valid_time instead of time; rename it before joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg."
   },
   "glorys12v1": {
     "description": "Mercator GLORYS12V1 global ocean reanalysis, daily means, 1/12 deg (CMEMS GLOBAL_MULTIYEAR_PHY_001_030)",
     "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics Reanalysis, doi:10.48670/moi-00021. Lellouche, J.-M. et al. (2021) Front. Earth Sci. 9:698876, doi:10.3389/feart.2021.698876.",
     "license": "Copernicus Marine Service licence (service commitments and licence)",
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/glorys12v1",
+    "years": "1993-2024",
+    "caveats": "File names change in 2020 (cmems_mod_glo_phy_my_*); from mid-2021 the files are the interim product (myint). 2024 has 359 days."
   },
   "glorys12v1_monthly": {
     "description": "Mercator GLORYS12V1 global ocean reanalysis, monthly means, 1/12 deg (CMEMS GLOBAL_REANALYSIS_PHY_001_030)",
     "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics Reanalysis, doi:10.48670/moi-00021.",
     "license": "Copernicus Marine Service licence (service commitments and licence)",
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "cmems/GLOBAL_REANALYSIS_PHY_001_030/global-reanalysis-phy-001-030-monthly",
+    "years": "1993-2024 (2024 January only)",
+    "caveats": "2019-2021 also hold duplicate copies named *_(1).nc."
   },
   "glorys12v1_statics": {
     "description": "GLORYS12V1 static fields (coordinates, mask and bathymetry, mean dynamic topography)",
     "citation": "E.U. Copernicus Marine Service Information (CMEMS), doi:10.48670/moi-00021.",
     "license": "Copernicus Marine Service licence (service commitments and licence)",
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "cmems/GLOBAL_REANALYSIS_PHY_001_030/global-reanalysis-phy-001-030-statics",
+    "years": null,
+    "caveats": null
   },
   "grep_daily": {
     "description": "CMEMS Global Reanalysis Ensemble Product (GREP v2), daily, 1/4 deg; four members (CGLORS, FOAM, GLORYS2V4, ORAS5) in each file (GLOBAL_REANALYSIS_PHY_001_031)",
     "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Ensemble Physics Reanalysis, doi:10.48670/moi-00024.",
     "license": "Copernicus Marine Service licence (service commitments and licence)",
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/CMEMS_ENSAMBLE/daily",
+    "years": "1993-2011 (to 2011-06-01)",
+    "caveats": "Each file holds all four members as separate variables (*_cglo, *_foam, *_glor, *_oras)."
   },
   "grep_monthly": {
     "description": "CMEMS Global Reanalysis Ensemble Product (GREP v2), monthly, 1/4 deg (GLOBAL_REANALYSIS_PHY_001_031; stored under ORAS5/)",
     "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Ensemble Physics Reanalysis, doi:10.48670/moi-00024.",
     "license": "Copernicus Marine Service licence (service commitments and licence)",
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/ORAS5/oras5/monthly/global-reanalysis-phy-001-031",
+    "years": "1993-2019",
+    "caveats": "Stored under ORAS5/ but is GREP, not ORAS5."
   },
   "bran2020": {
     "description": "Bluelink ReANalysis BRAN2020 (CSIRO / Bureau of Meteorology), 1/10 deg, daily (north and south halves) and monthly",
     "citation": "Chamberlain, M. A. et al. (2021) Next generation of Bluelink ocean reanalysis with multiscale data assimilation: BRAN2020. Earth Syst. Sci. Data 13, 5663-5688, doi:10.5194/essd-13-5663-2021.",
     "license": null,
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/bran2020",
+    "years": null,
+    "caveats": "Daily 1998 and 2000 are incomplete. Time is ocean_time; the files are not fully CF."
   },
   "soda3122": {
     "description": "Simple Ocean Data Assimilation SODA3.12.2, 5-day and monthly, regridded (reg) and native (or) grids",
     "citation": "Carton, J. A., Chepurin, G. A. and Chen, L. (2018) SODA3: A new ocean climate reanalysis. J. Climate 31, 6967-6983, doi:10.1175/JCLI-D-18-0149.1.",
     "license": null,
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/sodav3122",
+    "years": null,
+    "caveats": "Monthly time steps are being checked."
   },
   "hycom_gofs30": {
-    "description": "HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots, regional subset",
+    "description": "HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)",
     "citation": null,
     "license": null,
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/HYCOMvGOFS30",
+    "years": "1992-2012",
+    "caveats": "Daily snapshots, not means."
   },
   "hycom_gofs31": {
     "description": "HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH",
     "citation": null,
     "license": null,
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/HYCOMvGOFS31",
+    "years": "1994-2015",
+    "caveats": "Daily snapshots, not means. Regional subset, not global."
   },
   "eccov5": {
     "description": "ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles",
     "citation": null,
     "license": null,
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/ECCOv5/Version5/Alpha",
+    "years": null,
+    "caveats": "Unreleased alpha version."
   },
   "prism": {
     "description": "PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)",
     "citation": "PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.",
     "license": null,
-    "acknowledgment": null
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "prism/netcdf",
+    "years": "1895-2019",
+    "caveats": "No time coordinate (year and month variables). Mixes PRISM stable (M2) and provisional (M3) data."
+  },
+  "oras5": {
+    "description": "ECMWF ORAS5 ocean reanalysis, monthly, ORCA025 and 1x1 grids, members opa0-opa4",
+    "citation": "Zuo, H. et al. (2019) The ECMWF operational ensemble reanalysis-analysis system for ocean and sea ice: a description of the system and assessment. Ocean Sci. 15, 779-808, doi:10.5194/os-15-779-2019.",
+    "license": null,
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/ORAS5/oras5/monthly/oras5",
+    "years": null,
+    "caveats": "Yearly .tar.gz archives; only a few files are extracted. Some member dirs are incomplete."
+  },
+  "cfsr932": {
+    "description": "NCEP Climate Forecast System Reanalysis (CFSR, NCAR RDA ds093.2), converted from GRIB to NetCDF",
+    "citation": "Saha, S. et al. (2010) The NCEP Climate Forecast System Reanalysis. Bull. Amer. Meteor. Soc. 91, 1015-1057, doi:10.1175/2010BAMS3001.1.",
+    "license": null,
+    "acknowledgment": null,
+    "catalogued": false,
+    "path": "ocean_reanalysis/cfsr932",
+    "years": null,
+    "caveats": "Contents being sorted out (good/new/old dirs, some files still compressed). Ask before relying on it."
   }
 }

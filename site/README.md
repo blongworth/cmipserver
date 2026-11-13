@@ -8,7 +8,7 @@ Static site for `cmip.whoi.edu`. Plan: `../docs/static-site-plan.md`.
 ```bash
 # from the repo root
 L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
-uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data
 uv run quarto render site      # or: uv run quarto preview site
 ```
 
