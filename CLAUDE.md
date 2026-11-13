@@ -30,7 +30,7 @@ Maintainer: Brett Longworth.
 - Catalog, not a search server: intake-esm CSV + JSON (ecgtools), rebuilt
   nightly on HPC, plus a small dataset-level summary for the site.
 - Quarto site, OJS dataset browser over the summary, built-in search,
-  notebooks with `freeze: auto` executed on HPC (frozen output committed).
+  notebooks (committed without outputs) executed on HPC at render time; `site/_freeze/` is generated and untracked.
 - Deploy: nightly HPC job renders and rsyncs to the VM. GitHub Actions runs
   checks only and never deploys.
 - External access: HTTPS from the VM first (rate limits, IT security review),
@@ -56,7 +56,7 @@ Maintainer: Brett Longworth.
 ```bash
 uv sync --all-groups
 uv run ruff check && uv run ruff format --check && uv run pytest
-uv run scripts/make_sample_catalog.py --out tests/fixtures
-uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --out site/data
+L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
 uv run quarto render site
 ```

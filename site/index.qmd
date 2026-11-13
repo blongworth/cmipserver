@@ -6,8 +6,8 @@ toc: false
 ::: {.callout-warning}
 ## Preview
 
-This site is under construction and currently runs on a **sample catalog**.
-Dataset counts, paths, and download links are not real yet.
+This site is under construction. Hosts, download URLs, and some contact
+details are still placeholders.
 :::
 
 The WHOI CMIP data server holds CMIP6 model output and reanalysis products

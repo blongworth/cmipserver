@@ -65,8 +65,9 @@ GitHub Actions: checks only.
 - Production settings (`catalog_version` = build date, `audience`,
   `catalog_path`, `https_prefix`) come from the build: a Quarto profile
   plus a production values file read by `write_site_config.py`.
-- Never execute notebooks: render from committed `_freeze/` and fail if
-  Quarto tries to run one.
+- Notebooks are executed by the nightly render on HPC, where the catalog is
+  reachable (fresh checkout, so no stale `_freeze/`). They are committed without
+  outputs; CI renders with `--no-execute`.
 
 **Code to write (in this repo):**
 

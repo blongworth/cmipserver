@@ -7,15 +7,15 @@ Static site for `cmip.whoi.edu`. Plan: `../docs/static-site-plan.md`.
 
 ```bash
 # from the repo root
-uv run scripts/make_sample_catalog.py --out tests/fixtures
-uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --out site/data
+L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
+uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --out site/data
 uv run quarto render site      # or: uv run quarto preview site
 ```
 
 - `_variables.yml` holds hosts, prefixes, and addresses. `_TBD` values are
   placeholders. The pre-render step copies the browser's settings into
   `data/site_config.json`.
-- `data/` holds the small committed catalog summary (sample for now).
+- `data/` holds the committed catalog summary (CMIP6 + reanalysis, ~60 MB).
 - `vendor/` holds pinned third-party JavaScript, CSS, and fonts (Tom Select,
   Tabulator, Arquero, the OJS stdlib pieces the browser uses, and the cosmo
   font), so pages load nothing from CDNs. `vendor/vendor.yml` lists each file
@@ -23,8 +23,11 @@ uv run quarto render site      # or: uv run quarto preview site
   downloads and checks them; after bumping a version, run it with `--update`
   to record the new hashes, then commit the files. `theme.scss` and
   `fonts.css` stop cosmo from loading Google Fonts.
-- Notebooks (`notebooks/*.ipynb`) use `freeze: auto`. Re-execute them where
-  the catalog is reachable and commit `_freeze/`; CI renders from frozen output.
+- Notebooks (`notebooks/*.ipynb`) are committed without outputs (quarto writes
+  outputs back into them, so strip before committing). `quarto render` executes
+  them where the catalog is reachable (hydra, or a Mac with the mount) and
+  caches results in `_freeze/` (`freeze: auto`; untracked and ignored). CI
+  renders with `--no-execute`, so its pages have code but no output.
   Set `WHOI_CMIP_CATALOG` (and optionally `WHOI_CMIP_DATA_ROOT`) to point the
   quickstart at another catalog.
 - Remove `old_site_url` from `_variables.yml` and the "Old site" navbar entry in

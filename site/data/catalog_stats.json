@@ -1,10 +1,24 @@
 {
-  "catalog": "sample_catalog.csv",
-  "n_datasets": 160,
-  "n_files": 1090,
-  "size_tb": 8.659,
+  "catalogs": [
+    {
+      "name": "whoi_cmip6",
+      "n_datasets": 31031,
+      "synthetic": false
+    },
+    {
+      "name": "whoi_20crv3",
+      "n_datasets": 10,
+      "synthetic": false
+    }
+  ],
+  "n_datasets": 31041,
+  "n_files": 715462,
+  "size_tb": 161.387,
   "by_collection": {
-    "cmip6": 151,
-    "reanalysis": 9
+    "cmip6": 31031,
+    "reanalysis": 10
+  },
+  "by_product": {
+    "20crv3": 10
   }
 }

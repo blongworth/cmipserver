@@ -78,7 +78,7 @@ row === null
     <table class="table table-sm w-auto small mb-3"><tbody>
       ${facetLabels.filter(([k]) => row[k] != null).map(([k, label]) =>
         html`<tr><th scope="row" class="pe-4">${label}</th><td>${row[k]}</td></tr>`)}
-      <tr><th scope="row" class="pe-4">Time range</th><td>${row.time_start ?? "?"} to ${row.time_end ?? "?"}</td></tr>
+      <tr><th scope="row" class="pe-4">Time range</th><td>${row.time_start == null && row.time_end == null ? "—" : `${row.time_start ?? "?"} to ${row.time_end ?? "?"}`}</td></tr>
       <tr><th scope="row" class="pe-4">Size</th><td>${row.n_files.toLocaleString()} files,
         ${row.size_gb.toLocaleString(undefined, {maximumFractionDigits: 1})} GB</td></tr>
       <tr><th scope="row" class="pe-4">Catalog</th><td>${config.catalog_version}</td></tr>
