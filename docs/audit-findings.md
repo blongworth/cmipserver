@@ -158,6 +158,11 @@ All 14,378 `EC-Earth3-CC` files are dated 2022-02-03 (12,652) or 2022-02-04
 checked for the other groups.
 `find_gaps` ignores size, so empty files count as present and hide real gaps
 (it reads filenames only).
+The 4 `KACE-1-0-G` empties are the daily `tasmax`/`tasmin` files filed under
+`Amon` (see below), so the catalog build lists them as
+`path_filename_mismatch`, not `excluded` (14,458 `excluded` + 4). Build the
+Phase B worklist from `ncinfo` (`nc_status = empty`), not from the catalog's
+invalid list.
 Open: re-fetch from ESGF (Phase B), after the versioning question.
 
 ### 9 other files only in the scan, not in the 2022 list (report-only)
@@ -206,3 +211,4 @@ to keep and which gaps are upstream.
 | L3 | `PMIP`, `CFMIP` | 3,227 `.nc` | all ok | counts equal old list; 25.6 files/s (PMIP); 0 attribute mismatches |
 | L4 scan | `CMIP6` root, 41-43 shards | 732,134 `.nc` | see below | 763,175 entries, 162 TB, 31,072 datasets; 729,910 `ok`, 2,216 `bad_filename`, 8 `path_filename_mismatch`; +651 `.nc` vs 2022 list (660 only in scan, 9 only in list) |
 | L4 check_nc | same | 732,134 `.nc` | 717,672 ok, 14,462 empty | 7 `attr_mismatch`; calendars incl. `julian` (3,728) and `360_day` (12,869); gaps (filename-only): 27,546 ok, 3,137 fixed, 370 overlap, 106 gap |
+| L4 catalog | full `build_catalog.sbatch` | 715,452 files, 31,031 datasets, 161.3 TB | n/a | 16,682 invalid (14,458 excluded as empty, 2,216 `bad_filename`, 8 `path_filename_mismatch`; sum 732,134); crawl 306-415 s on 8 cpus; `whoi_20crv3` 10 datasets; all `check_catalog` checks pass with synchronous dask and `use_cftime=True` |
