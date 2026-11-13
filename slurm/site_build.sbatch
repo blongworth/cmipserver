@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build the site from origin/main against the live catalogs and publish it as a
-# release in the VAST site dir; the VM picks it up within 5 minutes
+# release in /proj/cmip6/site; the VM picks it up within 5 minutes
 # (docs/deploy-plan.md, docs/runbook-site.md). Takes minutes; independent of
 # the slow catalog build (build_catalog.sbatch), which only refreshes the CSVs.
 # Dry run unless PUBLISH=1: renders and stops before writing the release.
@@ -8,17 +8,17 @@
 # Run from the repo clone (it is only fetched; the build uses a throwaway
 # worktree, so the clone is never dirtied):
 #   mkdir -p logs
-#   sbatch --export=ALL,SITE_DIR=<VAST site dir> slurm/site_build.sbatch            # dry run
-#   sbatch --export=ALL,SITE_DIR=<VAST site dir>,PUBLISH=1 slurm/site_build.sbatch  # deploy now
+#   sbatch slurm/site_build.sbatch                            # dry run
+#   sbatch --export=ALL,PUBLISH=1 slurm/site_build.sbatch     # deploy now
 # Against the sample catalog (rollout step 2):
 #   uv run scripts/make_sample_catalog.py --out runs/sample
-#   sbatch --export=ALL,SITE_DIR=...,CATALOGS="$PWD/runs/sample/sample_catalog.csv" slurm/site_build.sbatch
+#   sbatch --export=ALL,CATALOGS="$PWD/runs/sample/sample_catalog.csv" slurm/site_build.sbatch
 # Nightly (scrontab -e, as the service account; same options as below):
 #   #SCRON --job-name=site_build --time=01:00:00 --mem=8G --cpus-per-task=2
 #   #SCRON --output=<clone>/logs/site_build_%j.out --mail-type=FAIL
-#   30 5 * * * cd <clone> && SITE_DIR=<VAST site dir> PUBLISH=1 bash slurm/site_build.sbatch
+#   30 5 * * * cd <clone> && PUBLISH=1 bash slurm/site_build.sbatch
 #
-# Needs: SITE_DIR (outside /proj/cmip6). Optional: REF (default origin/main),
+# Optional: SITE_DIR (default /proj/cmip6/site), REF (default origin/main),
 # CATALOG_DIR (default /proj/cmip6/catalog/live; one <output>.csv per enabled
 # product in manifests/catalogs.yaml), CATALOGS (space-separated CSVs used
 # instead of CATALOG_DIR), PUBLISH=1, KEEP (releases kept on VAST, default 10).
@@ -33,7 +33,7 @@
 
 set -euo pipefail
 
-: "${SITE_DIR:?set SITE_DIR to the VAST site directory}"
+SITE_DIR="${SITE_DIR:-/proj/cmip6/site}"
 REF="${REF:-origin/main}"
 CATALOG_DIR="${CATALOG_DIR:-/proj/cmip6/catalog/live}"
 PUBLISH="${PUBLISH:-0}"

@@ -1,8 +1,8 @@
 # Runbook: cmip.whoi.edu
 
 Operations for the static site. Design and setup: `docs/deploy-plan.md`.
-`<site dir>` is the VAST site directory (mounted on the VM at
-`/vast/cmip-site`); `<clone>` is the service account's repo clone on HPC.
+Releases live in `/proj/cmip6/site` (on the VM: `/vast/cmip6/site`, read-only);
+`<clone>` is the service account's repo clone on HPC.
 
 ## Change a page
 
@@ -11,7 +11,7 @@ Operations for the static site. Design and setup: `docs/deploy-plan.md`.
 3. Wait for the nightly build, or deploy now from `<clone>`:
 
    ```bash
-   sbatch --export=ALL,SITE_DIR=<site dir>,PUBLISH=1 slurm/site_build.sbatch
+   sbatch --export=ALL,PUBLISH=1 slurm/site_build.sbatch
    ```
 
    Live about 5 minutes after the job ends. Check `https://cmip.whoi.edu/build.json`.

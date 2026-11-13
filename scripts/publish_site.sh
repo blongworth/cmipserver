@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Publish a rendered site (site/_site) as a release in the VAST site directory,
+# Publish a rendered site (site/_site) as a release in the site directory on VAST
+# (/proj/cmip6/site; the VM sees it in its read-only /proj/cmip6 mount),
 # where the VM's pull_site.sh picks it up (docs/deploy-plan.md). Dry run unless
 # --publish: prints what it would do and writes nothing.
 #
-#   scripts/publish_site.sh --dest <site dir> [--src site/_site] [--keep 10]
+#   scripts/publish_site.sh --dest /proj/cmip6/site [--src site/_site] [--keep 10]
 #       [--commit <sha>] [--catalog-version <YYYY-MM-DD>] [--publish]
 #
-# Layout under --dest (never under /proj/cmip6):
+# The only place under /proj/cmip6 it accepts is /proj/cmip6/site exactly (it
+# prunes with rm -rf, so a mistyped --dest must not land in the store).
+# Layout under --dest:
 #   releases/<stamp>/site/...      the rendered site (served as the docroot)
 #   releases/<stamp>/SHA256SUMS    sha256 of every file under site/
 #   releases/<stamp>/BUILD_OK      stamp, commit, catalog_version, files,
@@ -46,9 +49,11 @@ die() { echo "publish_site: $*" >&2; exit 1; }
 
 [[ -n "$dest" ]] || die "--dest is required"
 [[ "$keep" =~ ^[1-9][0-9]*$ ]] || die "--keep must be a positive integer"
-case "$(cd "$dest" 2>/dev/null && pwd -P || echo "$dest")/" in
-    /proj/cmip6/*) die "--dest must be outside /proj/cmip6" ;;
-esac
+real=$(cd "$dest" 2>/dev/null && pwd -P || echo "$dest")
+real=${real%/}
+if [[ "$real" == /proj/cmip6 || ("$real" == /proj/cmip6/* && "$real" != /proj/cmip6/site) ]]; then
+    die "--dest under /proj/cmip6 must be /proj/cmip6/site, not $real"
+fi
 [[ -f "$src/index.html" ]] || die "$src/index.html not found (render the site first)"
 [[ -f "$src/data/site_config.json" ]] || die "$src/data/site_config.json not found"
 if [[ -n "$(find "$src" -type l -print -quit)" ]]; then

@@ -17,8 +17,9 @@ HPC: build_catalog.sbatch (existing; slow; nightly or as needed) -> catalog/live
 HPC: site_build.sbatch    (minutes; nightly via scrontab AND by hand any time)
        git worktree of origin/main -> summarize_catalog.py (live CSVs)
        -> write_site_config.py --production -> quarto render --profile production
-       -> publish_site.sh -> <VAST site dir>/releases/<UTC stamp>/ + BUILD_OK, then LATEST
-VM:  cmip-pull.timer (every 5 min) -> pull_site.sh
+       -> publish_site.sh -> /proj/cmip6/site/releases/<UTC stamp>/ + BUILD_OK, then LATEST
+VM:  /proj/cmip6 mounted read-only at /vast/cmip6 (data/ for downloads, site/ for releases)
+     cmip-pull.timer (every 5 min) -> pull_site.sh
        new LATEST with BUILD_OK? -> rsync to /srv/cmip/releases/<stamp>
        -> file count + SHA256SUMS + smoke_test.sh -> atomic swap of /srv/cmip/current
 Apache: /             -> /srv/cmip/current/site
@@ -30,7 +31,7 @@ The site build is separate from the catalog build. A page edit does not wait
 for a 12 h catalog crawl: **deploy now** is
 
 ```bash
-sbatch --export=ALL,SITE_DIR=<VAST site dir>,PUBLISH=1 slurm/site_build.sbatch
+sbatch --export=ALL,PUBLISH=1 slurm/site_build.sbatch
 ```
 
 and the site is live within about 5 minutes of the job ending. The nightly
@@ -51,6 +52,7 @@ in `catalog/live`. `site/data/holdings.json` (Other holdings page) comes from
 | Decision | ID | Status / blocks |
 |---|---|---|
 | Pull or push deploy | — | **Pull** (2026-11-13) |
+| Where releases live | — | **`/proj/cmip6/site`** (2026-11-13), so one read-only export of `/proj/cmip6` serves data and releases |
 | Staging host | — | **None** (2026-11-13) |
 | Public or WHOI-only | PI-4 | Open. Blocks access rules, TLS route (§3), IT review |
 | TLS certificate | IT-9 | Open (§3). Blocks announcement |
@@ -132,7 +134,8 @@ of this repo used only for `git fetch` (public repo or read-only deploy key).
    catalog version; for monitoring), writes `SHA256SUMS` and then `BUILD_OK`
    (stamp, commit, catalog_version, files, sums_sha256), renames to
    `releases/<stamp>/`, then replaces `LATEST` by rename. Keeps 10 releases.
-   Refuses a destination under `/proj/cmip6`.
+   Under `/proj/cmip6` it accepts only `/proj/cmip6/site` itself (it
+   prunes with `rm -rf`, so a mistyped destination must not reach the data).
 
 Resources: 2 CPUs, 8 GB, 1 h, `--mail-type=FAIL`.
 
@@ -145,9 +148,9 @@ Everything on the VM is in the repo under `infra/`. `infra/vm/setup.sh`
 
 - Packages: `apache2 rsync python3 certbot python3-certbot-apache
   unattended-upgrades`; with `--public` also `libapache2-mod-qos fail2ban`.
-- `/etc/fstab` (IT; `setup.sh` checks, does not edit):
-  `/vast/cmip6` ← `/proj/cmip6` and `/vast/cmip-site` ← the VAST site dir,
-  both `ro,nosuid,nodev,noexec`.
+- `/etc/fstab` (IT; `setup.sh` checks, does not edit): `/vast/cmip6` ←
+  `/proj/cmip6`, `ro,nosuid,nodev,noexec`. One mount: `data/` for downloads,
+  `site/` for releases. Apache serves only `data/**/*.nc` from it.
 - User `cmipsite` (system, no shell, group `www-data`) owns `/srv/cmip`.
   `cmip-pull.timer` runs `pull_site.sh` as `cmipsite` every 5 minutes: no
   root, no sudo; the unit can write only `/srv/cmip`.
@@ -214,8 +217,9 @@ audience, and give external users an HTTPS catalog instead of the prefix swap.
    HSTS with `includeSubDomains`, so plain HTTP fails in many browsers: this
    blocks launch.
 3. **Network (PI-4):** internal only, or a public IP with 80/443 open.
-4. **Storage:** a VAST site directory outside `/proj/cmip6`, writable by the
-   HPC service account; export it and `/proj/cmip6` **read-only** to the VM.
+4. **Storage:** create `/proj/cmip6/site` (under 1 GB), writable by the HPC
+   service account (only that directory); export `/proj/cmip6` **read-only**
+   to the VM.
 5. **HPC:** a service account with `scrontab` and outbound HTTPS to GitHub.
 6. **Monitoring:** uptime check, certificate expiry (21 days), and
    `build.json` older than 48 h; an optional mail relay for
@@ -227,7 +231,7 @@ audience, and give external users an HTTPS catalog instead of the prefix swap.
    `pull_site.sh` and `smoke_test.sh`, against a production-profile render of
    the live catalogs; Apache vhosts checked in an Ubuntu 24.04 container.
 2. HPC: `site_build.sbatch` with the sample catalog (dry run), then with
-   `PUBLISH=1` to the VAST site dir.
+   `PUBLISH=1` to `/proj/cmip6/site`.
 3. VM (once IT delivers): `sudo infra/vm/setup.sh` (interim HTTP vhost, timer).
    Check the first pull and smoke test. Soft launch to test users by IP.
 4. Certificate: `setup.sh --https`, rebuild with `https://` URLs, HSTS 300 s
@@ -250,7 +254,7 @@ audience, and give external users an HTTPS catalog instead of the prefix swap.
 
 ## Appendix: push variant (not chosen)
 
-- No VAST site directory or `/vast/cmip-site` mount.
+- No `/proj/cmip6/site`; the VM mounts `/proj/cmip6` for downloads only.
 - `publish_site.sh` would `rsync -a --delete --delay-updates _site/
   cmipdeploy@cmip.whoi.edu:releases/<stamp>/`.
 - VM user `cmipdeploy`, key limited in `authorized_keys`:

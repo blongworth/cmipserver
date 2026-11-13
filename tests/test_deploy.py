@@ -183,9 +183,19 @@ def test_publish_dry_run_writes_nothing(tmp_path):
 @needs_shell
 def test_publish_refuses_store_and_unrendered(tmp_path):
     site = fake_site(tmp_path / "_site")
-    r = run([PUBLISH, "--src", site, "--dest", "/proj/cmip6/site"], ok=False)
-    assert r.returncode != 0
-    assert "outside /proj/cmip6" in r.stderr
+    for bad in (
+        "/proj/cmip6",
+        "/proj/cmip6/data",
+        "/proj/cmip6/site/x",
+        "/proj/cmip6/",
+    ):
+        r = run([PUBLISH, "--src", site, "--dest", bad], ok=False)
+        assert r.returncode != 0, bad
+        assert "must be /proj/cmip6/site" in r.stderr
+    # the site dir itself is allowed (dry run: nothing written)
+    assert (
+        "dry run" in run([PUBLISH, "--src", site, "--dest", "/proj/cmip6/site/"]).stdout
+    )
     r = run([PUBLISH, "--src", tmp_path, "--dest", tmp_path], ok=False)
     assert r.returncode != 0
 

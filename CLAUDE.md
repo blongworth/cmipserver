@@ -50,7 +50,7 @@ Maintainer: Brett Longworth.
   logs, or chat.
 - Never move, rename, or delete anything on `/proj/cmip6`. Data-touching
   scripts default to dry run. Do not scan the full store; use the sample
-  catalog (`scripts/make_sample_catalog.py`).
+  catalog (`scripts/make_sample_catalog.py`). The one exception is /proj/cmip6/site/releases/, which scripts/publish_site.sh writes and prunes (site releases, not data).
 - Do not contact users, PIs, or IT; draft messages for Brett.
 - Unresolved hosts, emails, and prefixes are placeholders in
   `site/_variables.yml`. Do not guess them.

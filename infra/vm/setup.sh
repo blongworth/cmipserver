@@ -8,9 +8,8 @@
 #
 # Does not edit /etc/fstab or the firewall: IT provides the VAST exports and
 # the firewall rules; this checks the mounts and stops if they are missing.
-# Expected mounts (read-only):
+# Expected mount (read-only; data for downloads, site/ for releases):
 #   <VAST>:/proj/cmip6      /vast/cmip6      nfs  ro,nosuid,nodev,noexec  0 0
-#   <VAST>:<site dir>       /vast/cmip-site  nfs  ro,nosuid,nodev,noexec  0 0
 
 set -euo pipefail
 
@@ -37,19 +36,17 @@ apt-get update -q
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${pkgs[@]}"
 
 say mounts
-for m in /vast/cmip6 /vast/cmip-site; do
-    if ! mountpoint -q "$m"; then
-        echo "$m is not mounted; add it to /etc/fstab (see the header) and mount it" >&2
-        exit 1
-    fi
-done
+if ! mountpoint -q /vast/cmip6; then
+    echo "/vast/cmip6 is not mounted; add it to /etc/fstab (see the header) and mount it" >&2
+    exit 1
+fi
 
 say "user cmipsite and /srv/cmip"
 id cmipsite >/dev/null 2>&1 ||
     useradd --system --home-dir /srv/cmip --shell /usr/sbin/nologin --gid www-data cmipsite
 install -d -o cmipsite -g www-data -m 0755 /srv/cmip /srv/cmip/releases
-runuser -u cmipsite -- test -r /vast/cmip-site/LATEST ||
-    echo "warning: cmipsite cannot read /vast/cmip-site/LATEST (no release published yet?)" >&2
+runuser -u cmipsite -- test -r /vast/cmip6/site/LATEST ||
+    echo "warning: cmipsite cannot read /vast/cmip6/site/LATEST (no release published yet?)" >&2
 
 say scripts
 install -d -m 0755 /usr/local/lib/cmip-site

@@ -17,14 +17,14 @@
 # Keeps the newest KEEP releases plus the live one.
 #
 # Environment (defaults are the VM's paths; override for local tests):
-#   CMIP_SITE_SRC   /vast/cmip-site   VAST site dir (read-only mount)
+#   CMIP_SITE_SRC   /vast/cmip6/site  /proj/cmip6/site (read-only mount)
 #   CMIP_SITE_DEST  /srv/cmip         holds current -> releases/<stamp>
 #   CMIP_SITE_KEEP  5
 #   CMIP_SMOKE      smoke_test.sh next to this script
 
 set -euo pipefail
 
-src=${CMIP_SITE_SRC:-/vast/cmip-site}
+src=${CMIP_SITE_SRC:-/vast/cmip6/site}
 dest=${CMIP_SITE_DEST:-/srv/cmip}
 keep=${CMIP_SITE_KEEP:-5}
 smoke=${CMIP_SMOKE:-$(cd "$(dirname "$0")" && pwd)/smoke_test.sh}
@@ -114,7 +114,7 @@ pull() {
         log "HOLD set ($(head -n 1 "$dest/HOLD")); not switching"
         return 0
     fi
-    [[ -r "$src/LATEST" ]] || die "$src/LATEST not readable (is the VAST site dir mounted?)"
+    [[ -r "$src/LATEST" ]] || die "$src/LATEST not readable (is /proj/cmip6 mounted at /vast/cmip6?)"
     latest=$(head -n 1 "$src/LATEST")
     valid_stamp "$latest" || die "LATEST holds an invalid stamp: '$latest'"
     live=$(live_stamp)
