@@ -7,12 +7,13 @@
 #   sbatch --export=ALL,OUT=$PWD/runs/$(date +%F)_catalog,NCINFO=$PWD/runs/<date>_L4/ncinfo \
 #       slurm/build_catalog.sbatch
 # Smoke test on one subtree first (cmip6 only):
-#   ... --export=ALL,OUT=...,NCINFO=...,PRODUCT=cmip6,ROOT=/proj/cmip6/data/cmip6/CMIP/NCAR/CESM2
+#   ... --export=ALL,OUT=...,NCINFO=...,PRODUCT=cmip6,SUBTREE=/proj/cmip6/data/cmip6/CMIP/NCAR/CESM2
 # Chain the full build after a successful smoke test:
 #   J=$(sbatch --parsable ...smoke...); sbatch --dependency=afterok:$J ...full...
 #
 # Needs: OUT, NCINFO. Optional: MANIFEST (default manifests/catalogs.yaml),
-# PRODUCT (one product name), ROOT (crawl one subtree; cmip6 only).
+# PRODUCT (one product name), SUBTREE (crawl one subtree; cmip6 only; not ROOT, which
+# the runbook exports as the store root).
 # Outputs: $OUT/<output>.{csv,json}, <output>_invalid.parquet, checks/<output>.json,
 # $OUT/summary/ (site summary for whoi_cmip6; copy to site/data after review).
 #
@@ -35,9 +36,9 @@ export HDF5_USE_FILE_LOCKING=FALSE
 
 args=(--manifest "$MANIFEST" --out "$OUT" --ncinfo "$NCINFO" --jobs "${SLURM_CPUS_PER_TASK:-1}")
 [[ -n "${PRODUCT:-}" ]] && args+=(--product "$PRODUCT")
-[[ -n "${ROOT:-}" ]] && args+=(--root "$ROOT")
+[[ -n "${SUBTREE:-}" ]] && args+=(--root "$SUBTREE")
 
-echo "host=$(hostname) out=${OUT} ncinfo=${NCINFO} product=${PRODUCT:-all} root=${ROOT:-all}"
+echo "host=$(hostname) out=${OUT} ncinfo=${NCINFO} product=${PRODUCT:-all} subtree=${SUBTREE:-all}"
 uv run --frozen scripts/build_catalog.py "${args[@]}"
 
 for js in "$OUT"/*.json; do
