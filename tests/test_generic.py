@@ -746,6 +746,62 @@ def test_summarize_other(other, tmp_path):
     assert (out / "inventory.md").read_text().startswith("| tree | product |")
 
 
+def test_site_holdings_json(other, tmp_path):
+    scans = []
+    for tree in ("ocean_reanalysis", "prism"):
+        out = tmp_path / f"scan_{tree}"
+        scan(other.root / tree, out)
+        scans += ["--scan", str(out)]
+    products = _catalogs(tmp_path, other.root)
+    m = yaml.safe_load(products.read_text())
+    m["listed"] = [
+        {"name": "prism_bil", "path": "prism/bil", "description": "PRISM source"},
+        {"name": "nowhere", "path": "ocean_reanalysis/none", "description": "x"},
+    ]
+    products.write_text(yaml.safe_dump(m))
+    site = tmp_path / "holdings.json"
+    args = [*scans, "--out", str(tmp_path / "inv"), "--root", str(other.root)]
+    with pytest.raises(SystemExit):
+        summarize_other.main([*args, "--site-json", str(site)])
+    assert (
+        summarize_other.main(
+            [*args, "--products", str(products), "--site-json", str(site)]
+        )
+        == 0
+    )
+    got = json.loads(site.read_text())
+    assert set(got) == {"generated", "products"}
+    rows = got["products"]
+    # longest path wins: the .zip is prism_bil's, not prism's; no scan -> absent
+    assert set(rows) == {"glorys12v1", "bran2020", "prism", "prism_bil"}
+    gl = rows["glorys12v1"]
+    assert (gl["n_files"], gl["n_nc"], gl["n_empty_nc"]) == (5, 5, 1)
+    assert (rows["prism"]["n_nc"], rows["prism"]["n_other"]) == (1, 0)
+    assert (rows["prism_bil"]["n_files"], rows["prism_bil"]["n_nc"]) == (1, 0)
+    assert rows["bran2020"]["n_nc"] == 2
+    assert "owners" not in gl and str(other.root) not in site.read_text()
+
+    info = summarize_catalog.product_info(products, str(other.root))
+    assert info["prism_bil"]["catalogued"] is False
+    assert info["prism_bil"]["path"] == "prism/bil"
+    assert info["glorys12v1"]["path"] == "ocean_reanalysis/glorys12v1"
+    assert info["glorys12v1"]["catalogued"] is True
+    # outside the data root: no path
+    assert (
+        summarize_catalog.product_info(products, "/elsewhere")["prism"]["path"] is None
+    )
+
+
+def test_listed_names_unique(tmp_path):
+    m = yaml.safe_load(_catalogs(tmp_path, tmp_path).read_text())
+    m["listed"] = [{"name": "prism", "path": "prism/bil", "description": "x"}]
+    with pytest.raises(ValueError, match="duplicate product names"):
+        CatalogsManifest.model_validate(m)
+    m["listed"] = [{"name": "bil", "path": "/abs/bil", "description": "x"}]
+    with pytest.raises(ValueError, match="relative"):
+        CatalogsManifest.model_validate(m)
+
+
 def test_product_info_from_repo_manifest():
     info = summarize_catalog.product_info(
         Path(__file__).parent.parent / "manifests/catalogs.yaml"

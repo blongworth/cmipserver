@@ -12,7 +12,9 @@ Only reads the catalogs; writes to --out:
     files/<shard>.json        dataset_id -> file names, one shard per
                               source_id (cmip6) or product (reanalysis)
     products.json             with --products: product -> description,
-                              citation, license, acknowledgment (dataset page)
+                              citation, license, acknowledgment (dataset
+                              page), catalogued, path, years, caveats
+                              (holdings page)
 
 ``relative_path`` is the dataset directory relative to --root (for non-CMIP6
 products split into year dirs, the directory that holds them all). The
@@ -126,15 +128,25 @@ def combine(catalogs: list[tuple[str, pl.DataFrame]]) -> pl.DataFrame:
     return out.drop("shard")
 
 
-def product_info(catalogs_yaml: str | Path) -> dict[str, dict]:
-    """{product: {description, citation, license, acknowledgment}} for every
-    non-CMIP6 product in ``catalogs.yaml`` (enabled or not). A reanalysis
-    spec's citation/license/acknowledgment fill in what the entry leaves out.
-    Keys are the catalog ``product`` facet (the spec's ``product`` for
-    reanalysis, the entry ``name`` for generic)."""
+def _rel_root(root: str, data_root: str) -> str | None:
+    prefix = data_root.rstrip("/") + "/"
+    return root.rstrip("/").removeprefix(prefix) if root.startswith(prefix) else None
+
+
+def product_info(
+    catalogs_yaml: str | Path, data_root: str = DEFAULT_DATA_ROOT
+) -> dict[str, dict]:
+    """{product: {description, citation, license, acknowledgment, catalogued,
+    path, years, caveats}} for every non-CMIP6 product in ``catalogs.yaml``
+    (enabled or not) and every ``listed`` holding (``catalogued: false``).
+    A reanalysis spec's citation/license/acknowledgment fill in what the entry
+    leaves out. Keys are the catalog ``product`` facet (the spec's ``product``
+    for reanalysis, the entry ``name`` otherwise). ``path`` is relative to
+    ``data_root`` (None if the root is outside it)."""
     path = Path(catalogs_yaml)
+    m = load(path, CatalogsManifest)
     out = {}
-    for p in load(path, CatalogsManifest).products:
+    for p in m.products:
         if p.builder == "cmip6":
             continue
         info = {
@@ -142,6 +154,10 @@ def product_info(catalogs_yaml: str | Path) -> dict[str, dict]:
             "citation": p.citation,
             "license": p.license,
             "acknowledgment": None,
+            "catalogued": p.enabled,
+            "path": _rel_root(p.root, data_root),
+            "years": p.years,
+            "caveats": p.caveats,
         }
         key = p.name
         if p.spec:
@@ -151,6 +167,17 @@ def product_info(catalogs_yaml: str | Path) -> dict[str, dict]:
             for k in ("citation", "license", "acknowledgment"):
                 info[k] = info[k] or getattr(spec, k)
         out[key] = info
+    for h in m.listed:
+        out[h.name] = {
+            "description": h.description,
+            "citation": h.citation,
+            "license": h.license,
+            "acknowledgment": None,
+            "catalogued": False,
+            "path": h.path,
+            "years": h.years,
+            "caveats": h.caveats,
+        }
     return out
 
 
@@ -239,7 +266,7 @@ def main(argv: list[str] | None = None) -> int:
     (out / "catalog_stats.json").write_text(json.dumps(stats, indent=2) + "\n")
     if args.products:
         (out / "products.json").write_text(
-            json.dumps(product_info(args.products), indent=2) + "\n"
+            json.dumps(product_info(args.products, args.root), indent=2) + "\n"
         )
     print(json.dumps(stats), file=sys.stderr)
     return 0

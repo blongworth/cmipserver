@@ -524,6 +524,9 @@ class Product(_Strict):
     # Shown on the site's dataset page (reanalysis: also in the product spec).
     citation: str | None = None
     license: str | None = None
+    # Shown on the site's "Other holdings" page while the product is disabled.
+    years: str | None = None
+    caveats: str | None = None
 
     @field_validator("root")
     @classmethod
@@ -554,13 +557,37 @@ class Product(_Strict):
         return self.collection or ("cmip6" if self.builder == "cmip6" else "reanalysis")
 
 
+class Listed(_Strict):
+    """A holding shown on the site's "Other holdings" page but never
+    catalogued (no builder). ``path`` is relative to the data root."""
+
+    name: str
+    path: str
+    description: str
+    years: str | None = None
+    caveats: str | None = None
+    citation: str | None = None
+    license: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _tok(cls, v: str) -> str:
+        return _token(v)
+
+    @field_validator("path")
+    @classmethod
+    def _rel(cls, v: str) -> str:
+        return _check_rel(v)
+
+
 class CatalogsManifest(_Strict):
     schema_version: Literal[1] = 1
     products: list[Product]
+    listed: list[Listed] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _unique(self) -> CatalogsManifest:
-        names = [p.name for p in self.products]
+        names = [p.name for p in [*self.products, *self.listed]]
         if len(names) != len(set(names)):
             raise ValueError("duplicate product names")
         outs = [p.output for p in self.products]

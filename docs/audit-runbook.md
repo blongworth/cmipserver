@@ -293,7 +293,9 @@ uv run scripts/scan_holdings.py --root $D/prism --out $R/scan_prism --shard netc
 
 # 2. inventory per product (tree/first --depth dirs), duplicates, owners
 uv run scripts/summarize_other.py --scan $R/scan_era5 --scan $R/scan_ocean_reanalysis \
-    --scan $R/scan_cmems --scan $R/scan_prism --depth era5=3 --out $R/inventory
+    --scan $R/scan_cmems --scan $R/scan_prism --depth era5=3 --out $R/inventory \
+    --products manifests/catalogs.yaml --site-json site/data/holdings.json
+#    (holdings.json: counts and TB for the site's Other holdings page; commit it)
 
 # 3. headers (read-only opens): data_vars, time axis, generic attrs
 uv run scripts/check_nc.py --scan $R/scan_<tree> --out $R/ncinfo_<tree> --shard <tag> [--deep]

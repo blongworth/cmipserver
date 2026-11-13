@@ -37,6 +37,10 @@ products:
     output: whoi_era5
     enabled: false
     description: ECMWF ERA5 reanalysis (WHOI holdings; single and pressure levels)
+    years: 1979-2025 (end varies by variable)
+    caveats: >-
+      Files from 2022-2023 on use valid_time instead of time; rename it before
+      joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg.
 
   # Tier 1, generic: facets from file headers.
   - name: glorys12v1
@@ -49,6 +53,10 @@ products:
     rules:
       - {match: "", frequency: day}
     description: Mercator GLORYS12V1 global ocean reanalysis, daily means, 1/12 deg (CMEMS GLOBAL_MULTIYEAR_PHY_001_030)
+    years: 1993-2024
+    caveats: >-
+      File names change in 2020 (cmems_mod_glo_phy_my_*); from mid-2021 the
+      files are the interim product (myint). 2024 has 359 days.
     citation: >-
       E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics
       Reanalysis, doi:10.48670/moi-00021. Lellouche, J.-M. et al. (2021)
@@ -64,6 +72,8 @@ products:
     rules:
       - {match: "", frequency: mon}
     description: Mercator GLORYS12V1 global ocean reanalysis, monthly means, 1/12 deg (CMEMS GLOBAL_REANALYSIS_PHY_001_030)
+    years: 1993-2024 (2024 January only)
+    caveats: 2019-2021 also hold duplicate copies named *_(1).nc.
     citation: >-
       E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics
       Reanalysis, doi:10.48670/moi-00021.
@@ -89,6 +99,8 @@ products:
     rules:
       - {match: "", frequency: day}
     description: CMEMS Global Reanalysis Ensemble Product (GREP v2), daily, 1/4 deg; four members (CGLORS, FOAM, GLORYS2V4, ORAS5) in each file (GLOBAL_REANALYSIS_PHY_001_031)
+    years: 1993-2011 (to 2011-06-01)
+    caveats: Each file holds all four members as separate variables (*_cglo, *_foam, *_glor, *_oras).
     citation: >-
       E.U. Copernicus Marine Service Information (CMEMS). Global Ocean
       Ensemble Physics Reanalysis, doi:10.48670/moi-00024.
@@ -103,6 +115,8 @@ products:
     rules:
       - {match: "", frequency: mon}
     description: CMEMS Global Reanalysis Ensemble Product (GREP v2), monthly, 1/4 deg (GLOBAL_REANALYSIS_PHY_001_031; stored under ORAS5/)
+    years: 1993-2019
+    caveats: Stored under ORAS5/ but is GREP, not ORAS5.
     citation: >-
       E.U. Copernicus Marine Service Information (CMEMS). Global Ocean
       Ensemble Physics Reanalysis, doi:10.48670/moi-00024.
@@ -121,6 +135,9 @@ products:
       - {match: "_north_", level: north}
       - {match: "_south_", level: south}
     description: Bluelink ReANalysis BRAN2020 (CSIRO / Bureau of Meteorology), 1/10 deg, daily (north and south halves) and monthly
+    caveats: >-
+      Daily 1998 and 2000 are incomplete. Time is ocean_time; the files are
+      not fully CF.
     citation: >-
       Chamberlain, M. A. et al. (2021) Next generation of Bluelink ocean
       reanalysis with multiscale data assimilation: BRAN2020. Earth Syst. Sci.
@@ -139,6 +156,7 @@ products:
       - {match: "^gridded/", level: reg}
       - {match: "^original/", level: native}
     description: Simple Ocean Data Assimilation SODA3.12.2, 5-day and monthly, regridded (reg) and native (or) grids
+    caveats: Monthly time steps are being checked.
     citation: >-
       Carton, J. A., Chepurin, G. A. and Chen, L. (2018) SODA3: A new ocean
       climate reanalysis. J. Climate 31, 6967-6983, doi:10.1175/JCLI-D-18-0149.1.
@@ -151,6 +169,8 @@ products:
     enabled: false
     version: GOFS3_0
     description: HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)
+    years: 1992-2012
+    caveats: Daily snapshots, not means.
     citation: null  # FILL IN (Brett): HYCOM reanalysis reference
     license: null   # FILL IN (Brett)
   - name: hycom_gofs31
@@ -161,6 +181,8 @@ products:
     enabled: false
     version: GOFS3_1
     description: HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH
+    years: 1994-2015
+    caveats: Daily snapshots, not means. Regional subset, not global.
     citation: null  # FILL IN (Brett): HYCOM reanalysis reference
     license: null   # FILL IN (Brett)
   - name: eccov5
@@ -171,6 +193,7 @@ products:
     enabled: false
     version: v5alpha
     description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles
+    caveats: Unreleased alpha version.
     citation: null  # FILL IN (Brett): ECCO v5 alpha reference
     license: null   # FILL IN (Brett)
   - name: prism
@@ -183,6 +206,37 @@ products:
       # no time coordinate in the files (t dim with year/month variables)
       - {match: "^monthly/", frequency: mon}
     description: PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)
+    years: 1895-2019
+    caveats: >-
+      No time coordinate (year and month variables). Mixes PRISM stable (M2)
+      and provisional (M3) data.
     citation: >-
       PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.
     license: null   # FILL IN (Brett): PRISM terms of use
+
+# --- Listed only: shown on the site's "Other holdings" page
+# (site/holdings.qmd), never catalogued. path is relative to /proj/cmip6/data.
+# Disabled products above are listed there too, with their years and caveats.
+# Citations are drafts: CONFIRM (Brett).
+listed:
+  - name: oras5
+    path: ocean_reanalysis/ORAS5/oras5/monthly/oras5
+    description: ECMWF ORAS5 ocean reanalysis, monthly, ORCA025 and 1x1 grids, members opa0-opa4
+    caveats: >-
+      Yearly .tar.gz archives; only a few files are extracted. Some member
+      dirs are incomplete.
+    citation: >-
+      Zuo, H. et al. (2019) The ECMWF operational ensemble reanalysis-analysis
+      system for ocean and sea ice: a description of the system and
+      assessment. Ocean Sci. 15, 779-808, doi:10.5194/os-15-779-2019.
+    license: null   # FILL IN (Brett)
+  - name: cfsr932
+    path: ocean_reanalysis/cfsr932
+    description: NCEP Climate Forecast System Reanalysis (CFSR, NCAR RDA ds093.2), converted from GRIB to NetCDF
+    caveats: >-
+      Contents being sorted out (good/new/old dirs, some files still
+      compressed). Ask before relying on it.
+    citation: >-
+      Saha, S. et al. (2010) The NCEP Climate Forecast System Reanalysis.
+      Bull. Amer. Meteor. Soc. 91, 1015-1057, doi:10.1175/2010BAMS3001.1.
+    license: null   # FILL IN (Brett)

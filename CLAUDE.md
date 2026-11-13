@@ -29,6 +29,11 @@ Maintainer: Brett Longworth.
 - VAST is canonical storage; NetCDF stays in the DRS layout.
 - Catalog, not a search server: intake-esm CSV + JSON (ecgtools), rebuilt
   nightly on HPC, plus a small dataset-level summary for the site.
+  Enabled catalogs (`manifests/catalogs.yaml`): `cmip6`, `20crv3`. ERA5 and
+  one or two ocean products are next (after the HPC audit); the rest of the
+  non-CMIP6 holdings are listed on `site/holdings.qmd`, not catalogued. How
+  often non-CMIP6 products are checked and rebuilt is undecided (regular or
+  on demand, per product).
 - Quarto site, OJS dataset browser over the summary, built-in search,
   notebooks (committed without outputs) executed on HPC at render time; `site/_freeze/` is generated and untracked.
 - Deploy: nightly HPC job renders and rsyncs to the VM. GitHub Actions runs
@@ -60,6 +65,7 @@ L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
 uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data
 # non-CMIP6 products (era5, glorys12v1, bran2020, ...; docs/audit-runbook.md
 # "Non-CMIP6 trees"): add --catalog $L/whoi_<output>.csv for each one enabled
-# in manifests/catalogs.yaml
+# in manifests/catalogs.yaml. site/data/holdings.json (Other holdings page)
+# comes from summarize_other.py --site-json after an inventory scan
 uv run quarto render site
 ```

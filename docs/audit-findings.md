@@ -243,7 +243,15 @@ no moves; anything below that suggests a move is a **proposal**.
 | `.DS_Store`, `._*` | exclude | macOS litter (in `data/`, `era5/`, `era5/reanalysis/*`, `ocean_reanalysis/`, `ORAS5/`) |
 
 Every `catalog` entry is in `manifests/catalogs.yaml`, **disabled** until its
-HPC check_nc run and `check_catalog.py` pass.
+HPC check_nc run and `check_catalog.py` pass. Decision (Brett, 2026-11-13):
+catalog ERA5 plus one or two ocean products (GLORYS12 daily likely first;
+pick after the X4 inventory) and **list the rest** on the site's Other
+holdings page (`site/holdings.qmd`): every disabled product, plus the
+`listed:` entries in `catalogs.yaml` (`oras5` archives, `cfsr932`), with
+path, years, caveats and citation. Check/rebuild cadence per product is
+undecided. Cleanup proposals below (quarantine, `_(1).nc`, `x.nc`,
+`.DS_Store`) and the owner questions follow the usual plan, approve, apply
+flow.
 
 ### ERA5 quarantine: partial 2022 monthly means (resolved: reason; open: delete?)
 `era5/quarantine_2022_20260807T140218/single-levels/monthly-means/<var>/2022_<var>.nc`,

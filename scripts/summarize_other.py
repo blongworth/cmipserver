@@ -14,18 +14,30 @@ Writes to --out:
                           product, or that share an inode with another path
     owners.parquet        files and bytes per product and uid
 
+With --site-json (and --products catalogs.yaml) also writes the site's
+inventory (site/data/holdings.json): files, .nc files and TB per non-CMIP6
+product and ``listed`` holding in catalogs.yaml, keyed like products.json.
+Each scanned file counts toward the product with the longest matching path.
+Products with no scanned file are left out. No owners or absolute paths.
+
 Example:
     uv run scripts/summarize_other.py --scan $R/scan_era5 --scan $R/scan_ocean \\
-        --depth era5=3 --out $R/inventory
+        --depth era5=3 --out $R/inventory \\
+        --products manifests/catalogs.yaml --site-json site/data/holdings.json
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from datetime import date
 from pathlib import Path
 
 import polars as pl
+from summarize_catalog import product_info
+
+from whoi_cmip_reorg_code.catalog_schema import DEFAULT_DATA_ROOT
 
 TB = 1e12
 
@@ -153,6 +165,33 @@ def owners(lf: pl.LazyFrame) -> pl.DataFrame:
     )
 
 
+def site_holdings(
+    lf: pl.LazyFrame, paths: dict[str, str], data_root: str = DEFAULT_DATA_ROOT
+) -> pl.DataFrame:
+    """Files, .nc files and TB per product. ``paths``: product -> path
+    relative to ``data_root``; a file belongs to the longest matching path."""
+    rel = pl.col("path").str.strip_prefix(data_root.rstrip("/") + "/")
+    expr = pl.lit(None, dtype=pl.String)
+    for name, p in sorted(paths.items(), key=lambda kv: len(kv[1])):
+        p = p.rstrip("/")
+        expr = (
+            pl.when((rel == p) | rel.str.starts_with(p + "/"))
+            .then(pl.lit(name))
+            .otherwise(expr)
+        )
+    lf = lf.with_columns(product=expr, tree=pl.lit("")).drop_nulls("product")
+    return inventory(lf).select(
+        "product", "n_files", "n_nc", "n_empty_nc", "n_other", "size_tb"
+    )
+
+
+def site_json(df: pl.DataFrame) -> dict:
+    return {
+        "generated": date.today().isoformat(),
+        "products": {r.pop("product"): r for r in df.to_dicts()},
+    }
+
+
 def to_markdown(df: pl.DataFrame) -> str:
     cols = df.columns
     lines = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
@@ -182,7 +221,12 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="product depth: N (all trees) or TREE=N (repeatable)",
     )
+    ap.add_argument("--products", help="catalogs.yaml (needed for --site-json)")
+    ap.add_argument("--site-json", help="write the site inventory JSON here")
+    ap.add_argument("--root", default=DEFAULT_DATA_ROOT, help="data root prefix")
     args = ap.parse_args(argv)
+    if bool(args.site_json) != bool(args.products):
+        ap.error("--site-json and --products go together")
     per, default = _depths(args.depth)
     try:
         lf = with_product(load(args.scan), per, default)
@@ -196,6 +240,14 @@ def main(argv: list[str] | None = None) -> int:
     dup = duplicates(lf)
     dup.write_parquet(out / "duplicates.parquet")
     owners(lf).write_parquet(out / "owners.parquet")
+    if args.site_json:
+        info = product_info(args.products, args.root)
+        paths = {k: v["path"] for k, v in info.items() if v["path"]}
+        site = site_holdings(lf, paths, args.root)
+        Path(args.site_json).write_text(json.dumps(site_json(site), indent=2) + "\n")
+        missing = sorted(set(paths) - set(site["product"]))
+        if missing:
+            print(f"site json: no scanned files for {missing}", file=sys.stderr)
     with pl.Config(tbl_rows=-1, tbl_cols=-1, tbl_width_chars=200):
         print(
             inv.select(
