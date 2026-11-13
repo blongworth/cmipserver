@@ -127,8 +127,14 @@ Open: does ESGF have those years? If so, a repair candidate for `plan_repairs`.
 578 files in `CMIP/NCAR/{LENS (254), CESM_HR (254), CESM2-LE (70)}` use native
 CESM names (`b.e11.B20TRC5CNBDRD.f09_g16.001.cam.h0.PSL.185001-200512.nc`,
 `cesm2_historical_aice_member_r10i1181p1f1.nc`), so they scan as `bad_filename`.
-They were added after the Feb 2022 file list. They are not CMIP6 DRS data and
-must be kept out of the CMIP6 catalog (or given their own collection). Do not
+They were added after the Feb 2022 file list. One file from each directory was
+opened: none has CMIP6 global attributes (`mip_era`, `activity_id`,
+`source_id`, `experiment_id`). `LENS` is CESM1/CAM5 output (CMIP5 era, 2013),
+`CESM_HR` has no CMIP metadata, `CESM2-LE` is native CICE output that only borrows
+CMIP6-style member names. So they are native CESM model output, not published
+CMIP6 files, and do not fit the DRS. Currently excluded from the catalog as
+`bad_filename` (578 of the 2,216; the other 1,638 are the SAM0-UNICON files
+below). Decide: leave out, or add as their own product/collection. Do not
 `reorg` them.
 
 ### SAM0-UNICON non-standard filenames (open, decision)
