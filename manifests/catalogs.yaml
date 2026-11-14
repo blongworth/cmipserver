@@ -193,7 +193,9 @@ products:
     enabled: false
     version: v5alpha
     description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles
-    caveats: Unreleased alpha version.
+    caveats: >-
+      Unreleased alpha version. nctiles_monthly/THETA/THETA_1992.nc is
+      truncated (incomplete copy).
     citation: null  # FILL IN (Brett): ECCO v5 alpha reference
     license: null   # FILL IN (Brett)
   - name: prism

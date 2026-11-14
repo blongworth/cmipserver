@@ -117,7 +117,7 @@
     "catalogued": false,
     "path": "ocean_reanalysis/ECCOv5/Version5/Alpha",
     "years": null,
-    "caveats": "Unreleased alpha version."
+    "caveats": "Unreleased alpha version. nctiles_monthly/THETA/THETA_1992.nc is truncated (incomplete copy)."
   },
   "prism": {
     "description": "PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)",

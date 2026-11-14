@@ -337,6 +337,15 @@ Proposal: delete after the owner confirms. Not catalogued (outside the root).
   (not inspected). Strays: `index.html` (GOFS30/1995), `wget-log`
   (GOFS31/1994, 2006), a `1992/` dir inside `GOFS30/1999/`. Snapshots, not
   means (`field_type: instantaneous`).
+- **ECCOv5: one truncated file.** `ECCOv5/Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc`
+  is 366,788,608 B, but its HDF5 superblock says the file ends at
+  2,274,498,300 B (16% present; X3 `check_nc`, `truncated`). The other
+  10,797 ECCOv5 `.nc` are `ok`. The other `THETA_*.nc` are exactly
+  2,274,498,300 B, dated 2020-10-06; `THETA_1992.nc` is dated 2021-06-16, so
+  it was rewritten later by a copy or download that stopped. The catalog
+  would leave it out (invalid). Proposal: re-fetch it from the ECCO source
+  (repair worklist); ask the file's owner whether they replaced it on
+  purpose and where it came from.
 - **SODA 3.12.2.** `gridded/` (regridded `_reg_`, 2,774 5-day files + 38
   monthly) and `original/` (native `_or_`, 2,774 5-day). The monthly file
   for 2017 runs 2017-01-16 to 2017-12-12 with a 30-day median step; check
@@ -387,7 +396,11 @@ send (not sent):
 6. (uid 16165) BRAN2020 1998 and 2000 daily: stopped downloads or intentional?
 7. (uid 16360) `emu`: leave as an install under `ocean_reanalysis`, or move
    out of the data tree (proposal)?
-8. Licence and citation for each product (drafts in `manifests/catalogs.yaml`,
+8. (owner of `ECCOv5/.../THETA/THETA_1992.nc`) The file was rewritten on
+   2021-06-16 and is truncated (367 MB of 2.27 GB; the other years date from
+   2020-10-06). Was it replaced on purpose, and from which source can it be
+   fetched again?
+9. Licence and citation for each product (drafts in `manifests/catalogs.yaml`,
    marked FILL IN / CONFIRM).
 
 ### Tooling (resolved / open)
@@ -416,4 +429,6 @@ send (not sent):
 | L4 check_nc | same | 732,134 `.nc` | 717,672 ok, 14,462 empty | 7 `attr_mismatch`; calendars incl. `julian` (3,728) and `360_day` (12,869); gaps (filename-only): 27,546 ok, 3,137 fixed, 370 overlap, 106 gap |
 | L4 catalog | full `build_catalog.sbatch` | 715,452 files, 31,031 datasets, 161.3 TB | n/a | 16,682 invalid (14,458 excluded as empty, 2,216 `bad_filename`, 8 `path_filename_mismatch`; sum 732,134); crawl 306-415 s on 8 cpus; `whoi_20crv3` 10 datasets; all `check_catalog` checks pass with synchronous dask and `use_cftime=True` |
 | X1 | `prism/netcdf/monthly`; `era5/.../monthly-means/2m_temperature` (laptop, mount) | 13 + 47 `.nc` | all ok (`--deep`) | counts and bytes equal `ls -l` (5,235,175,036 B; 693,964,995 B incl. 1 `.lck`); 1.5 and 0.8 files/s over SMB; ERA5 header gaps `ok` 1979-01 to 2025-12 across `time`/`valid_time`; PRISM `fixed` (no time axis) |
+| X2 | `ocean_reanalysis/bran2020`, one Slurm task each (hydra, 4G) | 64,642 `.nc` | all ok | scan 28 s (~2,300 files/s), MaxRSS 380 MB; check_nc 37:48 (28.5 files/s), sacct MaxRSS 4.19 GB = the 4G limit, but `/usr/bin/time -v` on 5,000 files: process peak 147 MB (2:01), so the sacct figure is page cache, not growth; 4G is enough; ncinfo rows equal the scan's `.nc` count |
 | X3 (partial) | `era5/{quarantine_*,download-scripts,_root_files}` stat scans; quarantine headers + sha256 | 28 `.nc` (quarantine) | ok | quarantine reason found (above); `ocean_reanalysis/emu` scan >100k entries, unfinished on the laptop; rest of X3, X2, X4 to run on HPC |
+| X3 | `ocean_reanalysis/{emu,cfsr932,ECCOv5,ORAS5}`, `prism/bil` (hydra, one task each) | 19,387 `.nc` (ECCOv5 10,798, cfsr932 8,454, ORAS5 135) | 19,386 ok, 1 truncated | 0 scan errors; ncinfo rows equal the scan's `.nc` count; entries / TB: emu 198,731 / 1.129 (no `.nc`), ORAS5 3,144 / 2.511 (mostly `.tar.gz`), ECCOv5 10,810 / 0.417, cfsr932 8,509 / 0.354, bil 625 / 0.003; truncated: ECCOv5 `THETA_1992.nc` (above) |
