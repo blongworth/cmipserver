@@ -145,7 +145,8 @@ products:
     description: Bluelink ReANalysis BRAN2020 (CSIRO / Bureau of Meteorology), 1/10 deg, daily (north and south halves) and monthly
     caveats: >-
       Daily 1998 and 2000 are incomplete. Time is ocean_time; the files are
-      not fully CF.
+      not fully CF. 3 daily files have wrong time values (south salt
+      1999 day 330, north temp 2000 day 085 and 2003 day 229).
     citation: >-
       Chamberlain, M. A. et al. (2021) Next generation of Bluelink ocean
       reanalysis with multiscale data assimilation: BRAN2020. Earth Syst. Sci.

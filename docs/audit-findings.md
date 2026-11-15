@@ -326,7 +326,7 @@ BRAN2020, SODA or PRISM.** List: `nc_status != "ok"` in
 
 ### X4 header gaps (open)
 `find_gaps.py --ncinfo` per tree (dataset = dir with year dirs folded to
-`*`, plus data variables; only `ok` files). Datasets: era5 138 ok, 4 gap,
+`*`, plus data variables; only `ok` files). Datasets (first run): era5 138 ok, 4 gap,
 8 overlap, 1 duplicate; ocean_reanalysis 30 ok, 14 gap, 5 bad_time_label,
 1 duplicate; cmems 3 fixed (statics), 1 gap, 1 duplicate; prism 1 fixed.
 
@@ -355,7 +355,10 @@ in a different order, so the header check split the product in two and
 reported a false 2021-06 -> 2023-12 gap. Same split would have made two
 catalog datasets: fixed (generic `variable_id` and the gap grouping now
 sort the variables). The 36 `_(1).nc` copies show as `duplicate` (same
-times), as expected.
+times), as expected. Re-run with sorted variables (2026-11-15): cmems is
+3 fixed + 1 duplicate (no gap); ocean_reanalysis `ok` datasets 30 -> 27
+(three products had been split by variable order, each part gap-free),
+other statuses unchanged; era5 unchanged.
 
 **GREP daily**: besides the 12 truncated files, whole runs are missing:
 1993-11-22..30, 1995-01-03..02-28, 1996-02-29, **1999-06-26..2001-06-30
@@ -372,9 +375,18 @@ stopped. Proposal: re-fetch from CMEMS, or list as incomplete.
 pairs, then quarantine the `GOFS31/global/1994` copies. HYCOM stays listed,
 not catalogued.
 
-**BRAN2020 daily** (open): `salt` and `temp` start 1984-06-08 and
-1980-03-03 at odd times (`07:31:13.83`), before BRAN2020's 1993 start: a
-few files have bad time values; to find. The ~7,000 `duplicate`s per
+**BRAN2020 daily** (open): 3 files have a time value that does not match
+their name (units `days since 1979-01-01`), though their headers read `ok`:
+
+| File (`daily/global/`) | Should be | Time in file |
+|---|---|---|
+| `1999/bran2020_daily_south_salt_1999_330.nc` | 1999-11-26 | 1984-06-08T07:31:13.83 |
+| `2000/bran2020_daily_north_temp_2000_085.nc` | 2000-03-25 | 1980-03-03T01:18:26.54 |
+| `2003/bran2020_daily_north_temp_2003_229.nc` | 2003-08-17 | 1982-01-20T07:31:13.83 |
+
+Fractional-second garbage suggests corrupted bytes, so the data in them is
+suspect too (not deep-read). The catalog would put them at the wrong time.
+Proposal: re-fetch the 3 files from NCI; meanwhile exclude them. The ~7,000 `duplicate`s per
 variable are the north/south halves (same times; the catalog splits them
 by `level`). 14-16 gaps per variable include the short 1998 and 2000
 years.
@@ -566,4 +578,4 @@ send (not sent):
 | X2 | `ocean_reanalysis/bran2020`, one Slurm task each (hydra, 4G) | 64,642 `.nc` | all ok | scan 28 s (~2,300 files/s), MaxRSS 380 MB; check_nc 37:48 (28.5 files/s), sacct MaxRSS 4.19 GB = the 4G limit, but `/usr/bin/time -v` on 5,000 files: process peak 147 MB (2:01), so the sacct figure is page cache, not growth; 4G is enough; ncinfo rows equal the scan's `.nc` count |
 | X3 (partial) | `era5/{quarantine_*,download-scripts,_root_files}` stat scans; quarantine headers + sha256 | 28 `.nc` (quarantine) | ok | quarantine reason found (above); `ocean_reanalysis/emu` scan >100k entries, unfinished on the laptop; rest of X3, X2, X4 to run on HPC |
 | X3 | `ocean_reanalysis/{emu,cfsr932,ECCOv5,ORAS5}`, `prism/bil` (hydra, one task each) | 19,387 `.nc` (ECCOv5 10,798, cfsr932 8,454, ORAS5 135) | 19,386 ok, 1 truncated | 0 scan errors; ncinfo rows equal the scan's `.nc` count; entries / TB: emu 198,731 / 1.129 (no `.nc`), ORAS5 3,144 / 2.511 (mostly `.tar.gz`), ECCOv5 10,810 / 0.417, cfsr932 8,509 / 0.354, bil 625 / 0.003; truncated: ECCOv5 `THETA_1992.nc` (above) |
-| X4 scan | `era5`, `ocean_reanalysis`, `cmems`, `prism` (hydra arrays; era5 split by product) | 614,746 `.nc`, ~124.5 TB | 614,710 ok, 17 truncated, 19 empty (ERA5 all ok) | inventory above; 458 duplicate names (364 HYCOM GOFS30 in GOFS31), 0 hard links; header gaps: era5 138 ok / 8 overlap / 4 gap / 1 duplicate, ocean_reanalysis 30 ok / 14 gap / 5 bad_time_label / 1 duplicate, cmems 3 fixed / 1 gap (false: variable order) / 1 duplicate, prism 1 fixed (see X4 header gaps) |
+| X4 scan | `era5`, `ocean_reanalysis`, `cmems`, `prism` (hydra arrays; era5 split by product) | 614,746 `.nc`, ~124.5 TB | 614,710 ok, 17 truncated, 19 empty (ERA5 all ok) | inventory above; 458 duplicate names (364 HYCOM GOFS30 in GOFS31), 0 hard links; header gaps: era5 138 ok / 8 overlap / 4 gap / 1 duplicate, ocean_reanalysis 30 ok / 14 gap / 5 bad_time_label / 1 duplicate, after the variable-order fix: ocean_reanalysis 27 ok, cmems 3 fixed / 1 duplicate, prism 1 fixed (see X4 header gaps) |
