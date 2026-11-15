@@ -93,6 +93,7 @@ re-run.
 |---|---|---|
 | `scripts/build_catalog.py` (4.1) | HPC | ecgtools scan -> catalog CSV + JSON with `master_id`, `size_bytes`; write temp, then rename |
 | `scripts/check_catalog.py` | HPC | Fail on schema errors or large swings vs the last catalog (e.g. >5% fewer datasets). Report, never fix. |
+| `scripts/promote_catalog.py` (TODO, not written) | HPC | `catalog/next` -> `catalog/live`. Dry run unless `--execute`. Refuse unless the catalog's check report exists with every check passing; run the `--previous` comparison against `live`. Copy each file to a hidden temp name, then rename: CSV and `_invalid.parquet` first, JSON last. Until it exists, promote by hand with that pattern (2026-11-15: `whoi_era5`, `whoi_glorys12v1`, `whoi_soda3122` are still only in `runs/`). |
 | `slurm/nightly.sbatch` | HPC | All steps, `set -euo pipefail`, `--mail-type=FAIL` |
 | `scripts/publish_site.sh` | HPC | `_site/` -> `releases/<UTC stamp>/`; write `BUILD_OK` (stamp, commit, catalog version, file count, checksum), then `LATEST`. Keep 14. Dry run unless `--publish`. |
 | `infra/vm/pull_site.sh` | VM | New `LATEST` with `BUILD_OK` -> rsync to `/srv/cmip/releases/<stamp>/`, check count, smoke test, switch `staging` symlink; promote to `current` unless `HOLD`. Keep 7. Also `--promote`, `--rollback <stamp>`. |

@@ -11,6 +11,7 @@ Code for reorganizing and cataloguing the WHOI CMIP6 holdings on VAST
   Hosting and nightly build: `docs/deploy-plan.md` (proposal).
 - Audit: `docs/audit-runbook.md` (HPC steps, rollout ladder);
   `docs/audit-findings.md` (what the audit found, open decisions).
+- Open items: `docs/todo.md`.
 
 ## Project
 
