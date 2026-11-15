@@ -35,12 +35,12 @@ products:
     builder: reanalysis
     spec: products/era5.yaml
     output: whoi_era5
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-15 (docs/audit-findings.md)
     description: ECMWF ERA5 reanalysis (WHOI holdings; single and pressure levels)
     years: 1979-2025 (end varies by variable)
     caveats: >-
-      Files from 2022-2023 on use valid_time instead of time; rename it before
-      joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg.
+      Files from 2022-2023 on use valid_time (and pressure_level) instead of
+      time (and level); open with the preprocess on the Catalog page. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg.
       1hr 2023-2025 exists as both daily and yearly files for 7 variables
       (the catalog uses the daily files).
       Pressure-level monthly means for 2022 stop in September (geopotential,

@@ -26,8 +26,8 @@ VM (Ubuntu, Apache), VAST mounted read-only:
 GitHub Actions: checks only.
 ```
 
-Catalogs in the nightly job: the enabled ones, today `cmip6` and `20crv3`
-(`build_catalog.py --manifest`). Non-CMIP6 products (ERA5, then one or two
+Catalogs in the nightly job: the enabled ones, today `cmip6`, `20crv3` and
+`era5` (`build_catalog.py --manifest`). Other non-CMIP6 products (one or two
 ocean products; `docs/audit-runbook.md`, "Non-CMIP6 trees") are enabled in
 `manifests/catalogs.yaml` after their HPC check, but **how often they are
 checked and rebuilt is undecided**: some may run on a schedule, some on
