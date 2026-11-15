@@ -764,6 +764,15 @@ def test_check_catalog_era5_mixed_time_format(other, tmp_path):
     mon = [r for r in opens if "mon.sfc.2m_temperature" in r["detail"]]
     assert mon and "preprocess" in mon[0]["detail"], opens
 
+    # --dataset opens just the named datasets; an unknown key fails
+    key = "reanalysis.era5.mon.sfc.2m_temperature.v1"
+    res = check_catalog.run_checks(out / "whoi_era5.json", datasets=[key])
+    assert [r["detail"] for r in res if r["check"] == "to_dataset_dict"] == [
+        f"{key} (only with preprocess)"
+    ]
+    res = check_catalog.run_checks(out / "whoi_era5.json", datasets=["nope"])
+    assert not next(r for r in res if r["check"] == "dataset_keys")["ok"]
+
 
 def test_dated_reanalysis_build(other):
     spec = ProductManifest.model_validate(ERA5)

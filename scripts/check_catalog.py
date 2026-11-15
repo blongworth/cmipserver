@@ -83,6 +83,7 @@ def run_checks(
     sample_datasets: int = 3,
     max_drop: float = 0.05,
     seed: int = 0,
+    datasets: list[str] | None = None,
 ) -> list[dict]:
     rng = random.Random(seed)
     results: list[dict] = []
@@ -143,7 +144,13 @@ def run_checks(
             add("intake_open", False, f"{type(exc).__name__}: {exc}")
             return results
         add("intake_open", len(keys) == n_ds, f"{len(keys)} keys, {n_ds} datasets")
-        for key in rng.sample(keys, min(sample_datasets, len(keys))):
+        if datasets:
+            unknown = [k for k in datasets if k not in keys]
+            add("dataset_keys", not unknown, f"unknown: {unknown[:3]}")
+            chosen = [k for k in datasets if k in keys]
+        else:
+            chosen = rng.sample(keys, min(sample_datasets, len(keys)))
+        for key in chosen:
             try:
                 # long runs (piControl past year 2262) mix pandas and cftime
                 # time types unless cftime is forced; users need this too
@@ -173,6 +180,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sample-datasets", type=int, default=3)
     ap.add_argument("--max-drop", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--dataset",
+        action="append",
+        help="open this dataset key instead of a random sample (repeatable); "
+        "e.g. reanalysis.era5.mon.plev.geopotential.v1",
+    )
     ap.add_argument("--report", help="write results JSON here")
     args = ap.parse_args(argv)
 
@@ -183,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
         args.sample_datasets,
         args.max_drop,
         args.seed,
+        args.dataset,
     )
     for r in res:
         print(f"{'PASS' if r['ok'] else 'FAIL'} {r['check']}: {r['detail']}")
