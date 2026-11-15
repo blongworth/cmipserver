@@ -26,7 +26,11 @@
 # (see docs/audit-findings.md, "Non-CMIP6 holdings").
 #
 # Not catalogued (invalid, for review): stray files that match no group
-# (single-levels/monthly-means/evaporation/x.nc, a partial 2022 file).
+# (single-levels/monthly-means/evaporation/x.nc, a partial 2022 file;
+# 1hr/evaporation/1993-05-03_evaporation_corrupted.nc), and the yearly 1hr
+# files 1hr/<var>/{2023,2024,2025}_<var>.nc of 7 variables: they hold the
+# same hours as the daily files, which are catalogued instead (Brett,
+# 2026-11-15; docs/audit-findings.md, "X4 header gaps").
 # *.nc.lck lock files are not .nc and are not crawled.
 schema_version: 1
 product: era5
@@ -46,7 +50,7 @@ acknowledgment: >-
 # CONFIRM (Brett): licence text as currently shown on the CDS dataset pages.
 license: Licence to use Copernicus Products (Copernicus Climate Change Service)
 groups:
-  # hourly, one file per day (1979-2022; geopotential 2023-2025)
+  # hourly, one file per day (1979-2025; geopotential 2023-2025 only)
   - remote_dir: single-levels/1hr
     frequency: 1hr
     level: sfc
@@ -86,21 +90,6 @@ groups:
     - vertical_integral_of_northward_cloud_liquid_water_flux
     - vertical_integral_of_northward_water_vapour_flux
     - vertically_integrated_moisture_divergence
-  # hourly, one file per year (new CDS format). geopotential also has daily files for these years (duplicate)
-  - remote_dir: single-levels/1hr
-    frequency: 1hr
-    level: sfc
-    path_template: "{remote_dir}/{variable}/{file}"
-    file_pattern: "{year}_{variable}.nc"
-    years: [2023, 2025]
-    variables:
-    - 10m_u_component_of_wind
-    - 10m_v_component_of_wind
-    - 2m_temperature
-    - geopotential
-    - mean_sea_level_pressure
-    - sea_surface_temperature
-    - surface_latent_heat_flux
   # 3-hourly, 1 deg, one file per month (1979-2021)
   - remote_dir: single-levels/3hr
     frequency: 3hr

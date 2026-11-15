@@ -336,8 +336,9 @@ BRAN2020, SODA or PRISM.** List: `nc_status != "ok"` in
   `surface_latent_heat_flux`, `geopotential`): every daily file *and* a
   yearly `YYYY_<var>.nc` (17,170 files = 16,071 days 1979-2022 + 1,096 days
   + 3 yearly). A catalog over both gives every 2023-2025 hour twice.
-  Decide: catalog the daily or the yearly files for 2023-2025 (exclude the
-  other in `products/era5.yaml`); later, quarantine one set.
+  Decision (Brett, 2026-11-15): catalog the daily files for all years; the
+  yearly group is removed from `products/era5.yaml`, so the 21 yearly files
+  are catalog-invalid. Removing them from the store is a later proposal.
 - **pressure-levels monthly-means 2022 stops at September** for
   `geopotential`, `specific_humidity`, `temperature`: the 2022 files are the
   old 9-month downloads (like the quarantined single-level ones) and were

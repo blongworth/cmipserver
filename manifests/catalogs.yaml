@@ -41,7 +41,8 @@ products:
     caveats: >-
       Files from 2022-2023 on use valid_time instead of time; rename it before
       joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg.
-      1hr 2023-2025 exists as both daily and yearly files for 7 variables.
+      1hr 2023-2025 exists as both daily and yearly files for 7 variables
+      (the catalog uses the daily files).
       Pressure-level monthly means for 2022 stop in September (geopotential,
       specific_humidity, temperature); 6hr soil water layer 4 lacks
       1998-11.

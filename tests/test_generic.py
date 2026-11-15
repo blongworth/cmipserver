@@ -703,6 +703,32 @@ def test_dated_manifest_validation():
         )
 
 
+def test_repo_era5_skips_yearly_1hr(tmp_path):
+    """The repo's ERA5 spec catalogs 1hr daily files only; the yearly
+    2023-2025 files hold the same hours and are left out (invalid)."""
+    spec = load(
+        Path(__file__).parent.parent / "manifests/products/era5.yaml",
+        ProductManifest,
+    )
+    root = tmp_path / "reanalysis"
+    d = root / "single-levels/1hr/2m_temperature"
+    daily = write(
+        d / "2023-01-01_2m_temperature.nc",
+        {"t2m": 3},
+        hours(24),
+        units="hours since 2023-01-01",
+    )
+    yearly = write(
+        d / "2023_2m_temperature.nc",
+        {"t2m": 3},
+        hours(24),
+        units="hours since 2023-01-01",
+    )
+    df, invalid = reanalysis.build(str(root), spec, jobs=1, collection="reanalysis")
+    assert df["path"].to_list() == [str(daily)]
+    assert invalid["path"].to_list() == [str(yearly)]
+
+
 def test_dated_reanalysis_build(other):
     spec = ProductManifest.model_validate(ERA5)
     root = other.root / "era5/reanalysis"  # not named after the product
