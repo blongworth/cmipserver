@@ -65,19 +65,20 @@ cat.df["path"] = cat.df["path"].str.replace(
 Reading NetCDF over HTTPS works for small requests; for anything large,
 download the files first (see the [download guide](download-guide.qmd)).
 
-## ERA5: two time formats
+## ERA5: two file formats
 
 Many ERA5 datasets mix files from the old and new Copernicus download
-services: older files use a `time` coordinate, newer ones (2022 onward) use
-`valid_time`, with different calendar names. `to_dataset_dict()` fails on
-these (`Cannot combine along dimension 'time' with mixed types`). Open them
-with this `preprocess`:
+services. Older files use a `time` coordinate (and, for pressure levels, a
+`level` coordinate counting 1 to 1000 hPa); newer ones (2022 onward) use
+`valid_time` and `pressure_level` (counting 1000 to 1), with different
+calendar names. `to_dataset_dict()` fails on these (`Cannot combine along
+dimension 'time' with mixed types`). Open them with this `preprocess`:
 
 ```python
 def fix(ds):
-    if "valid_time" in ds.dims:
-        ds = ds.rename(valid_time="time")
-    return ds.drop_vars(["number", "expver"], errors="ignore")
+    ren = {n: o for n, o in (("valid_time", "time"), ("pressure_level", "level")) if n in ds.dims}
+    ds = ds.rename(ren).drop_vars(["number", "expver"], errors="ignore")
+    return ds.sortby("level") if "level" in ds.dims else ds
 
 dsets = cat.search(product="era5", variable_id="2m_temperature", frequency="mon").to_dataset_dict(
     preprocess=fix, progressbar=False

@@ -434,14 +434,25 @@ Proposal: delete after the owner confirms. Not catalogued (outside the root).
     `number` and `expver`.
   - with `use_cftime=True`, also `ds.convert_calendar("standard",
     dim="time", use_cftime=True)` in `preprocess`.
-  Proposal: document the first for users; do not rewrite files.
+  **Pressure-level monthly means need more** (HPC recheck 2026-11-15:
+  `reanalysis.era5.mon.plev.geopotential` still failed with the time recipe):
+  old files have vertical dim `level` (int32, `millibars`, 1 to 1000), new
+  files `pressure_level` (float64, `hPa`, 1000 to 1), and `z` is float64 vs
+  float32. Renaming `pressure_level` to `level` and `sortby("level")` makes
+  all 47 files combine (561 steps; the 3 missing months are the 2022
+  gap). Time rename alone fails ("Coordinate variable level is neither
+  monotonically increasing nor decreasing"). The `level` units attribute
+  differs (`millibars` vs `hPa`) and the combined dataset keeps the first
+  file's.
+  Proposal: document the first recipe plus the level handling for users; do
+  not rewrite files.
   `check_catalog.py` opens 3 sampled datasets with `use_cftime=True`; on
   `whoi_era5` it failed 2 of 3 (monthly means spanning the change), 1 passed
   (1hr geopotential, new format only). **50 of 145 ERA5 variable dirs mix the
   two formats** (5 pressure-level monthly means, 39 single-level monthly
   means, 6 of the 1hr variables). The check now retries a
-  failed open with `check_catalog.normalize_time` (rename, drop, convert
-  calendar to `standard`) and reports "only with preprocess"; a dataset that
+  failed open with `check_catalog.normalize_cds` (rename, drop, sort levels,
+  convert calendar to `standard`) and reports "only with preprocess"; a dataset that
   fails both ways still fails. The recipe for users is on `site/catalog.qmd`.
 - **Two grids.** Long-name dirs are 0.25 deg (1440 x 721), pressure levels 37.
   Short-name dirs are 1 deg (360 x 181): `3hr/{T2m,mfd,olr,sp,tcw,uv10m,vert-int}`,

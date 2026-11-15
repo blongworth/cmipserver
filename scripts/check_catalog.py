@@ -3,7 +3,7 @@
 Checks: columns/types match CATALOG_SCHEMA, paths unique, key columns not
 null, a sample of paths exists, intake-esm opens the catalog and
 to_dataset_dict() loads a few sample datasets (a dataset that opens only
-with ``normalize_time`` passes, and the detail says so), and the dataset count did not
+with ``normalize_cds`` passes, and the detail says so), and the dataset count did not
 drop more than --max-drop vs the last good catalog (--previous).
 
 Exit 0 if every check passes, else 1. --report writes the results as JSON.
@@ -53,15 +53,23 @@ def _intake_errors() -> tuple[type[BaseException], ...]:
 INTAKE_ERRORS = _intake_errors()
 
 
-def normalize_time(ds):
-    """``preprocess`` for datasets that mix NetCDF time formats: ERA5 files
-    from the old CDS use ``time`` (calendar ``gregorian``), files from the new
-    CDS use ``valid_time`` (``proleptic_gregorian``) plus ``number`` and
-    ``expver``. Rename, drop the extras, and make the calendars equal (they
-    are the same after 1582). Meant for users too (docs/audit-findings.md)."""
-    if "valid_time" in ds.dims:
-        ds = ds.rename(valid_time="time")
-    ds = ds.drop_vars(["number", "expver"], errors="ignore")
+def normalize_cds(ds):
+    """``preprocess`` for ERA5 datasets that mix download formats. Files from
+    the old CDS use ``time`` (calendar ``gregorian``) and, for pressure
+    levels, ``level`` (int, ``millibars``, 1 to 1000). Files from the new CDS
+    (2022 onward) use ``valid_time`` (``proleptic_gregorian``),
+    ``pressure_level`` (float, ``hPa``, 1000 to 1), and add ``number`` and
+    ``expver``. Rename to the old names, drop the extras, put levels in
+    ascending order, and make the calendars equal (they are the same after
+    1582). Meant for users too (docs/audit-findings.md, site/catalog.qmd)."""
+    ren = {
+        new: old
+        for new, old in (("valid_time", "time"), ("pressure_level", "level"))
+        if new in ds.dims
+    }
+    ds = ds.rename(ren).drop_vars(["number", "expver"], errors="ignore")
+    if "level" in ds.dims:
+        ds = ds.sortby("level")
     if "time" in ds.dims and ds["time"].dtype == object:  # cftime
         ds = ds.convert_calendar("standard", dim="time", use_cftime=True)
     return ds
@@ -164,7 +172,7 @@ def run_checks(
             # documented preprocess, which the detail records
             try:
                 cat[key](
-                    xarray_open_kwargs={"use_cftime": True}, preprocess=normalize_time
+                    xarray_open_kwargs={"use_cftime": True}, preprocess=normalize_cds
                 ).to_dask()
                 add("to_dataset_dict", True, f"{key} (only with preprocess)")
             except INTAKE_ERRORS:

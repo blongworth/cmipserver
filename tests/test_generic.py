@@ -774,6 +774,46 @@ def test_check_catalog_era5_mixed_time_format(other, tmp_path):
     assert not next(r for r in res if r["check"] == "dataset_keys")["ok"]
 
 
+def test_normalize_cds_pressure_levels():
+    """Old CDS pressure-level files (time, level 1..1000 int) and new ones
+    (valid_time, pressure_level 1000..1 float) only combine after
+    normalize_cds."""
+    import xarray as xr
+
+    def ds(tname, lname, levels, times, calendar, dtype):
+        v = np.ones((2, len(levels), 2), dtype=dtype)  # 2 time steps
+        return xr.Dataset(
+            {"z": ((tname, lname, "lat"), v)},
+            coords={
+                tname: xr.date_range(
+                    times, periods=2, freq="MS", calendar=calendar, use_cftime=True
+                ),
+                lname: np.asarray(levels),
+            },
+        )
+
+    old = ds("time", "level", [1, 500, 1000], "2021-11-01", "gregorian", "f8")
+    new = ds(
+        "valid_time",
+        "pressure_level",
+        [1000.0, 500.0, 1.0],
+        "2022-01-01",
+        "proleptic_gregorian",
+        "f4",
+    )
+    new = new.assign(number=0, expver=("valid_time", ["0001", "0001"]))
+    parts = [check_catalog.normalize_cds(d) for d in (old, new)]
+    out = xr.combine_by_coords(parts)
+    assert dict(out.sizes) == {"time": 4, "level": 3, "lat": 2}
+    assert out.level.values.tolist() == [1, 500, 1000]
+    assert out.indexes["time"].is_monotonic_increasing
+    assert "number" not in out and "expver" not in out
+    # the time rename alone is not enough
+    bad = [old, new.rename(valid_time="time").drop_vars(["number", "expver"])]
+    with pytest.raises((TypeError, ValueError), match="mixed types|monoton"):
+        xr.combine_by_coords(bad)
+
+
 def test_dated_reanalysis_build(other):
     spec = ProductManifest.model_validate(ERA5)
     root = other.root / "era5/reanalysis"  # not named after the product
