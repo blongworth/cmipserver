@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -727,6 +728,41 @@ def test_repo_era5_skips_yearly_1hr(tmp_path):
     df, invalid = reanalysis.build(str(root), spec, jobs=1, collection="reanalysis")
     assert df["path"].to_list() == [str(daily)]
     assert invalid["path"].to_list() == [str(yearly)]
+
+
+def test_check_catalog_era5_mixed_time_format(other, tmp_path):
+    """An ERA5 dataset spanning the old (time, gregorian) and new CDS
+    (valid_time, proleptic_gregorian) formats cannot be opened plainly. The
+    check retries with the documented recipe and says so."""
+    (tmp_path / "products").mkdir()
+    shutil.copy(
+        Path(__file__).parent.parent / "manifests/products/era5.yaml",
+        tmp_path / "products/era5.yaml",
+    )
+    cats = tmp_path / "catalogs.yaml"
+    cats.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": 1,
+                "products": [
+                    {
+                        "name": "era5",
+                        "root": str(other.root / "era5/reanalysis"),
+                        "builder": "reanalysis",
+                        "spec": "products/era5.yaml",
+                        "output": "whoi_era5",
+                    }
+                ],
+            }
+        )
+    )
+    out = tmp_path / "next"
+    assert build_catalog.main(["--manifest", str(cats), "--out", str(out)]) == 0
+    res = check_catalog.run_checks(out / "whoi_era5.json", sample_datasets=50)
+    opens = [r for r in res if r["check"] == "to_dataset_dict"]
+    assert all(r["ok"] for r in opens), opens
+    mon = [r for r in opens if "mon.sfc.2m_temperature" in r["detail"]]
+    assert mon and "preprocess" in mon[0]["detail"], opens
 
 
 def test_dated_reanalysis_build(other):

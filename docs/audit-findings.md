@@ -421,9 +421,28 @@ Proposal: delete after the owner confirms. Not catalogued (outside the root).
   intake-esm's `join_existing` on `time` will fail for it (not yet run;
   check on HPC). `ncinfo` finds either (`time_name`), and the header gap
   check treats the calendars as one after 1582: X1 `monthly-means/2m_temperature`
-  is `ok`, 1979-01 to 2025-12, 47 files. Proposal: document a
-  `preprocess=lambda ds: ds.rename(valid_time="time")` for users; do not
-  rewrite files.
+  is `ok`, 1979-01 to 2025-12, 47 files. **Tested on HPC (2026-11-15,
+  `whoi_era5` catalog, `reanalysis.era5.mon.sfc.2m_temperature`, 47 files):**
+  a plain `to_dataset_dict()` fails, and so does the rename alone with
+  `use_cftime=True`: the old files decode to `DatetimeGregorian`, the new to
+  `DatetimeProlepticGregorian`, which xarray will not combine (`Cannot
+  combine along dimension 'time' with mixed types`). Two recipes work (tested
+  with `open_mfdataset` on the 47 files: 564 steps, 1979-01 to 2025-12,
+  sorted, unique):
+  - ERA5 starts in 1979, so skip `use_cftime`: both calendars decode to
+    `datetime64`. `preprocess` renames `valid_time` to `time` and drops
+    `number` and `expver`.
+  - with `use_cftime=True`, also `ds.convert_calendar("standard",
+    dim="time", use_cftime=True)` in `preprocess`.
+  Proposal: document the first for users; do not rewrite files.
+  `check_catalog.py` opens 3 sampled datasets with `use_cftime=True`; on
+  `whoi_era5` it failed 2 of 3 (monthly means spanning the change), 1 passed
+  (1hr geopotential, new format only). **50 of 145 ERA5 variable dirs mix the
+  two formats** (5 pressure-level monthly means, 39 single-level monthly
+  means, 6 of the 1hr variables). The check now retries a
+  failed open with `check_catalog.normalize_time` (rename, drop, convert
+  calendar to `standard`) and reports "only with preprocess"; a dataset that
+  fails both ways still fails. The recipe for users is on `site/catalog.qmd`.
 - **Two grids.** Long-name dirs are 0.25 deg (1440 x 721), pressure levels 37.
   Short-name dirs are 1 deg (360 x 181): `3hr/{T2m,mfd,olr,sp,tcw,uv10m,vert-int}`,
   `pressure-levels/3hr/uvq` (37 levels), `pressure-levels/6hr/Z` (only 200,
