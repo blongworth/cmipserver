@@ -23,9 +23,13 @@ products:
     description: NOAA/CIRES/DOE 20th Century Reanalysis V3 (WHOI mirror)
 
   # --- Non-CMIP6 holdings, catalogued in place (docs/audit-findings.md,
-  # "Non-CMIP6 holdings"). Disabled until the HPC run: generic products need
-  # the check_nc output for their tree (build_catalog.py --ncinfo), and each
-  # must pass check_catalog.py before it is enabled. A curated product
+  # "Non-CMIP6 holdings"). Catalogued (enabled): era5, glorys12v1, soda3122
+  # (Brett, 2026-11-15; each built and passed check_catalog.py on HPC).
+  # Every entry below with enabled: false is LISTED ONLY: it appears on the
+  # site's Other holdings page (site/holdings.qmd) and has no catalog. Enable
+  # one only after a build and check_catalog.py pass: generic products need
+  # the check_nc output for their tree (build_catalog.py --ncinfo). How often
+  # catalogs are rebuilt is undecided (docs/deploy-plan.md). A curated product
   # replaces its generic entry (enabled roots must not overlap).
   # Citations and licences are drafts: CONFIRM (Brett) before enabling.
 
@@ -53,7 +57,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_glorys12v1
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-15
     version: 12v1
     rules:
       - {match: "", frequency: day}
@@ -158,7 +162,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_soda3122
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-15
     version: "3_12_2"
     rules:
       - {match: "_5dy_", frequency: 5day}
@@ -166,7 +170,9 @@ products:
       - {match: "^gridded/", level: reg}
       - {match: "^original/", level: native}
     description: Simple Ocean Data Assimilation SODA3.12.2, 5-day and monthly, regridded (reg) and native (or) grids
-    caveats: Monthly time steps are being checked.
+    caveats: >-
+      Monthly time steps are 30 days from mid-January (2017 runs 2017-01-16
+      to 2017-12-12), not calendar-month centres.
     citation: >-
       Carton, J. A., Chepurin, G. A. and Chen, L. (2018) SODA3: A new ocean
       climate reanalysis. J. Climate 31, 6967-6983, doi:10.1175/JCLI-D-18-0149.1.

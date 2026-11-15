@@ -26,21 +26,23 @@ VM (Ubuntu, Apache), VAST mounted read-only:
 GitHub Actions: checks only.
 ```
 
-Catalogs in the nightly job: the enabled ones, today `cmip6`, `20crv3` and
-`era5` (`build_catalog.py --manifest`). Other non-CMIP6 products (one or two
-ocean products; `docs/audit-runbook.md`, "Non-CMIP6 trees") are enabled in
-`manifests/catalogs.yaml` after their HPC check, but **how often they are
-checked and rebuilt is undecided**: some may run on a schedule, some on
-demand, per product. Until that is settled, nothing here assumes they are
-rebuilt nightly; the summary uses each product's latest checked CSV. Generic products
-(`builder: generic`) need `--ncinfo` pointing at the `check_nc.py` output for
-their tree; files with no ncinfo row are left out (invalid) until
-`check_nc.py` is re-run on them. `summarize_catalog.py` gets one `--catalog`
-per enabled product's CSV plus `--products manifests/catalogs.yaml` for the
-dataset pages' citations and the Other holdings page. That page
-(`site/holdings.qmd`) lists the products that are not catalogued; its file
-counts (`site/data/holdings.json`) come from `summarize_other.py --site-json`
-and change only when the inventory is re-run.
+Catalogs in the nightly job: the enabled ones, today `cmip6`, `20crv3`,
+`era5`, `glorys12v1` and `soda3122` (`build_catalog.py --manifest`). The other
+non-CMIP6 products are listed only (`docs/audit-runbook.md`, "Non-CMIP6
+trees"); one enabled later in `manifests/catalogs.yaml` needs an HPC build and
+`check_catalog.py` pass first. **How often the non-CMIP6 catalogs are checked
+and rebuilt is undecided**: some may run on a schedule, some on demand, per
+product. Until that is settled, nothing here assumes they are rebuilt nightly;
+the summary uses each product's latest checked CSV. Generic products
+(`builder: generic`: `glorys12v1`, `soda3122`) need `--ncinfo` pointing at the
+`check_nc.py` output for their tree; files with no ncinfo row are left out
+(invalid) until `check_nc.py` is re-run on them. `summarize_catalog.py` gets
+one `--catalog` per enabled product's CSV plus `--products
+manifests/catalogs.yaml` for the dataset pages' citations and the Other
+holdings page. That page (`site/holdings.qmd`) lists the products that are
+not catalogued; its file counts (`site/data/holdings.json`) come from
+`summarize_other.py --site-json` and change only when the inventory is
+re-run.
 
 ## 2. Decisions needed
 

@@ -29,8 +29,8 @@ Maintainer: Brett Longworth.
 - VAST is canonical storage; NetCDF stays in the DRS layout.
 - Catalog, not a search server: intake-esm CSV + JSON (ecgtools), rebuilt
   nightly on HPC, plus a small dataset-level summary for the site.
-  Enabled catalogs (`manifests/catalogs.yaml`): `cmip6`, `20crv3`, `era5`.
-  One or two ocean products are next (chosen after the HPC audit); the rest of the
+  Enabled catalogs (`manifests/catalogs.yaml`): `cmip6`, `20crv3`, `era5`,
+  `glorys12v1` (daily), `soda3122`; the rest of the
   non-CMIP6 holdings are listed on `site/holdings.qmd`, not catalogued. How
   often non-CMIP6 products are checked and rebuilt is undecided (regular or
   on demand, per product).

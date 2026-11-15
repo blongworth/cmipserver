@@ -24,7 +24,7 @@
     "citation": "E.U. Copernicus Marine Service Information (CMEMS). Global Ocean Physics Reanalysis, doi:10.48670/moi-00021. Lellouche, J.-M. et al. (2021) Front. Earth Sci. 9:698876, doi:10.3389/feart.2021.698876.",
     "license": "Copernicus Marine Service licence (service commitments and licence)",
     "acknowledgment": null,
-    "catalogued": false,
+    "catalogued": true,
     "path": "ocean_reanalysis/glorys12v1",
     "years": "1993-2024",
     "caveats": "File names change in 2020 (cmems_mod_glo_phy_my_*); from mid-2021 the files are the interim product (myint). 2024 has 359 days."
@@ -84,10 +84,10 @@
     "citation": "Carton, J. A., Chepurin, G. A. and Chen, L. (2018) SODA3: A new ocean climate reanalysis. J. Climate 31, 6967-6983, doi:10.1175/JCLI-D-18-0149.1.",
     "license": null,
     "acknowledgment": null,
-    "catalogued": false,
+    "catalogued": true,
     "path": "ocean_reanalysis/sodav3122",
     "years": null,
-    "caveats": "Monthly time steps are being checked."
+    "caveats": "Monthly time steps are 30 days from mid-January (2017 runs 2017-01-16 to 2017-12-12), not calendar-month centres."
   },
   "hycom_gofs30": {
     "description": "HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)",

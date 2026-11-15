@@ -214,10 +214,11 @@ Trees under `/proj/cmip6/data` besides `cmip6/` and `reanalysis/20crv3`:
 `era5/`, `ocean_reanalysis/`, `cmems/`, `prism/`. Seen on the mounted store
 (`~/mnt/cmip6`, read-only) on 2026-11-13: directory listings, X1 scans and
 headers, and header reads of one or two files per product. The full
-inventory and health check (X2-X4) still have to run on HPC
-(`audit-runbook.md`, "Non-CMIP6 trees"); file counts below are from `ls`, not
-from a scan, unless marked X1. Decision (Brett, 2026-11-13): catalog in place,
-no moves; anything below that suggests a move is a **proposal**.
+inventory and health check (X2-X4, `audit-runbook.md`, "Non-CMIP6 trees")
+ran on HPC on 2026-11-14 (level log below); counts in the X4 tables are from
+those scans, older counts in the per-product notes are from `ls`. Decision
+(Brett, 2026-11-13): catalog in place, no moves; anything below that suggests
+a move is a **proposal**.
 
 ### Classification (open, confirm with Brett)
 
@@ -244,8 +245,10 @@ no moves; anything below that suggests a move is a **proposal**.
 
 Every `catalog` entry is in `manifests/catalogs.yaml`, **disabled** until its
 HPC check_nc run and `check_catalog.py` pass. Decision (Brett, 2026-11-13):
-catalog ERA5 plus one or two ocean products (GLORYS12 daily likely first;
-pick after the X4 inventory) and **list the rest** on the site's Other
+catalog ERA5 plus one or two ocean products and **list the rest**; chosen
+2026-11-15 after X4: ERA5, GLORYS12V1 daily (1 dataset, 11,681 files) and
+SODA 3.12.2 (3 datasets, 5,586 files), all enabled, each with 0 invalid
+files and a passing `check_catalog.py` on HPC. The rest are listed on the site's Other
 holdings page (`site/holdings.qmd`): every disabled product, plus the
 `listed:` entries in `catalogs.yaml` (`oras5` archives, `cfsr932`), with
 path, years, caveats and citation. Check/rebuild cadence per product is
@@ -525,8 +528,10 @@ Proposal: delete after the owner confirms. Not catalogued (outside the root).
   purpose and where it came from.
 - **SODA 3.12.2.** `gridded/` (regridded `_reg_`, 2,774 5-day files + 38
   monthly) and `original/` (native `_or_`, 2,774 5-day). The monthly file
-  for 2017 runs 2017-01-16 to 2017-12-12 with a 30-day median step; check
-  the calendar of the monthly series on HPC.
+  for 2017 runs 2017-01-16 to 2017-12-12 with a 30-day median step: the
+  monthly axis is 30-day steps from mid-January, not calendar-month centres
+  (now a site caveat). Catalogued 2026-11-15: 3 datasets (5-day native,
+  5-day regridded, monthly regridded), 5,586 files, 0 invalid.
 - **GREP daily** holds 4 members x 6 variables per file (`*_cglo`, `*_foam`,
   `*_glor`, `*_oras`), so its `variable_id` is long; 1993-01-01 to 2011-06-01
   (5,723 files).
