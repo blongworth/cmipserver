@@ -41,6 +41,10 @@ products:
     caveats: >-
       Files from 2022-2023 on use valid_time instead of time; rename it before
       joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg.
+      1hr 2023-2025 exists as both daily and yearly files for 7 variables.
+      Pressure-level monthly means for 2022 stop in September (geopotential,
+      specific_humidity, temperature); 6hr soil water layer 4 lacks
+      1998-11.
 
   # Tier 1, generic: facets from file headers.
   - name: glorys12v1
@@ -100,7 +104,11 @@ products:
       - {match: "", frequency: day}
     description: CMEMS Global Reanalysis Ensemble Product (GREP v2), daily, 1/4 deg; four members (CGLORS, FOAM, GLORYS2V4, ORAS5) in each file (GLOBAL_REANALYSIS_PHY_001_031)
     years: 1993-2011 (to 2011-06-01)
-    caveats: Each file holds all four members as separate variables (*_cglo, *_foam, *_glor, *_oras).
+    caveats: >-
+      Each file holds all four members as separate variables (*_cglo, *_foam,
+      *_glor, *_oras). Incomplete: 12 daily files are truncated (including
+      the last, 2011-06-01) and several runs of days are missing, the
+      longest 1999-06-26 to 2001-06-30.
     citation: >-
       E.U. Copernicus Marine Service Information (CMEMS). Global Ocean
       Ensemble Physics Reanalysis, doi:10.48670/moi-00024.
@@ -170,7 +178,9 @@ products:
     version: GOFS3_0
     description: HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)
     years: 1992-2012
-    caveats: Daily snapshots, not means.
+    caveats: >-
+      Daily snapshots, not means. analysis/ 2013-08-01 to 08-15 are empty
+      (0-byte) files.
     citation: null  # FILL IN (Brett): HYCOM reanalysis reference
     license: null   # FILL IN (Brett)
   - name: hycom_gofs31
@@ -182,7 +192,10 @@ products:
     version: GOFS3_1
     description: HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH
     years: 1994-2015
-    caveats: Daily snapshots, not means. Regional subset, not global.
+    caveats: >-
+      Daily snapshots, not means. Regional subset, not global. 4 daily files
+      are truncated (2001-10-08, 2007-05-11, 2007-10-15, 2008-01-20) and 4
+      in global/2003 are empty.
     citation: null  # FILL IN (Brett): HYCOM reanalysis reference
     license: null   # FILL IN (Brett)
   - name: eccov5

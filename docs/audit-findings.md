@@ -253,6 +253,140 @@ undecided. Cleanup proposals below (quarantine, `_(1).nc`, `x.nc`,
 `.DS_Store`) and the owner questions follow the usual plan, approve, apply
 flow.
 
+### X4 inventory (scan, 2026-11-14)
+`summarize_other.py --depth era5=3 --depth cmems=2` over the X4 scans.
+`.nc` files and TB (decimal) per product; "other" is non-`.nc` files.
+
+| Product (dir) | `.nc` | other | TB | Note |
+|---|---:|---:|---:|---|
+| `era5/reanalysis/single-levels/1hr` | 376,656 | 1 | 9.726 | |
+| `era5/reanalysis/single-levels/3hr` | 3,568 | 1 | 0.213 | 1 deg short-name dirs |
+| `era5/reanalysis/single-levels/6hr` | 13,200 | 1 | 1.601 | |
+| `era5/reanalysis/single-levels/daily` | 24 | 0 | 0.002 | |
+| `era5/reanalysis/single-levels/monthly-means` | 1,834 | 40 | 0.019 | other: `.lck` etc. |
+| `era5/reanalysis/pressure-levels/3hr` | 507 | 0 | 1.786 | `uvq`, 1 deg |
+| `era5/reanalysis/pressure-levels/6hr` | 80,559 | 0 | 11.492 | |
+| `era5/reanalysis/pressure-levels/monthly-means` | 235 | 6 | 0.083 | |
+| **ERA5 total** | **476,583** | | **24.92** | |
+| `era5/quarantine_2022_*` | 28 | 0 | 0.0003 | not catalogued |
+| `ocean_reanalysis/glorys12v1` | 11,681 | 2 | 19.373 | = every day 1993-01-01 to 2024's 359th |
+| `cmems/.../global-reanalysis-phy-001-030-monthly` | 409 | 1 | 0.532 | = 373 months + 36 `_(1).nc` |
+| `cmems/.../global-reanalysis-phy-001-030-statics` | 3 | 0 | 0.002 | |
+| `ocean_reanalysis/CMEMS_ENSAMBLE` (GREP daily) | 5,723 | 0 | 12.576 | |
+| `ocean_reanalysis/bran2020` | 64,642 | 4 | 15.602 | |
+| `ocean_reanalysis/sodav3122` | 5,586 | 1 | 6.470 | = 2,774 + 38 + 2,774 |
+| `ocean_reanalysis/HYCOMvGOFS30` | 9,383 | 10 | 21.377 | |
+| `ocean_reanalysis/HYCOMvGOFS31` | 21,308 | 4 | 19.233 | |
+| `ocean_reanalysis/ECCOv5` | 10,798 | 12 | 0.417 | 1 truncated (below) |
+| `ocean_reanalysis/ORAS5` (incl. GREP monthly) | 135 | 3,009 | 2.511 | mostly `.tar.gz` |
+| `ocean_reanalysis/cfsr932` | 8,454 | 55 | 0.354 | |
+| `ocean_reanalysis/emu` | 0 | 160,122 | 1.129 | software install |
+| `prism/netcdf` | 13 | 0 | 0.005 | |
+| `prism/bil` | 0 | 625 | 0.003 | source zips |
+
+Total about 124.5 TB in 4 trees. Loose files at tree and group roots (1-2
+each in `era5/`, `era5/reanalysis/`, `*-levels/`, `ocean_reanalysis/`) are
+probably `.DS_Store`. Owners (uids, file counts) are in
+`runs/2026-11-14_X4/inventory/owners.parquet`; most products have one or two
+uids, ECCOv5, ORAS5 and cfsr932 several. `duplicates.parquet`: 458 file
+names in more than one product (933 rows), no hard links:
+- **HYCOM GOFS 3.0 files inside `HYCOMvGOFS31`** (open, proposal): 364
+  names (e.g. `hycom_GLBu0.08_190_1993072700_t000.nc`, expt 19.0) are in
+  both trees, 363 with the same size. Likely copies. Where they sit under GOFS31 and whether they are byte-identical is
+  not checked (sha256 of the pairs). They are `GOFS30/1993` (363 files,
+  1,052.5 GB) copied to `GOFS31/global/1994`. Proposal: keep the GOFS30
+  copy and quarantine the GOFS31 one after the checksum pass.
+- **ERA5 name reuse** (report-only): `YYYY_<var>.nc` is used in several
+  frequency/level dirs (66 names: `1hr` yearly files vs `monthly-means`,
+  single- vs pressure-level `geopotential`), different content (sizes
+  differ but for one). Not duplicates.
+- **ERA5 quarantine** (28 names): expected, see below.
+- `README` in `bran2020` and `emu`: unrelated files.
+
+### X4 check_nc: 36 damaged files (open, repair worklist)
+All 614,746 `.nc` read (ncinfo rows = scan `.nc` count): 614,710 `ok`,
+17 `truncated` (HDF5 end-of-file address past the file size), 19 `empty`
+(0 bytes). **No damaged files in ERA5 (476,583), GLORYS daily or monthly,
+BRAN2020, SODA or PRISM.** List: `nc_status != "ok"` in
+`runs/2026-11-14_X4/ncinfo_*`.
+
+| Product | Damaged | Files |
+|---|---:|---|
+| GREP daily (`CMEMS_ENSAMBLE/daily`) | 12 truncated of 5,723 | `grepv2_daily_` 19931122, 19950103, 19950201, 19990626, 20020506, 20061107, 20061201, 20070605, 20070824, 20100103, 20110502, 20110601 (1-98% present; full size ~2.2 GB) |
+| HYCOM GOFS 3.0 `analysis/` | 15 empty | `hycom_GLBu0.08_201308{01..15}_t00.nc` |
+| HYCOM GOFS 3.1 (NW Atlantic) | 4 truncated | `2001/..._20011008`, `2007/..._20070511`, `2007/..._20071015`, `2008/..._20080120` (`hycom_GLBv0.08_53x_*_t00.nc`) |
+| HYCOM GOFS 3.1 `global/2003` | 4 empty | `hycom_GLBv0.08_532_2003{0515,0525,0527,0529}12_t000.nc` |
+| ECCOv5 | 1 truncated | `nctiles_monthly/THETA/THETA_1992.nc` (above) |
+
+- GREP daily's **last** file (2011-06-01) is truncated, so the series
+  probably ends where a download stopped, not at the product's end.
+- Catalogs leave all 36 out (invalid). Proposal: re-fetch from the source
+  (CMEMS for GREP, HYCOM for GOFS) through the repair plan; the empty and
+  truncated files stay until replaced (no deletes without approval).
+
+### X4 header gaps (open)
+`find_gaps.py --ncinfo` per tree (dataset = dir with year dirs folded to
+`*`, plus data variables; only `ok` files). Datasets: era5 138 ok, 4 gap,
+8 overlap, 1 duplicate; ocean_reanalysis 30 ok, 14 gap, 5 bad_time_label,
+1 duplicate; cmems 3 fixed (statics), 1 gap, 1 duplicate; prism 1 fixed.
+
+**ERA5** (affects the catalog):
+- **1hr, 2023-2025 held twice** for 7 variables (`10m_u/v_component_of_wind`,
+  `2m_temperature`, `mean_sea_level_pressure`, `sea_surface_temperature`,
+  `surface_latent_heat_flux`, `geopotential`): every daily file *and* a
+  yearly `YYYY_<var>.nc` (17,170 files = 16,071 days 1979-2022 + 1,096 days
+  + 3 yearly). A catalog over both gives every 2023-2025 hour twice.
+  Decide: catalog the daily or the yearly files for 2023-2025 (exclude the
+  other in `products/era5.yaml`); later, quarantine one set.
+- **pressure-levels monthly-means 2022 stops at September** for
+  `geopotential`, `specific_humidity`, `temperature`: the 2022 files are the
+  old 9-month downloads (like the quarantined single-level ones) and were
+  never replaced; Oct-Dec 2022 missing. Proposal: re-fetch 2022.
+- **6hr `volumetric_soil_water_layer_4`: `1998-11_...nc` holds October
+  1998** (same times as `1998-10_...nc`); November 1998 is missing.
+  Proposal: re-fetch 1998-11.
+- `1hr/evaporation/1993-05-03_evaporation_corrupted.nc` beside a good
+  `1993-05-03_evaporation.nc` (reads `ok`; the catalog's name pattern
+  leaves it out). Proposal: quarantine. `monthly-means/evaporation/x.nc`:
+  known (above).
+
+**GLORYS12V1 monthly**: no gap. From 2021-07 the files list their variables
+in a different order, so the header check split the product in two and
+reported a false 2021-06 -> 2023-12 gap. Same split would have made two
+catalog datasets: fixed (generic `variable_id` and the gap grouping now
+sort the variables). The 36 `_(1).nc` copies show as `duplicate` (same
+times), as expected.
+
+**GREP daily**: besides the 12 truncated files, whole runs are missing:
+1993-11-22..30, 1995-01-03..02-28, 1996-02-29, **1999-06-26..2001-06-30
+(2 years)**, 2002-05-06..10, 2006-11-07..12-31, 2007-06-05..30,
+2007-08-24..31, 2010-01-03..03-31; the series ends 2011-06-01. Most runs
+start at a truncated file and end at a month start: monthly downloads that
+stopped. Proposal: re-fetch from CMEMS, or list as incomplete.
+
+**HYCOM**: many gaps (GOFS 3.0 year dirs 9, mostly 2-15 days; `analysis/`
+50 gaps and 44 files whose time is the previous day's; GOFS 3.1 year dirs
+44, bottom files 134, `analysis/` 11, `global/` 247). The 363 GOFS 3.0 expt
+19.0 files of `HYCOMvGOFS30/1993` (1,052.5 GB) are also in
+`HYCOMvGOFS31/global/1994`, same names and sizes. Proposal: checksum the
+pairs, then quarantine the `GOFS31/global/1994` copies. HYCOM stays listed,
+not catalogued.
+
+**BRAN2020 daily** (open): `salt` and `temp` start 1984-06-08 and
+1980-03-03 at odd times (`07:31:13.83`), before BRAN2020's 1993 start: a
+few files have bad time values; to find. The ~7,000 `duplicate`s per
+variable are the north/south halves (same times; the catalog splits them
+by `level`). 14-16 gaps per variable include the short 1998 and 2000
+years.
+
+**ECCOv5** `latlon_daily/SSH.nc`, `latlon_monthly/{SALT,THETA,UVEL,VVEL}.nc`:
+`bad_time_label`, time values 0.5 / 1.0 with no `since` units (one file,
+9,497 daily or 312 monthly steps). A catalog cannot give them a time range.
+
+**cfsr932** (listed only): `daily` 1 gap; `global` `ocnf.gdas.*` and
+`ocnh.gdas.*` have the same times and variables (162 pairs). What the two
+are is part of owner question 4.
+
 ### ERA5 quarantine: partial 2022 monthly means (resolved: reason; open: delete?)
 `era5/quarantine_2022_20260807T140218/single-levels/monthly-means/<var>/2022_<var>.nc`,
 28 files. Each holds 9 months (2022-01 to 2022-09, dim `time`), written
@@ -304,8 +438,8 @@ Proposal: delete after the owner confirms. Not catalogued (outside the root).
 - **GLORYS12V1 monthly: duplicate `_(1).nc` files.** 2019-2021 each have 24
   files: `mercatorglorys12v1_gl12_mean_YYYYMM.nc` and `..._(1).nc`. Two pairs
   compared with `cmp` (2019-01, 2019-06): byte-identical, 1.29 GB each; the
-  `(1)` copies are older (2023-11-19 vs 2024-01-22). Likely all 36 pairs
-  (~46 GB). Proposal: quarantine the `(1)` copies after a full checksum pass
+  `(1)` copies are older (2023-11-19 vs 2024-01-22). The X4 count fits 36
+  pairs (409 = 373 months + 36); ~46 GB. Proposal: quarantine the `(1)` copies after a full checksum pass
   on HPC. 2024 has only January.
 - **GLORYS12V1 daily: naming and product change.** 1993-2019
   `mercatorglorys12v1_gl12_mean_YYYYMMDD_RYYYYMMDD.nc`; from 2020
@@ -432,3 +566,4 @@ send (not sent):
 | X2 | `ocean_reanalysis/bran2020`, one Slurm task each (hydra, 4G) | 64,642 `.nc` | all ok | scan 28 s (~2,300 files/s), MaxRSS 380 MB; check_nc 37:48 (28.5 files/s), sacct MaxRSS 4.19 GB = the 4G limit, but `/usr/bin/time -v` on 5,000 files: process peak 147 MB (2:01), so the sacct figure is page cache, not growth; 4G is enough; ncinfo rows equal the scan's `.nc` count |
 | X3 (partial) | `era5/{quarantine_*,download-scripts,_root_files}` stat scans; quarantine headers + sha256 | 28 `.nc` (quarantine) | ok | quarantine reason found (above); `ocean_reanalysis/emu` scan >100k entries, unfinished on the laptop; rest of X3, X2, X4 to run on HPC |
 | X3 | `ocean_reanalysis/{emu,cfsr932,ECCOv5,ORAS5}`, `prism/bil` (hydra, one task each) | 19,387 `.nc` (ECCOv5 10,798, cfsr932 8,454, ORAS5 135) | 19,386 ok, 1 truncated | 0 scan errors; ncinfo rows equal the scan's `.nc` count; entries / TB: emu 198,731 / 1.129 (no `.nc`), ORAS5 3,144 / 2.511 (mostly `.tar.gz`), ECCOv5 10,810 / 0.417, cfsr932 8,509 / 0.354, bil 625 / 0.003; truncated: ECCOv5 `THETA_1992.nc` (above) |
+| X4 scan | `era5`, `ocean_reanalysis`, `cmems`, `prism` (hydra arrays; era5 split by product) | 614,746 `.nc`, ~124.5 TB | 614,710 ok, 17 truncated, 19 empty (ERA5 all ok) | inventory above; 458 duplicate names (364 HYCOM GOFS30 in GOFS31), 0 hard links; header gaps: era5 138 ok / 8 overlap / 4 gap / 1 duplicate, ocean_reanalysis 30 ok / 14 gap / 5 bad_time_label / 1 duplicate, cmems 3 fixed / 1 gap (false: variable order) / 1 duplicate, prism 1 fixed (see X4 header gaps) |

@@ -17,7 +17,7 @@
     "catalogued": false,
     "path": "era5/reanalysis",
     "years": "1979-2025 (end varies by variable)",
-    "caveats": "Files from 2022-2023 on use valid_time instead of time; rename it before joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg."
+    "caveats": "Files from 2022-2023 on use valid_time instead of time; rename it before joining. Short-name dirs (3hr/T2m, sp, olr, mfd, uvq; 6hr/Z) are 1 deg. 1hr 2023-2025 exists as both daily and yearly files for 7 variables. Pressure-level monthly means for 2022 stop in September (geopotential, specific_humidity, temperature); 6hr soil water layer 4 lacks 1998-11."
   },
   "glorys12v1": {
     "description": "Mercator GLORYS12V1 global ocean reanalysis, daily means, 1/12 deg (CMEMS GLOBAL_MULTIYEAR_PHY_001_030)",
@@ -57,7 +57,7 @@
     "catalogued": false,
     "path": "ocean_reanalysis/CMEMS_ENSAMBLE/daily",
     "years": "1993-2011 (to 2011-06-01)",
-    "caveats": "Each file holds all four members as separate variables (*_cglo, *_foam, *_glor, *_oras)."
+    "caveats": "Each file holds all four members as separate variables (*_cglo, *_foam, *_glor, *_oras). Incomplete: 12 daily files are truncated (including the last, 2011-06-01) and several runs of days are missing, the longest 1999-06-26 to 2001-06-30."
   },
   "grep_monthly": {
     "description": "CMEMS Global Reanalysis Ensemble Product (GREP v2), monthly, 1/4 deg (GLOBAL_REANALYSIS_PHY_001_031; stored under ORAS5/)",
@@ -97,7 +97,7 @@
     "catalogued": false,
     "path": "ocean_reanalysis/HYCOMvGOFS30",
     "years": "1992-2012",
-    "caveats": "Daily snapshots, not means."
+    "caveats": "Daily snapshots, not means. analysis/ 2013-08-01 to 08-15 are empty (0-byte) files."
   },
   "hycom_gofs31": {
     "description": "HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH",
@@ -107,7 +107,7 @@
     "catalogued": false,
     "path": "ocean_reanalysis/HYCOMvGOFS31",
     "years": "1994-2015",
-    "caveats": "Daily snapshots, not means. Regional subset, not global."
+    "caveats": "Daily snapshots, not means. Regional subset, not global. 4 daily files are truncated (2001-10-08, 2007-05-11, 2007-10-15, 2008-01-20) and 4 in global/2003 are empty."
   },
   "eccov5": {
     "description": "ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles",
