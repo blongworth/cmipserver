@@ -223,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         ap.error(f"{n_split} datasets span more than one directory")
     if not ds["dataset_id"].is_unique().all():
         ap.error("duplicate dataset_id across catalogs")
-    ds = ds.select(list(SUMMARY_SCHEMA)).cast(SUMMARY_SCHEMA)
+    ds = ds.select(list(SUMMARY_SCHEMA)).cast(pl.Schema(SUMMARY_SCHEMA))
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

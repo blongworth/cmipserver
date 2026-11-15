@@ -45,3 +45,7 @@ default-groups = ["dev", "site"]
 [tool.pytest.ini_options]
 pythonpath = ["scripts"]
 testpaths = ["tests"]
+
+[tool.ty.environment]
+# mirrors pytest pythonpath so tests can import scripts as modules
+extra-paths = ["scripts"]

@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             if builder in ("reanalysis", "generic") and args.root:
                 raise ValueError("--root applies to cmip6 products only")
             if builder == "reanalysis":
-                if spec is None:  # the manifest validator guarantees it
+                if spec is None or prod is None:  # the manifest validator guarantees it
                     raise ValueError(f"{name}: reanalysis product has no spec")
                 df, invalid = reanalysis.build(
                     root,
@@ -101,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
                     **kw,
                 )
             elif builder == "generic":
+                if prod is None:
+                    raise ValueError(f"{name}: generic products need a manifest entry")
                 if nci is None:
                     raise ValueError(f"{name}: generic products need --ncinfo")
                 df, invalid = generic.build(prod, nci, **kw)
