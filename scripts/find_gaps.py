@@ -79,7 +79,7 @@ def _header(ap: argparse.ArgumentParser, ncinfo: Path, out: Path) -> int:
     if not files:
         ap.error(f"no ncinfo_*.parquet in {ncinfo}")
     lf = pl.scan_parquet(files).with_columns(
-        dir=dataset_dir_expr(), vars=pl.col("data_vars").list.join(",")
+        dir=dataset_dir_expr(), vars=pl.col("data_vars").list.sort().list.join(",")
     )
     datasets, issues = header_gaps(lf, ["dir", "vars"])
     out.mkdir(parents=True, exist_ok=True)

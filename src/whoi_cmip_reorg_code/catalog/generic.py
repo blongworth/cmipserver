@@ -10,7 +10,8 @@ check and the build must use the same mount prefix (``/proj/cmip6`` on HPC).
 
 Per file:
 
-- ``variable_id``: the file's ``data_vars`` joined with ``,``
+- ``variable_id``: the file's ``data_vars``, sorted (file order varies
+  within a product, e.g. GLORYS12V1 monthly from 2021-07), joined with ``,``
   (``thetao,so,zos``). Not an intake-esm ``columns_with_iterables`` list:
   that path fails with intake-esm 2025.7.9 and polars 2 (``json_decode``
   needs a dtype), so the column stays a plain string.
@@ -145,7 +146,7 @@ def build_from_paths(
         )
 
     ok = ok.with_columns(
-        dir=dataset_dir_expr("rel"), vars=pl.col("data_vars").list.join(",")
+        dir=dataset_dir_expr("rel"), vars=pl.col("data_vars").list.sort().list.join(",")
     )
     ds, _ = header_gaps(ok.with_columns(rel_path="rel"), ["dir", "vars"])
     ok = ok.join(ds.select("dir", "vars", "step_days"), on=["dir", "vars"], how="left")
@@ -162,7 +163,7 @@ def build_from_paths(
         product=pl.lit(prod.name),
         frequency=pl.coalesce("rule_frequency", "auto_frequency"),
         level="rule_level",
-        variable_id=pl.col("data_vars").list.join(","),
+        variable_id=pl.col("data_vars").list.sort().list.join(","),
         version=pl.lit(prod.version or DEFAULT_VERSION),
         time_range=pl.when(pl.col("time_first").is_not_null()).then(
             pl.concat_str(

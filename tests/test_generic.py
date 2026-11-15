@@ -452,8 +452,8 @@ def test_generic_build(other, ncinfo, tmp_path):
         {"path": str(other.p["gl_empty"]), "reason": "nc_status=empty"}
     ]
     r = df.filter(pl.col("path").str.ends_with("19930104.nc")).row(0, named=True)
-    assert r["variable_id"] == "thetao,so,zos"
-    assert r["master_id"] == "ocean_reanalysis.glorys12v1.day.thetao-so-zos"
+    assert r["variable_id"] == "so,thetao,zos"  # sorted, not file order
+    assert r["master_id"] == "ocean_reanalysis.glorys12v1.day.so-thetao-zos"
     assert (r["collection"], r["frequency"], r["level"], r["version"]) == (
         "ocean_reanalysis",
         "day",
@@ -468,6 +468,30 @@ def test_generic_build(other, ncinfo, tmp_path):
     assert r["frequency"] == "mon"  # from the rule; no time axis in the file
     assert r["time_range"] is None and r["collection"] == "observations"
     assert r["master_id"] == "observations.prism.mon.ppt"
+
+
+def test_generic_variable_order(tmp_path):
+    """Files whose variables come in a different order (GLORYS12V1 monthly
+    from 2021-07) are one dataset."""
+    root = tmp_path / "data/gm"
+    a = write(root / "m_199301.nc", {"thetao": 4, "zos": 3}, [15.5])
+    b = write(root / "m_199302.nc", {"zos": 3, "thetao": 4}, [45.0])
+    files = pl.DataFrame(
+        {
+            "path": [str(a), str(b)],
+            "rel_path": [a.name, b.name],
+            "size_bytes": [a.stat().st_size, b.stat().st_size],
+        }
+    )
+    check_files(files, tmp_path / "nci/ncinfo_x.parquet")
+    prod = {**CATALOGS["products"][0], "name": "gm", "root": str(root), "output": "x"}
+    m = load(_catalogs(tmp_path, tmp_path, [prod]), CatalogsManifest)
+    df, invalid = generic.build(
+        m.products[0], generic.load_ncinfo(tmp_path / "nci"), jobs=1
+    )
+    assert invalid.is_empty()
+    assert df["variable_id"].unique().to_list() == ["thetao,zos"]
+    assert df["master_id"].n_unique() == 1
 
 
 def test_generic_missing_ncinfo_row(other, ncinfo, tmp_path):
@@ -541,8 +565,8 @@ def test_generic_cli_check_and_summary(other, ncinfo, tmp_path):
     gl = s.filter(product="glorys12v1").row(0, named=True)
     # dataset over two year dirs: relative_path is their parent
     assert gl["relative_path"] == "ocean_reanalysis/glorys12v1"
-    assert gl["variable_id"] == "thetao,so,zos"
-    assert gl["dataset_id"] == "ocean_reanalysis.glorys12v1.day.thetao-so-zos.12v1"
+    assert gl["variable_id"] == "so,thetao,zos"
+    assert gl["dataset_id"] == "ocean_reanalysis.glorys12v1.day.so-thetao-zos.12v1"
     assert (gl["time_start"], gl["time_end"], gl["n_files"]) == (
         "19930101",
         "19940101",
