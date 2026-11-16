@@ -30,6 +30,50 @@ they would match ESGF versions. Decide whether to rename.
   (created 2026-11-12 by a `mkdir` run from inside the store). They show up as
   scan shards. Remove with `rmdir` (refuses if not empty).
 
+### Disk use and catalog cross-check (du, 2026-11-16; open: VAST physical use)
+`scripts/du_shard.sh` (Slurm job 358247, 26 second-level shards, one `find`
+pass each, 0 errors) and `scripts/du_compare.py` against the 5 live catalogs.
+Output: `runs/du/358247/compare/`.
+
+- **Disk use of `/proj/cmip6/data`: 266,870.6 GiB (286.55 TB) apparent,
+  266,868.8 GiB allocated**, in 1,541,837 regular files (1,346,890 `.nc`).
+  Allocated equals apparent, so the blocks seen from hydra are logical size.
+  Physical use after VAST compression/dedup is not visible this way. Open: ask
+  the VAST admin or IT for the capacity/quota figure.
+- **Catalogs: 1,209,289 files, 211.90 TB (197,351.1 GiB).** Every enabled
+  catalog equals the `.nc` on disk under its root except for its invalid list:
+  20crv3, glorys12v1, soda3122 and cmip6 CFMIP/DAMIP/PMIP/ScenarioMIP match
+  exactly. `cmip6/CMIP` is 16,682 files / 658.5 GB short, exactly
+  `whoi_cmip6_invalid.parquet` (14,458 `excluded`, mostly the EC-Earth3-CC
+  zero-byte files; 2,216 `bad_filename`; 8 `path_filename_mismatch`; see the
+  dataset findings). `era5` is 23 files / 246.7 GB short, exactly
+  `whoi_era5_invalid.parquet` (the 21 yearly 1hr 2023-2025 files, plus
+  `_corrupted` evaporation and `x.nc`; see ERA5 below).
+- **Counts agree with the earlier scans**: cmip6 732,134 `.nc` + 31,041 other
+  (L4: 763,175 entries); every X4 product's `.nc` count matches the inventory
+  table. No files appeared or vanished between scans.
+- **Not catalogued: about 70.1 TB of `.nc`**: HYCOMvGOFS30 21.38, HYCOMvGOFS31
+  19.23, bran2020 15.60, CMEMS_ENSAMBLE (GREP daily) 12.58, cmems
+  GLOBAL_REANALYSIS_PHY_001_030 0.53, ECCOv5 0.42, cfsr932 0.35, ORAS5 0.03,
+  prism/netcdf 0.005, era5 quarantine 0.0003 TB.
+- **Non-`.nc`: about 3.6 TB**, mostly ORAS5 `.tar.gz` (2.3 TiB allocated) and
+  `ocean_reanalysis/emu` (160,122 files, 1.05 TiB); also 31,041 files under
+  `cmip6` and 625 `prism/bil`.
+- `ocean_reanalysis/NWA_downscaling` is empty; `.DS_Store`/`._.DS_Store` at
+  `era5/`, `ocean_reanalysis/`, `ocean_reanalysis/ECCOv5/` and
+  `ocean_reanalysis/ORAS5/` (add to the stray-file cleanup above).
+- **Split rerun** (job 358301: cmems/GLOBAL_REANALYSIS_PHY_001_030,
+  CMEMS_ENSAMBLE, ORAS5, ECCOv5 one level deeper, merged with the other 22
+  shards of 358247 as 32 shards; output `runs/du/merged_358247_358301/compare/`).
+  Grand totals identical to 358247. Per-product `.nc` now available:
+  glorys12v1_monthly 409 files / 532.34 GB (373 months + 36 `_(1).nc`),
+  glorys12v1_statics 3 / 2.38 GB, grep_daily 5,723 / 12,575.8 GB.
+  Subtree totals: `ECCOv5/Version5` 10,798 / 416.91 GB, `ORAS5/oras5`
+  135 `.nc` / 32.14 GB + 3,006 other (2,338 GiB allocated, the `.tar.gz`).
+  eccov5 (`Version5/Alpha`), oras5 and grep_monthly (`ORAS5/oras5/monthly/*`)
+  are still below a shard; a depth-3 split would separate them.
+  `ORAS5/wget_oras5.sh` is a loose download script.
+
 ## Tooling
 
 ### HDF5 file locking on VAST (resolved)
@@ -615,3 +659,4 @@ send (not sent):
 | X3 (partial) | `era5/{quarantine_*,download-scripts,_root_files}` stat scans; quarantine headers + sha256 | 28 `.nc` (quarantine) | ok | quarantine reason found (above); `ocean_reanalysis/emu` scan >100k entries, unfinished on the laptop; rest of X3, X2, X4 to run on HPC |
 | X3 | `ocean_reanalysis/{emu,cfsr932,ECCOv5,ORAS5}`, `prism/bil` (hydra, one task each) | 19,387 `.nc` (ECCOv5 10,798, cfsr932 8,454, ORAS5 135) | 19,386 ok, 1 truncated | 0 scan errors; ncinfo rows equal the scan's `.nc` count; entries / TB: emu 198,731 / 1.129 (no `.nc`), ORAS5 3,144 / 2.511 (mostly `.tar.gz`), ECCOv5 10,810 / 0.417, cfsr932 8,509 / 0.354, bil 625 / 0.003; truncated: ECCOv5 `THETA_1992.nc` (above) |
 | X4 scan | `era5`, `ocean_reanalysis`, `cmems`, `prism` (hydra arrays; era5 split by product) | 614,746 `.nc`, ~124.5 TB | 614,710 ok, 17 truncated, 19 empty (ERA5 all ok) | inventory above; 458 duplicate names (364 HYCOM GOFS30 in GOFS31), 0 hard links; header gaps: era5 138 ok / 8 overlap / 4 gap / 1 duplicate, ocean_reanalysis 30 ok / 14 gap / 5 bad_time_label / 1 duplicate, after the variable-order fix: ocean_reanalysis 27 ok, cmems 3 fixed / 1 duplicate, prism 1 fixed (see X4 header gaps) |
+| DU | `/proj/cmip6/data`, 26 second-level shards (`du_shard.sh`, job 358247, %16) | 1,346,890 `.nc` + 194,947 other | n/a | 266,870.6 GiB (286.55 TB) apparent, 266,868.8 GiB allocated; 0 find errors; catalogs 1,209,289 files / 211.90 TB; catalog vs disk differences equal the invalid lists exactly (cmip6 16,682, era5 23); split rerun 358301 (32 shards merged) gives identical totals |
