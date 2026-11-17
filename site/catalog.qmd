@@ -14,6 +14,23 @@ files into datasets. The catalog is rebuilt nightly.
 | Catalog descriptor | `{{< var catalog_path >}}` (placeholder) |
 | Current version | `{{< var catalog_version >}}` |
 
+Each product has its own catalog. Open the one that holds your dataset (the
+[browser](browse.qmd) picks it for you); a dataset key from one catalog does
+not exist in another. The CMIP6 catalog is the one in the table above.
+
+```{ojs}
+//| echo: false
+catalogStats = FileAttachment("data/catalog_stats.json").json()
+catalogConfig = FileAttachment("data/site_config.json").json()
+catalogDir = catalogConfig.catalog_path.replace(/[^/]*$/, "")
+html`<table class="table table-sm">
+<thead><tr><th>Catalog</th><th>Descriptor</th><th>Datasets</th></tr></thead>
+<tbody>${catalogStats.catalogs.map((c) => html`<tr>
+<td>${c.name.replace(/^whoi_/, "")}</td>
+<td><code>${catalogDir}${c.name}.json</code></td>
+<td>${c.n_datasets.toLocaleString()}</td></tr>`)}</tbody></table>`
+```
+
 ## Open it from Python
 
 ```python

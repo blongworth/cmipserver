@@ -602,6 +602,11 @@ class CatalogsManifest(_Strict):
                 raise ValueError(f"roots overlap: {na} ({a}) contains {nb} ({b})")
         return self
 
+    @property
+    def enabled_outputs(self) -> list[str]:
+        """Output names (``whoi_<name>``) of the enabled products, in order."""
+        return [p.output for p in self.products if p.enabled]
+
 
 # --- I/O ---------------------------------------------------------------------
 

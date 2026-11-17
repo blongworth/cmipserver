@@ -137,3 +137,31 @@ def test_catalogs_invalid():
                 ]
             }
         )
+
+
+def test_enabled_outputs(tmp_path, capsys):
+    import enabled_catalogs
+
+    prod = {"root": "/x", "builder": "cmip6", "enabled": True}
+    m = CatalogsManifest.model_validate(
+        {
+            "products": [
+                {**prod, "name": "a", "root": "/a", "output": "whoi_a"},
+                {
+                    **prod,
+                    "name": "b",
+                    "root": "/b",
+                    "output": "whoi_b",
+                    "enabled": False,
+                },
+                {**prod, "name": "c", "root": "/c", "output": "whoi_c"},
+            ]
+        }
+    )
+    assert m.enabled_outputs == ["whoi_a", "whoi_c"]
+    path = dump(m, tmp_path / "catalogs.yaml")
+    assert enabled_catalogs.main([str(path)]) == 0
+    assert capsys.readouterr().out.split() == ["whoi_a", "whoi_c"]
+    # the repo manifest: every enabled catalog the site build reads
+    repo = load(REPO / "manifests/catalogs.yaml", CatalogsManifest)
+    assert "whoi_cmip6" in repo.enabled_outputs

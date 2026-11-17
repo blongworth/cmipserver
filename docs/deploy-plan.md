@@ -139,6 +139,15 @@ area (publish, pull, HOLD, promote, rollback, pruning, count mismatch, failed
 smoke test, missing `BUILD_OK`). Not yet run on the VM or HPC. `vendor/` hash
 check in the smoke test is not implemented.
 
+**Status 2026-11-17:** first release (20261117T031034Z) built on HPC with
+`slurm/build_site.sbatch` and pulled to the VM; it summarized only `cmip6` and
+`20crv3`. `build_site.sbatch` now reads the enabled catalogs from
+`manifests/catalogs.yaml` (`scripts/enabled_catalogs.py`; `CATALOGS=` still
+overrides) and fails if a live CSV is missing. All five are in
+`/proj/cmip6/catalog/live` (copied 2026-11-15). The Browse page's Python
+snippet opens each dataset's own catalog (`whoi_<product>.json`, one block per
+catalog for a mixed selection), and the Catalog page lists every catalog.
+
 Tests: pytest for `check_catalog.py` and `publish_site.sh --dry-run`;
 `shellcheck` in CI.
 

@@ -364,21 +364,35 @@ See the <a href="access.html">access page</a> for which method to use.</p>`
 
 ```{ojs}
 //| echo: false
+// Each product has its own catalog, whoi_<product>.json (CMIP6 rows have no
+// product), next to config.catalog_path.
+catalogDescriptor = (d) =>
+  `${config.catalog_path.replace(/[^/]*$/, "")}whoi_${d.product ?? "cmip6"}.json`
 pythonSnippet = {
-  const ids = chosen.slice(0, maxSnippet).map((d) => d.dataset_id);
+  const groups = d3.groups(chosen.slice(0, maxSnippet), catalogDescriptor);
   const swap = internal
     ? ""
     : `\n# Outside VAST: read over HTTPS instead of ${config.vast_prefix}\n` +
       `cat.df["path"] = cat.df["path"].str.replace(\n` +
       `    "${config.vast_prefix}", "${config.https_prefix}", regex=False\n)\n`;
-  return `import intake
-
-cat = intake.open_esm_datastore("${config.catalog_path}")
+  const block = (path, rows, load) => `cat = intake.open_esm_datastore("${path}")
 ${swap}
 keys = [
-${ids.map((k) => `    "${k}",`).join("\n")}
+${rows.map((d) => `    "${d.dataset_id}",`).join("\n")}
 ]
-dsets = {k: cat[k].to_dask() for k in keys}`;
+${load}`;
+  if (groups.length === 1) {
+    const [path, rows] = groups[0];
+    return `import intake
+
+${block(path, rows, "dsets = {k: cat[k].to_dask() for k in keys}")}`;
+  }
+  // A mixed selection: one block per catalog.
+  return `import intake
+
+dsets = {}
+${groups.map(([path, rows]) => `
+${block(path, rows, "dsets.update({k: cat[k].to_dask() for k in keys})")}`).join("\n")}`;
 }
 html`${chosen.length > maxSnippet
   ? html`<p><em>Showing the first ${maxSnippet} of ${chosen.length} datasets. Narrow the filters or pick rows.</em></p>`

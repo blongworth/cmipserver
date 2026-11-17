@@ -1,11 +1,11 @@
 {
   "site_url": "https://cmip.whoi.edu",
-  "github_repo": "OWNER/REPO",
-  "help_email": "HELP_EMAIL_TBD",
+  "github_repo": "blongworth/cmipserver",
+  "help_email": "blongworth@whoi.edu",
   "catalog_path": "/proj/cmip6/catalog/live/whoi_cmip6.json",
   "catalog_version": "2026-11-12",
   "vast_prefix": "/proj/cmip6/data",
-  "https_prefix": "HTTPS_PREFIX_TBD",
+  "https_prefix": "https://cmip.whoi.edu/download",
   "globus_url": "",
   "audience": "internal",
   "wget_max_files": 500

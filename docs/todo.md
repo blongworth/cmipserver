@@ -8,15 +8,16 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
 
 ## Catalogs and site
 
-- [ ] **Copy the new catalogs to `/proj/cmip6/catalog/live`** (HPC, Brett).
-  `whoi_era5`, `whoi_glorys12v1` and `whoi_soda3122` (csv, `_invalid.parquet`,
-  json) are only under `runs/2026-11-15_era5cat` and `runs/2026-11-15_oceancat`.
-  Copy to a hidden temp name, then rename, JSON last.
+- [x] **Copy the new catalogs to `/proj/cmip6/catalog/live`** (HPC, Brett;
+  done 2026-11-15). `whoi_era5`, `whoi_glorys12v1` and `whoi_soda3122` (csv,
+  `_invalid.parquet`, json) are in `live`.
 - [ ] **Write `scripts/promote_catalog.py`** (`next` -> `live`; design in the
   `docs/deploy-plan.md` "Code to write" table: dry run by default, require a
   passing check report, `--previous` comparison, temp-and-rename copy).
 - [ ] **Re-run the site summary and render** with every enabled catalog
-  (command in `CLAUDE.md`), on HPC where the notebooks can execute. Check that
+  (`sbatch slurm/build_site.sbatch` now uses all enabled catalogs by default;
+  summary checked locally 2026-11-17: five catalogs, 31,162 datasets), on HPC
+  where the notebooks can execute. Check that
   Other holdings lists all 11 listed-only products with their citations.
 - [ ] **Generate `site/data/holdings.json`** (file counts for Other holdings):
   `summarize_other.py --products manifests/catalogs.yaml --site-json
@@ -25,6 +26,22 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   CONFIRM): licence for `soda3122`, `bran2020`, `hycom_gofs30/31`, `eccov5`,
   `prism`, `oras5`, `cfsr932`; confirm the draft citations and the ERA5 DOIs
   and licence text.
+- [ ] **Self-host plotly.js for the notebook figures** (found 2026-11-17).
+  Notebook figures did not show on the live site: Quarto's rendered plotly
+  output loads plotly.js/require.js from CDNs, and the Apache CSP
+  (`infra/apache/cmip.conf`, `script-src 'self' ...`) blocked them. Confirmed by
+  turning the CSP off on the VM (figures appeared); restore it afterwards.
+  Plan: copy `plotly/package_data/plotly.min.js` from the Python package (same
+  version as the code that builds the figures, about 4.7 MB) into
+  `site/vendor/` and record it in `site/vendor/vendor.yml`; make the notebooks
+  load that one file instead of a CDN (renderer or `include_plotlyjs`; not yet
+  tested with Quarto); then rebuild, publish and pull. Do not leave the CSP
+  open. Stopgap if needed: add only the observed CDN hosts to `script-src`.
+  Applies to `quickstart.ipynb` and `20crv3.ipynb`.
+- [ ] **Quickstart notebook: set `HDF5_USE_FILE_LOCKING=FALSE`** (and the
+  synchronous Dask scheduler for multi-file datasets) in the setup cell, as
+  `20crv3.ipynb` does; users on hydra hit "NetCDF: HDF error" otherwise
+  (`docs/audit-findings.md`, "HDF5 file locking on VAST").
 - [ ] **Decide how often non-CMIP6 catalogs are checked and rebuilt** (regular
   or on demand, per product). Nothing in the docs assumes a nightly rebuild.
 - [ ] Optional: show a product's `caveats` on its dataset page. ERA5 caveats no
