@@ -596,6 +596,27 @@ early years, `provisional_4kmM3` monthly zips for 2019. So the NetCDF mixes
 PRISM versions (M2 stable, M3 provisional); the catalog uses the default
 version `1` until that is sorted out.
 
+### CMIP5 tree `/proj/cmip6/cmip5` (open, decision)
+Shallow read-only look on hydra (`ls`, `find -maxdepth 3`, `du`; no scan,
+no headers). A sibling of `data/`, not under it. Owner `finn.wimberly`,
+group `sg-cmip6-mgr`; `data/` dated Sep 29.
+
+- Size: **18T** (`du -sh --apparent-size`), all under `cmip5/data`.
+- Files: **67,178** total, **6,714** `.nc`. So about 60,000 files are not
+  `.nc` (unidentified; check the extension mix before cataloguing).
+- Layout under `cmip5/data/`:
+  - `CMIP5/`: `output`, `output1`, `output1-climate`, `output1-climodes`,
+    `output2`
+  - `PMIP3/`: `output`, `output1`
+  - `reanalysis/`: `era.20c`, `era.interim`, `ncep.reanalysis.i`,
+    `noaa.cires.20crv2c`
+  - `stat/`: `makeup`
+- Not checked: per-directory sizes, file types, whether the CMIP5 layout is
+  the ESGF DRS, and overlap of `reanalysis/` with `data/reanalysis` (the
+  20CRv3 and ERA5 trees) and with `era5/`.
+- Not in `manifests/catalogs.yaml` or `site/holdings.qmd`. Decide: list on
+  Other holdings, catalog, or leave out.
+
 ### Owners (open, for Brett)
 uids of the directories (`ls -la`, numeric; names not resolved here):
 `era5/` 12795 (also `cmems/`, `prism/`, single-levels data), `era5/reanalysis`
