@@ -17,6 +17,8 @@
 set -euo pipefail
 
 export PATH=$HOME/opt/quarto/bin:$PATH
+# HDF5 file locking fails on VAST/NFS ("NetCDF: HDF error"); docs/audit-findings.md.
+export HDF5_USE_FILE_LOCKING=FALSE
 cd "${SLURM_SUBMIT_DIR:-.}"
 
 L=/proj/cmip6/catalog/live
