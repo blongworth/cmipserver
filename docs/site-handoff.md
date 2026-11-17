@@ -46,10 +46,13 @@ config), **M.3** (CI checks). Also prepares **5.11** (versioning text and
    footer and on `about.qmd`. The navbar can't be made conditional, so its
    "Old site" entry is a separate, commented line in `_quarto.yml`. Retiring
    the old site (6.3) takes two deletions.
-6. **Navbar grouping.** Access, Download guide, and Cloud sit under one "Using
-   the data" menu, to keep 11 items readable. The quickstart notebook is
-   rendered directly (`notebooks/quickstart.ipynb`). There is no separate
-   `quickstart.qmd`.
+6. **Navbar grouping.** Left: Browse | Holdings | Data Access | Learn | Blog.
+   Right: About | Cite | Help | Old site (temporary) | RSS. Data Access holds
+   Access, Download guide, Cloud mirrors (a section of `access.qmd`; the old
+   `cloud.qmd` was merged in), and Catalog. Learn holds the notebooks and the
+   WHOI short course. Help is `report.qmd`, which also carries the Slack link.
+   The quickstart notebook is rendered directly (`notebooks/quickstart.ipynb`).
+   There is no separate `quickstart.qmd`.
 7. **Reanalysis layout and version (settled by the product pipeline).**
    Files keep the provider's layout under `reanalysis/<product>/` (e.g.
    `reanalysis/20crv3/2mMO/air.2m.1981.nc`). API-only products (ERA5 from CDS)

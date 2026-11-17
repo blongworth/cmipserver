@@ -21,30 +21,30 @@ website:
     left:
       - href: browse.qmd
         text: Browse
-      - href: catalog.qmd
-        text: Catalog
       - text: Holdings
         menu:
           - href: holdings.qmd
             text: All holdings
           - href: holdings.qmd#other-holdings
             text: Other holdings
-      - text: Notebooks
+      - text: Data Access
+        menu:
+          - href: access.qmd
+            text: Access (HPC, SMB, HTTPS)
+          - href: download-guide.qmd
+            text: Download guide
+          - href: access.qmd#public-cloud-copies
+            text: Cloud mirrors
+          - href: catalog.qmd
+            text: Catalog
+      - text: Learn
         menu:
           - href: notebooks/quickstart.ipynb
             text: Quickstart
           - href: notebooks/20crv3.ipynb
             text: 20CRv3 monthly means
-      - text: Using the data
-        menu:
-          - href: access.qmd
-            text: Access
-          - href: download-guide.qmd
-            text: Download guide
-          - href: cloud.qmd
-            text: Cloud
           - href: https://ashleylasinsky.github.io/whoi-climate-tutorial_2026/pages/intro.html
-            text: Short course on climate model output
+            text: WHOI short course on climate model output
       - href: blog/index.qmd
         text: Blog
     right:
@@ -53,9 +53,7 @@ website:
       - href: cite.qmd
         text: Cite
       - href: report.qmd
-        text: Report a problem
-      - href: https://whoiclimatedata.slack.com
-        text: Slack
+        text: Help
       # Temporary; remove with old_site_url in _variables.yml (task 6.3).
       - href: http://cmip6.whoi.edu
         text: Old site

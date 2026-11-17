@@ -171,14 +171,13 @@ Matches the layout proposed in the planning repo (`script-inventory.md`). The co
     _variables.yml                 (hostnames, help email, URL prefixes: placeholders until confirmed)
     index.qmd
     about.qmd                      (store layout, holdings, acknowledgment, how to cite)
-    access.qmd                     (SMB, HPC, HTTPS, and later Globus: which to use when)
+    access.qmd                     (SMB, HPC, HTTPS, later Globus, public cloud copies: which to use when)
     catalog.qmd                    (intake-esm usage, catalog path, versions, changelog)
     browse.qmd                     (OJS dataset browser)
     quickstart.qmd                 (frozen notebook)
     notebooks/                     (.ipynb)
-    cloud.qmd                      (task 5.5)
     download-guide.qmd             (task 5.4)
-    report.qmd                     (links to issue forms and mailto)
+    report.qmd                     (Help: issue forms, mailto, Slack)
     blog/posts/
     data/                          (small committed catalog summary for CI)
   tests/                           (fixtures, no VAST needed)

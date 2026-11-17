@@ -15,15 +15,15 @@ The WHOI CMIP data server holds CMIP6 model output and reanalysis products
 the standard CMIP directory layout and indexed by an
 [intake-esm](https://intake-esm.readthedocs.io/) catalog.
 
-- **[Browse the holdings](browse.qmd)**: filter by model, experiment, variable,
-  and more, then copy paths, URLs, or a Python snippet.
-- **[Use the catalog from Python](catalog.qmd)**, or start with the
-  [quickstart notebook](notebooks/quickstart.ipynb).
-- **[Get access](access.qmd)**: on HPC, over the SMB share, or by HTTPS
-  download.
-- **[Learn to work with climate model output](https://ashleylasinsky.github.io/whoi-climate-tutorial_2026/pages/intro.html)**: the WHOI short course
-  on climate model output.
-- **[Report a problem or request data](report.qmd).**
+- **[Browse](browse.qmd)**: filter by model, experiment, variable, and more,
+  then copy paths, URLs, or a Python snippet. See [Holdings](holdings.qmd) for
+  everything on the server.
+- **[Data access](access.qmd)**: on HPC, over the SMB share, by HTTPS
+  download ([download guide](download-guide.qmd)), or from public cloud
+  mirrors. Use the [catalog](catalog.qmd) from Python.
+- **Learn**: start with the [quickstart notebook](notebooks/quickstart.ipynb),
+  or take the [WHOI short course on climate model output](https://ashleylasinsky.github.io/whoi-climate-tutorial_2026/pages/intro.html).
+- **[Help](report.qmd)**: report a problem, request data, or ask on Slack.
 - **[Cite the server](cite.qmd)** in your publications.
 
 News about the server, catalog releases, and maintenance windows is on the

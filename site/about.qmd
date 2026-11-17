@@ -7,21 +7,8 @@ reanalysis products for WHOI researchers, mainly in the Physical Oceanography
 Department. It replaces the older CMIP6 Community Storage Server
 ({{< old-site >}}), which stays online until this site is ready.
 
-## Holdings
-
-::: {.callout-note}
-These figures are from the **old site's statistics page** and have not been
-checked yet. An audit of the store is under way; this section will be updated
-from the catalog when it finishes.
-:::
-
-| | Old-site figure |
-|---|---|
-| Datasets | 28,361 |
-| NetCDF files | 555,263 |
-| Volume | about 142 TB |
-
-Reanalysis products (ERA5 first, then MERRA-2 and JRA-3Q) are being added.
+See [Holdings](holdings.qmd) for what the server holds, including
+reanalysis and other products.
 
 ## Layout
 
@@ -62,4 +49,4 @@ If you use data from this server, please include this acknowledgment (see
 ## Contact
 
 Maintainer: Brett Longworth. Questions and problems: see
-[Report a problem](report.qmd).
+[Help](report.qmd).
