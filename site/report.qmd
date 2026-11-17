@@ -20,3 +20,8 @@ Email [{{< var help_email >}}](mailto:{{< var help_email >}}) with the dataset
 id or file path, what you were doing, and what went wrong (or, for requests:
 variable, experiment, model, frequency, and why you need it). We will open an
 issue for you without publishing your email address.
+
+## Questions and discussion
+
+For quick questions and general discussion, join the
+[WHOI climate data Slack](https://whoiclimatedata.slack.com).

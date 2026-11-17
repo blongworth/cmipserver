@@ -50,6 +50,8 @@ website:
         text: Cite
       - href: report.qmd
         text: Report a problem
+      - href: https://whoiclimatedata.slack.com
+        text: Slack
       # Temporary; remove with old_site_url in _variables.yml (task 6.3).
       - href: http://cmip6.whoi.edu
         text: Old site
