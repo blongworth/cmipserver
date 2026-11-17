@@ -9,9 +9,9 @@ site_url: https://cmip.whoi.edu
 site_title: WHOI CMIP Data Server
 
 # GitHub repository for issue forms (TBD: which org/repo hosts issues).
-github_repo: OWNER/REPO
+github_repo: blongworth/cmipserver
 # Shared help address for users without GitHub accounts (TBD).
-help_email: HELP_EMAIL_TBD
+help_email: blongworth@whoi.edu
 
 # Production intake-esm catalog (CMIP6) on VAST (C-4).
 catalog_path: /proj/cmip6/catalog/live/whoi_cmip6.json
@@ -21,10 +21,10 @@ catalog_version: "2026-11-12"
 # Data root on HPC and the SMB share. Paths in the catalog start with this.
 vast_prefix: /proj/cmip6/data
 # SMB share name/path for Windows and macOS users (TBD, IT).
-smb_path: SMB_PATH_TBD
+smb_path: smb://vast.whoi.edu/proj/cmip6
 # HTTPS download prefix that maps to vast_prefix, e.g. <site_url>/data if the VM
 # aliases /data to /vast/cmip6/data (IT-8..IT-10, C-17).
-https_prefix: HTTPS_PREFIX_TBD
+https_prefix: https://cmip.whoi.edu/data
 # Globus collection link; empty until Globus exists (task 6.1, S-4).
 globus_url: ""
 

@@ -1,0 +1,9 @@
+[Unit]
+Description=Check for a new cmip.whoi.edu site build every 15 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target

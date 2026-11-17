@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull the latest cmip.whoi.edu site build from VAST
+After=network-online.target
+RequiresMountsFor=/vast/cmip6
+
+[Service]
+Type=oneshot
+User=cmipsite
+ExecStart=/srv/cmip/bin/pull_site.sh

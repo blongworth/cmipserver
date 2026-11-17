@@ -1,9 +1,9 @@
 # Plan: make cmip.whoi.edu live
 
-Date: 2026-11-06. Status: **proposal, not started.** Steps 6–8 of
+Date: 2026-11-06. Status: **in progress; decisions below made 2026-11-16.** Steps 6–8 of
 `docs/static-site-plan.md` (tasks 4.1, 5.7, 5.8, 5.13, 6.2, 6.4).
 
-**Needs approval:** the VM **pulls** each build from VAST instead of HPC
+**Approved (2026-11-16):** the VM **pulls** each build from VAST instead of HPC
 pushing it over SSH (static-site-plan §2, A.2). No deploy key, no HPC-to-VM
 connection (IT-10 goes away), and the VM runs only Apache and rsync. The push
 variant is in the appendix; everything else is the same.
@@ -13,14 +13,14 @@ variant is in the appendix; everything else is the same.
 ```
 HPC nightly job (service account, fresh checkout of main)
   build_catalog.py -> check_catalog.py -> summarize_catalog.py -> quarto render
-  publish_site.sh  -> VAST <site dir>/releases/<stamp>/ + BUILD_OK, then LATEST
+  publish_site.sh  -> /proj/cmip6/site/releases/<stamp>/ + BUILD_OK, then LATEST
 
 VM (Ubuntu, Apache), VAST mounted read-only:
   /vast/cmip6      <- /proj/cmip6 (data)
-  /vast/cmip-site  <- <site dir> (outside /proj/cmip6)
+  (site releases are at /vast/cmip6/site, same mount)
   pull_site.sh (every 15 min): copy new release -> smoke test -> staging -> current
   https://cmip.whoi.edu/       -> /srv/cmip/current
-  https://cmip.whoi.edu/data/  -> /vast/cmip6 (.nc only, no listing, rate limited)
+  https://cmip.whoi.edu/data/  -> /vast/cmip6/data (.nc only, no listing, rate limited)
   staging site                 -> /srv/cmip/staging (WHOI-only)
 
 GitHub Actions: checks only.
@@ -44,26 +44,57 @@ not catalogued; its file counts (`site/data/holdings.json`) come from
 `summarize_other.py --site-json` and change only when the inventory is
 re-run.
 
-## 2. Decisions needed
+## 2. Decisions
+
+**Made 2026-11-16:**
+
+- **Pull deploy** from `/proj/cmip6/site/` (below). The VM already mounts
+  the whole `/proj/cmip6` export read-only at `/vast/cmip6`, so there is no
+  separate `/vast/cmip-site` mount and no extra fstab line. Apache serves only
+  `/vast/cmip6/data`, so `site/` is not web-reachable.
+- **Builder:** Brett's HPC account for now; a service account later.
+- **Manual builds for now:** Brett runs build and publish by hand; no
+  `slurm/nightly.sbatch` or scheduled job yet. The VM pull timer is the only
+  scheduled piece, and it does nothing until a new `LATEST` appears.
+- **Access:** internal (`audience: internal` in `site/_variables.yml`; VAST
+  paths shown). `infra/apache/cmip.conf` still has `Require all granted`;
+  restrict it to WHOI ranges (**TBD**, ask IT) before announcing or pointing
+  DNS at the VM.
+- **TLS (IT-9):** Let's Encrypt certificate in
+  `/etc/letsencrypt/live/cmip.whoi.edu/`.
+
+**Release area** (written by `scripts/publish_site.sh`, read by
+`infra/vm/pull_site.sh`):
+
+```
+/proj/cmip6/site/
+  LATEST                    one line: newest complete release stamp
+  releases/<UTC stamp>/     built site + BUILD_OK (stamp, commit, catalog
+                            version, file count, sha256)
+  releases/.tmp-<stamp>/    build in progress (hidden; ignored by the VM)
+```
+
+Order: copy to `.tmp-`, write `BUILD_OK`, rename, then write `LATEST`. Keep 14
+on VAST and 7 on the VM.
+
+**Still open:**
 
 | Decision | ID | Blocks |
 |---|---|---|
-| Pull or push deploy | new | Scripts, IT requests |
-| Public or WHOI-only | PI-4 | Access rules, TLS, IT review |
+| WHOI IP ranges for internal access (PI-4 chosen: internal for now) | PI-4 | Access rules |
 | VAST paths on the site | PI-5 | External build (§5.3) |
 | Catalog path on VAST | C-4 | `catalog_path`, nightly job |
 | Rate limits, security review | C-17 | Go-live |
 | VM owner and patching | IT-8 | VM setup |
-| TLS certificate | IT-9 | VM setup |
 | Staging host name or port | — | VM setup |
 | `_variables.yml` placeholders: `github_repo`, `help_email`, `catalog_path`, `https_prefix` (proposal `https://cmip.whoi.edu/data`) | — | Rollout |
 | Snapshot naming (not blocking) | C-12 | — |
 
 ## 3. Requests (drafts for Brett to send)
 
-- **Storage:** a VAST site directory outside `/proj/cmip6`, writable by the
-  HPC service account. Export it and `/proj/cmip6` read-only to the VM.
-- **HPC:** a service account for a nightly job (`scrontab` or cron), with
+- **Storage:** `/proj/cmip6/site/` writable by the HPC account (group-readable).
+  The VM already has `/proj/cmip6` read-only.
+- **HPC:** (later; Brett's account until then) a service account for a nightly job (`scrontab` or cron), with
   outbound HTTPS to GitHub.
 - **IT:** DNS for `cmip.whoi.edu`; firewall 443/80 per PI-4, SSH from admin
   hosts only; TLS certificate; staging name; security review (C-17); VM
@@ -98,9 +129,15 @@ re-run.
 | `scripts/publish_site.sh` | HPC | `_site/` -> `releases/<UTC stamp>/`; write `BUILD_OK` (stamp, commit, catalog version, file count, checksum), then `LATEST`. Keep 14. Dry run unless `--publish`. |
 | `infra/vm/pull_site.sh` | VM | New `LATEST` with `BUILD_OK` -> rsync to `/srv/cmip/releases/<stamp>/`, check count, smoke test, switch `staging` symlink; promote to `current` unless `HOLD`. Keep 7. Also `--promote`, `--rollback <stamp>`. |
 | `infra/vm/smoke_test.sh` | VM | Key pages exist; summary and config JSON parse; rows > 0; `vendor/` hashes match |
-| `infra/vm/cmip-pull.{service,timer}` | VM | Every 15 min as `cmipsite` |
+| `infra/vm/cmip-pull.{service,timer}` | VM | Every 15 min as `cmipsite`. The unit runs `/srv/cmip/bin/pull_site.sh` (copy `infra/vm/*.sh` there). |
 | `infra/apache/cmip.conf` (5.13) | VM | §5.2, for IT review |
 | `docs/runbook-site.md` (6.4) | — | §7 |
+
+**Status 2026-11-16:** `publish_site.sh`, `pull_site.sh`, `smoke_test.sh` and
+the systemd units are written and were tested locally against a fake release
+area (publish, pull, HOLD, promote, rollback, pruning, count mismatch, failed
+smoke test, missing `BUILD_OK`). Not yet run on the VM or HPC. `vendor/` hash
+check in the smoke test is not implemented.
 
 Tests: pytest for `check_catalog.py` and `publish_site.sh --dry-run`;
 `shellcheck` in CI.
@@ -116,7 +153,8 @@ sudo useradd --system --home /srv/cmip --shell /usr/sbin/nologin cmipsite
 sudo install -d -o cmipsite -g www-data -m 2755 /srv/cmip /srv/cmip/releases
 ```
 
-- `/etc/fstab`: `/vast/cmip6` and `/vast/cmip-site`, `ro,nosuid,nodev,noexec`.
+- `/etc/fstab`: `/vast/cmip6` (whole `/proj/cmip6` export), `ro,nosuid,nodev,noexec`;
+  done 2026-11-16 (`docs/vm-spec.md`).
   Check that `www-data` can read a `.nc` file and `cmipsite` can read releases.
 - `ufw`: 443 and 80 per PI-4; 22 from admin hosts.
 
@@ -125,7 +163,7 @@ sudo install -d -o cmipsite -g www-data -m 2755 /srv/cmip /srv/cmip/releases
 - `:80` redirects to `https://`.
 - `/` -> `/srv/cmip/current`: `Options -Indexes SymLinksIfOwnerMatch`,
   `AllowOverride None`. Verify only the docroot symlink is followed.
-- `/data` -> `/vast/cmip6`: `Options -Indexes -FollowSymLinks`,
+- `/data` -> `/vast/cmip6/data`: `Options -Indexes -FollowSymLinks`,
   `Require all denied`, then allow `\.nc$` only. `application/x-netcdf`,
   range requests on, no compression.
 - Rate limits (tune from logs): `mod_ratelimit` 20 MB/s per connection,
@@ -147,8 +185,9 @@ audience, and give external users an HTTPS catalog instead of the prefix swap.
 
 ### 5.4 TLS
 
-Public: `certbot --apache -d cmip.whoi.edu`. WHOI-only: IT certificate or
-ACME DNS challenge (IT-9).
+Answered (IT-9): a Let's Encrypt certificate exists in
+`/etc/letsencrypt/live/cmip.whoi.edu/` (`infra/apache/cmip.conf` uses it).
+Check that `certbot renew --dry-run` passes and a deploy hook reloads Apache.
 
 ## 6. Rollout
 
