@@ -1,13 +1,84 @@
 ---
-title: "Other holdings"
-toc: false
+title: "Holdings"
+toc: true
 ---
 
-These products are on the WHOI store but are **not in the intake catalog**,
-so they are not on the [Browse](browse.qmd) page. Open the files directly on
-the HPC cluster at the path shown (see [Access](access.qmd)). Some may be
-added to the catalog later. Cite each product as given below; see also
-[How to cite](cite.qmd).
+What is on the WHOI store (`{{< var vast_prefix >}}`), with file counts and
+sizes. Products in the intake catalog are on the [Browse](browse.qmd) page;
+the rest are listed [below](#other-holdings). See [Access](access.qmd) for how
+to reach the files and [How to cite](cite.qmd) for citations.
+
+```{ojs}
+//| echo: false
+//| output: false
+summary = FileAttachment("data/catalog_summary.json").json()
+```
+
+## Catalogued holdings
+
+```{ojs}
+//| echo: false
+// Counts and sizes are summed from the catalog summary (every dataset version
+// in the catalog), so they match the Browse page.
+fmtN = (x, d = 0) => x.toLocaleString(undefined, {maximumFractionDigits: d})
+catalogued = {
+  const g = new Map();
+  for (const d of summary) {
+    const key = d.product ?? d.collection;
+    const e = g.get(key) ?? {key, collection: d.collection, n_datasets: 0, n_files: 0, size_gb: 0};
+    e.n_datasets += 1; e.n_files += d.n_files ?? 0; e.size_gb += d.size_gb ?? 0;
+    g.set(key, e);
+  }
+  return [...g.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+html`<table class="table table-sm w-auto">
+  <thead><tr><th>Holding</th><th class="text-end">Datasets</th><th class="text-end">Files</th><th class="text-end">Size (TB)</th></tr></thead>
+  <tbody>${catalogued.map((r) => html`<tr>
+    <td>${r.key === "cmip6" ? "CMIP6" : html`<code>${r.key}</code>`}</td>
+    <td class="text-end">${fmtN(r.n_datasets)}</td>
+    <td class="text-end">${fmtN(r.n_files)}</td>
+    <td class="text-end">${fmtN(r.size_gb / 1000, 2)}</td></tr>`)}</tbody>
+  <tfoot><tr class="fw-bold"><td>Total</td>
+    <td class="text-end">${fmtN(summary.length)}</td>
+    <td class="text-end">${fmtN(d3sum(catalogued, "n_files"))}</td>
+    <td class="text-end">${fmtN(d3sum(catalogued, "size_gb") / 1000, 2)}</td></tr></tfoot>
+</table>`
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+d3sum = (rows, k) => rows.reduce((a, r) => a + r[k], 0)
+```
+
+### CMIP6 by model
+
+```{ojs}
+//| echo: false
+cmip6Models = {
+  const g = new Map();
+  for (const d of summary.filter((d) => d.collection === "cmip6")) {
+    const e = g.get(d.source_id) ?? {source_id: d.source_id, n_datasets: 0, n_files: 0, size_gb: 0};
+    e.n_datasets += 1; e.n_files += d.n_files ?? 0; e.size_gb += d.size_gb ?? 0;
+    g.set(d.source_id, e);
+  }
+  return [...g.values()].sort((a, b) => a.source_id.localeCompare(b.source_id));
+}
+html`<div style="max-height: 480px; overflow-y: auto;"><table class="table table-sm w-auto small">
+  <thead style="position: sticky; top: 0; background: var(--bs-body-bg);"><tr><th>Source (model)</th><th class="text-end">Datasets</th><th class="text-end">Files</th><th class="text-end">Size (GB)</th></tr></thead>
+  <tbody>${cmip6Models.map((r) => html`<tr>
+    <td><a href="browse.html?source_id=${encodeURIComponent(r.source_id)}">${r.source_id}</a></td>
+    <td class="text-end">${fmtN(r.n_datasets)}</td>
+    <td class="text-end">${fmtN(r.n_files)}</td>
+    <td class="text-end">${fmtN(r.size_gb, 1)}</td></tr>`)}</tbody>
+</table></div>`
+```
+
+## Other holdings {#other-holdings}
+
+These products are on the store but are **not in the intake catalog**, so
+they are not on the [Browse](browse.qmd) page. Open the files directly on the
+HPC cluster at the path shown. Some may be added to the catalog later.
 
 ```{ojs}
 //| echo: false
