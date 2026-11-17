@@ -44,6 +44,10 @@ Inputs = require.alias({"htl@0.3.1/dist/htl.min.js": vendor("htl/htl.min.js")})(
 .facet-select .form-label { margin-bottom: 0.15rem; font-size: 0.9rem; }
 .ts-dropdown .ts-count { color: var(--bs-secondary-color, #6c757d); }
 .ts-dropdown .ts-zero { opacity: 0.45; }
+/* Facets with no values for the current selection. Set emptyFacets to "hide"
+   in the OJS cell below to hide them instead of greying them out. */
+.facet-select.facet-empty { opacity: 0.45; }
+.facet-select.facet-empty.facet-hide { display: none; }
 .browse-table .tabulator-cell a { white-space: nowrap; }
 </style>
 ```
@@ -81,6 +85,8 @@ facets = [
   ["grid_label", "Grid"],
   ["version", "Version"]
 ]
+// How facets with no values for the current selection are shown: "grey" or "hide".
+emptyFacets = "grey"
 uniq = (k) => [...new Set(summary.map((d) => d[k]).filter((v) => v != null))].sort()
 // Filters and search text from the page URL, read once on load.
 urlState = {
@@ -193,6 +199,13 @@ updateCounts = {
       if (ts.options[v]?.count !== n) ts.updateOption(v, {value: v, text: v, count: n});
     }
     ts.refreshOptions(false);
+    // Nothing to pick: grey out (or hide) the facet. Never lock one that has
+    // picks, so they can still be removed.
+    const w = (viewof filters).widgets[k];
+    const empty = ts.items.length === 0 && uniq(k).every((v) => (counts[k].get(v) ?? 0) === 0);
+    w.classList.toggle("facet-empty", empty);
+    w.classList.toggle("facet-hide", empty && emptyFacets === "hide");
+    if (empty) ts.disable(); else ts.enable();
   }
   return true;
 }
