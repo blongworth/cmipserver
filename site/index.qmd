@@ -21,6 +21,8 @@ the standard CMIP directory layout and indexed by an
   [quickstart notebook](notebooks/quickstart.ipynb).
 - **[Get access](access.qmd)**: on HPC, over the SMB share, or by HTTPS
   download.
+- **[Learn to work with climate model output](https://ashleylasinsky.github.io/whoi-climate-tutorial_2026/pages/intro.html)**: the WHOI short course
+  on climate model output.
 - **[Report a problem or request data](report.qmd).**
 - **[Cite the server](cite.qmd)** in your publications.
 

@@ -39,6 +39,8 @@ website:
             text: Download guide
           - href: cloud.qmd
             text: Cloud
+          - href: https://ashleylasinsky.github.io/whoi-climate-tutorial_2026/pages/intro.html
+            text: Short course on climate model output
       - href: blog/index.qmd
         text: Blog
     right:
