@@ -15,7 +15,12 @@ uv run quarto render site      # or: uv run quarto preview site
 - `_variables.yml` holds hosts, prefixes, and addresses. `_TBD` values are
   placeholders. The pre-render step copies the browser's settings into
   `data/site_config.json`.
-- `data/` holds the committed catalog summary (CMIP6 + reanalysis, ~60 MB).
+- `data/` is generated and not committed: the catalog summary from
+  `summarize_catalog.py` (above) and `site_config.json` from the pre-render
+  step. The exception is `holdings.json` (Other holdings page), which comes
+  from an occasional inventory scan via `summarize_other.py` and is committed. For a quick preview without
+  the store, build it from the test fixtures:
+  `uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --catalog tests/fixtures/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data`
 - `vendor/` holds pinned third-party JavaScript, CSS, and fonts (Tom Select,
   Tabulator, Arquero, the OJS stdlib pieces the browser uses, and the cosmo
   font), so pages load nothing from CDNs. `vendor/vendor.yml` lists each file

@@ -179,7 +179,7 @@ Matches the layout proposed in the planning repo (`script-inventory.md`). The co
     download-guide.qmd             (task 5.4)
     report.qmd                     (Help: issue forms, mailto, Slack)
     blog/posts/
-    data/                          (small committed catalog summary for CI)
+    data/                          (generated, not committed; CI builds it from tests/fixtures)
   tests/                           (fixtures, no VAST needed)
   .github/
     ISSUE_TEMPLATE/{report-problem,data-request,config}.yml
