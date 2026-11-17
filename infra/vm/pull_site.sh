@@ -16,6 +16,9 @@ SRC=${SRC:-/vast/cmip6/site}
 DEST=${DEST:-/srv/cmip}
 KEEP=${KEEP:-7}
 here=$(cd "$(dirname "$0")" && pwd)
+# Start somewhere cmipsite can read (sudo -u keeps the caller's cwd, e.g. a
+# home directory it can't enter, which makes find fail and pipefail abort).
+cd /
 
 # Atomically point link $1 at release stamp $2.
 point() {

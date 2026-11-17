@@ -62,7 +62,7 @@ runs Apache and rsync.
 - `:80` redirects to `https://`.
 - `/` serves `/srv/cmip/current` (a symlink to the live release):
   `Options -Indexes SymLinksIfOwnerMatch`, `AllowOverride None`.
-- `/data` is an `Alias` to `/vast/cmip6/data` (`/proj/cmip6/data`):
+- `/download` is an `Alias` to `/vast/cmip6/data` (`/proj/cmip6/data`):
   - `Options -Indexes -FollowSymLinks`; deny by default, allow `\.nc$` only.
   - Content type `application/x-netcdf`; range requests on; no compression.
 - Rate limits (tune from logs): `mod_ratelimit` 20 MB/s per connection,
@@ -91,8 +91,8 @@ runs Apache and rsync.
 ## 6. Acceptance checks
 
 - `http://` redirects to `https://`; headers present.
-- A `.nc` link under `/data` downloads, and `curl -r 0-99` returns 206.
-- `/data/` listing and any non-`.nc` file return 403.
+- A `.nc` link under `/download` downloads, and `curl -r 0-99` returns 206.
+- `/download/` listing and any non-`.nc` file return 403.
 - Rate limits trigger.
 - Mount is read-only (section 3).
 - Access matches PI-4 from on and off the WHOI network.
@@ -102,4 +102,4 @@ runs Apache and rsync.
 
 Once answered, these placeholders in `site/_variables.yml` can be set:
 `smb_path` (question 4) and `https_prefix` (proposal
-`https://cmip.whoi.edu/data`, once section 4 is in place).
+`https://cmip.whoi.edu/download`, once section 4 is in place).

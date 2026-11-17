@@ -20,7 +20,7 @@ VM (Ubuntu, Apache), VAST mounted read-only:
   (site releases are at /vast/cmip6/site, same mount)
   pull_site.sh (every 15 min): copy new release -> smoke test -> staging -> current
   https://cmip.whoi.edu/       -> /srv/cmip/current
-  https://cmip.whoi.edu/data/  -> /vast/cmip6/data (.nc only, no listing, rate limited)
+  https://cmip.whoi.edu/download/  -> /vast/cmip6/data (.nc only, no listing, rate limited)
   staging site                 -> /srv/cmip/staging (WHOI-only)
 
 GitHub Actions: checks only.
@@ -87,7 +87,7 @@ on VAST and 7 on the VM.
 | Rate limits, security review | C-17 | Go-live |
 | VM owner and patching | IT-8 | VM setup |
 | Staging host name or port | — | VM setup |
-| `_variables.yml` placeholders: `github_repo`, `help_email`, `catalog_path`, `https_prefix` (proposal `https://cmip.whoi.edu/data`) | — | Rollout |
+| `_variables.yml` placeholders: `github_repo`, `help_email`, `catalog_path`, `https_prefix` (`https://cmip.whoi.edu/download`) | — | Rollout |
 | Snapshot naming (not blocking) | C-12 | — |
 
 ## 3. Requests (drafts for Brett to send)
@@ -163,7 +163,7 @@ sudo install -d -o cmipsite -g www-data -m 2755 /srv/cmip /srv/cmip/releases
 - `:80` redirects to `https://`.
 - `/` -> `/srv/cmip/current`: `Options -Indexes SymLinksIfOwnerMatch`,
   `AllowOverride None`. Verify only the docroot symlink is followed.
-- `/data` -> `/vast/cmip6/data`: `Options -Indexes -FollowSymLinks`,
+- `/download` -> `/vast/cmip6/data`: `Options -Indexes -FollowSymLinks`,
   `Require all denied`, then allow `\.nc$` only. `application/x-netcdf`,
   range requests on, no compression.
 - Rate limits (tune from logs): `mod_ratelimit` 20 MB/s per connection,
@@ -215,7 +215,7 @@ Check that `certbot renew --dry-run` passes and a deploy hook reloads Apache.
 
 - Headers present; `http://` redirects.
 - A dataset page's `.nc` link downloads; `curl -r 0-99` returns 206.
-- `/data/` directory and non-`.nc` file return 403.
+- `/download/` directory and non-`.nc` file return 403.
 - Rate limits trigger.
 - Headless Chrome: filters, counts, URL state, dataset links, no other hosts.
 - Off-site access matches PI-4.
