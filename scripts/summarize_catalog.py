@@ -9,7 +9,8 @@ Only reads the catalogs; writes to --out:
     catalog_summary.json      one record per dataset (catalog_schema.SUMMARY_SCHEMA)
     catalog_summary.parquet   same, with --parquet
     catalog_stats.json        headline counts and the source catalogs
-    files/<shard>.json        dataset_id -> file names, one shard per
+    files/<shard>.json        dataset_id -> file paths relative to the
+                              dataset's relative_path, one shard per
                               source_id (cmip6) or product (reanalysis)
     products.json             with --products: product -> description,
                               citation, license, acknowledgment (dataset
@@ -94,21 +95,26 @@ def summarize(lf: pl.LazyFrame, root: str = DEFAULT_DATA_ROOT) -> pl.LazyFrame:
 
 
 def file_lists(lf: pl.LazyFrame) -> dict[str, dict[str, list[str]]]:
-    """{file_list shard: {dataset_id: [file names]}}."""
+    """{file_list shard: {dataset_id: [file paths]}}.
+
+    Paths are relative to the dataset's ``relative_path`` (the common directory
+    of its files), so datasets spread over subdirectories (e.g. one per year)
+    keep them: ``2020/<name>.nc``.
+    """
     df = (
-        lf.with_columns(
-            dataset_id_expr(),
-            name=pl.col("path").str.extract(r"([^/]+)$"),
-            shard=shard_expr(),
-        )
+        lf.with_columns(dataset_id_expr(), shard=shard_expr())
         .group_by("shard", "dataset_id")
-        .agg(pl.col("name").sort())
+        .agg(pl.col("path").sort())
         .sort("shard", "dataset_id")
         .collect()
     )
     out: dict[str, dict[str, list[str]]] = {}
     for r in df.iter_rows(named=True):
-        out.setdefault(r["shard"], {})[r["dataset_id"]] = r["name"]
+        paths = r["path"]
+        base = _common_dir([os.path.dirname(p) for p in paths]) + "/"
+        out.setdefault(r["shard"], {})[r["dataset_id"]] = [
+            p.removeprefix(base) for p in paths
+        ]
     return out
 
 

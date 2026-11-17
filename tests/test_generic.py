@@ -579,6 +579,8 @@ def test_generic_cli_check_and_summary(other, ncinfo, tmp_path):
     assert stats["by_collection"] == {"observations": 1, "ocean_reanalysis": 2}
     files = json.loads((site / "files/ocean_reanalysis.glorys12v1.json").read_text())
     assert len(files[gl["dataset_id"]]) == 4
+    # per-year subdirectories are kept so download URLs resolve
+    assert all(f.count("/") == 1 for f in files[gl["dataset_id"]])
 
 
 def test_catalogs_manifest_rules(tmp_path):
