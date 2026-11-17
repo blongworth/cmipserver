@@ -258,6 +258,7 @@ viewof selected = {
     selectableRowsRangeMode: "click",
     placeholder: "No matching datasets",
     columnDefaults: {resizable: true, headerSort: true},
+    initialSort: [{column: "source_id", dir: "asc"}],
     columns: [
       {formatter: "rowSelection", titleFormatter: "rowSelection", hozAlign: "center",
        headerSort: false, resizable: false, width: 44, frozen: true},
