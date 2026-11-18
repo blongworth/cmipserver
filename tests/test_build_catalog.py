@@ -77,8 +77,9 @@ def test_intake_loads_dataset(built):
     cat = intake.open_esm_datastore(str(built / "test_cat.json"))
     key = "CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn.v20190308"
     assert key in cat
+    # netCDF4/HDF5 are not thread-safe; threaded loads segfault on CI.
     ds = cat.search(variable_id="tas", version="v20190308").to_dataset_dict(
-        progressbar=False
+        progressbar=False, threaded=False
     )[key]
     assert ds.sizes["time"] == 165 * 12
 
