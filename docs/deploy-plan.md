@@ -44,6 +44,11 @@ not catalogued; its file counts (`site/data/holdings.json`) come from
 `summarize_other.py --site-json` and change only when the inventory is
 re-run.
 
+**Not yet planned: data updates** (found 2026-11-18). This plan rebuilds
+catalogs from what is on the store; it does not cover fetching new data
+(e.g. a new year of ERA5, which has no fetch path today) or the steps between
+fetch and catalog. Open items: `docs/todo.md`, "Data updates".
+
 ## 2. Decisions
 
 **Made 2026-11-16:**

@@ -42,8 +42,6 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   synchronous Dask scheduler for multi-file datasets) in the setup cell, as
   `20crv3.ipynb` does; users on hydra hit "NetCDF: HDF error" otherwise
   (`docs/audit-findings.md`, "HDF5 file locking on VAST").
-- [ ] **Decide how often non-CMIP6 catalogs are checked and rebuilt** (regular
-  or on demand, per product). Nothing in the docs assumes a nightly rebuild.
 - [ ] Optional: show a product's `caveats` on its dataset page. ERA5 caveats no
   longer appear on the site now that it is catalogued (only the recipe on the
   Catalog page does).
@@ -51,6 +49,35 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   on the catalogued products.
 - [ ] Fix the flaky `tests/test_checksums.py::test_select_and_hash` (an
   unseeded random sample sometimes adds `,sample` to the expected reason).
+
+## Data updates (needs a plan)
+
+Found 2026-11-18: the plans cover a one-time fill and catalog rebuilds, not
+getting new data into the store. Only the pieces below exist; the rest needs
+planning in `docs/deploy-plan.md` and `docs/audit-runbook.md` first.
+
+- [ ] **Decide the update policy per product**: which products get updates
+  (ERA5 at least), how often (regular or on demand), who runs them, and
+  whether ERA5T (preliminary, later replaced) goes on the store.
+- [ ] **Decide how often catalogs are checked and rebuilt** (regular or on
+  demand, per product). Nothing in the docs assumes a nightly rebuild.
+- [ ] **ERA5 fetch path**: `manifests/products/era5.yaml` is catalog-only (no
+  source) and `download_product.py` reads only HTTPS autoindex listings, so
+  there is no way to fetch new ERA5 data. Needs a CDS source and download mode;
+  the CDS API key stays in the account's own credentials file, never the repo.
+  Plan for the old/new CDS format change (`time` vs `valid_time`).
+- [ ] **20CRv3 and other HTTPS products**: updating works by hand (raise
+  `years`, `plan_product.py`, download, approve, apply), but files changed
+  upstream are only reported (`present_differs`), never re-fetched.
+- [ ] **CMIP6**: `check_esgf.py` and the repair path cover new versions and
+  retractions of datasets already held; nothing adds new datasets
+  (`manifests/core.yaml` is empty).
+- [ ] **Generic products** (GLORYS, SODA): new files stay invalid until
+  `check_nc.py` is re-run on them; make that a required update step.
+- [ ] **Runbook section "Updating a product"** (`docs/audit-runbook.md`), once
+  the above is decided: plan, download, approve, move, `check_nc` (generic),
+  rebuild, check and promote, site news post.
+- [ ] Then add the update loop to `docs/pipeline-flowchart.html` (not before).
 
 ## Cleanup proposals (need approval; nothing done)
 
