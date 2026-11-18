@@ -122,10 +122,10 @@ or fonts at runtime. Checked in headless Chrome: every request from
 | Key | Value now | Waiting on |
 |---|---|---|
 | `github_repo` | `OWNER/REPO` | which repo hosts issues |
-| `help_email` | `HELP_EMAIL_TBD` (also in `config.yml`) | shared help address |
+| `help_email` | set 2026-11-18 (also in `config.yml`) | — |
 | `catalog_path` | `CATALOG_PATH_TBD` | C-4 |
 | `catalog_version` | `sample` | C-12, real catalog (4.1–4.4) |
-| `smb_path` | `SMB_PATH_TBD` | IT (share name) |
+| `smb_path` | confirmed 2026-11-18 | — |
 | `https_prefix` | `HTTPS_PREFIX_TBD` (`https://cmip.whoi.edu/download`) | IT-8–IT-10, C-17, 5.13 |
 | `globus_url` | set 2026-11-18 (collection file-manager link, `/cmip6/data/`) | who may use it (unknown) |
 | `audience` | `internal` | PI-4, PI-5 |

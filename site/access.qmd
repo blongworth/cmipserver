@@ -26,9 +26,8 @@ ds = xr.open_mfdataset(
 
 ## SMB share
 
-From a WHOI laptop or desktop, connect to the share `{{< var smb_path >}}`
-(placeholder until IT confirms the share name). The directory layout is the
-same as on the cluster.
+From a WHOI laptop or desktop, connect to the share `{{< var smb_path >}}`.
+The directory layout is the same as on the cluster.
 
 ::: {.callout-tip}
 Many people reading the same files over SMB at once has caused errors in the

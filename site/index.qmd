@@ -6,9 +6,8 @@ toc: false
 ::: {.callout-warning}
 ## Preview
 
-This site is new and works only from the WHOI network or VPN. The SMB share
-name is still being confirmed. Please [tell us](report.qmd) what is missing
-or wrong.
+This site is new and works only from the WHOI network or VPN. Please
+[tell us](report.qmd) what is missing or wrong.
 :::
 
 The WHOI CMIP data server holds CMIP6 model output and atmospheric and ocean

@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  # TBD: replace HELP_EMAIL_TBD with the shared help address (see docs/site-handoff.md).
+  # Keep in sync with help_email in site/_variables.yml.
   - name: Email the maintainers (no GitHub account needed)
-    url: mailto:HELP_EMAIL_TBD
+    url: mailto:blongworth@whoi.edu
     about: We will open an issue for you without publishing your email address.
   - name: WHOI CMIP site
     url: https://cmip.whoi.edu/

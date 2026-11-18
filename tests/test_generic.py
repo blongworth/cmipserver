@@ -948,3 +948,6 @@ def test_product_info_from_repo_manifest():
     assert info["20crv3"]["acknowledgment"].startswith("Support for the Twentieth")
     assert info["era5"]["citation"].startswith("Hersbach")
     assert info["glorys12v1"]["license"].startswith("Copernicus Marine")
+    # acknowledgment set on a catalog entry (not a spec)
+    assert info["hycom_gofs30"]["acknowledgment"].startswith("The 1/12 deg global")
+    assert info["hycom_gofs31"]["acknowledgment"] is None

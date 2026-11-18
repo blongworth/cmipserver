@@ -27,6 +27,11 @@ products not in the catalog have theirs on [Other holdings](holdings.qmd#other-h
 
 ### NOAA-CIRES-DOE Twentieth Century Reanalysis version 3 (20CRv3)
 
+Cite Slivinski, L. C. et al. (2019) Towards a more reliable historical
+reanalysis: Improvements for version 3 of the Twentieth Century Reanalysis
+system. *Q. J. R. Meteorol. Soc.* 145, 2876-2908,
+<https://doi.org/10.1002/qj.3598>.
+
 NOAA PSL asks that papers using 20CRv3 include this text in their
 acknowledgments:
 

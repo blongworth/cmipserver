@@ -156,7 +156,14 @@ products:
       Chamberlain, M. A. et al. (2021) Next generation of Bluelink ocean
       reanalysis with multiscale data assimilation: BRAN2020. Earth Syst. Sci.
       Data 13, 5663-5688, doi:10.5194/essd-13-5663-2021.
-    license: null   # FILL IN (Brett): BRAN2020 terms of use from the NCI/CSIRO data page
+    # CSIRO names no licence; it asks for this acknowledgment
+    # (https://research.csiro.au/bluelink/outputs/data-access, 2026-11-18).
+    license: null
+    acknowledgment: >-
+      BRAN data has been used in this study. BRAN is made freely available by
+      CSIRO Bluelink and is supported by the Bluelink Partnership: a
+      collaboration between the Australian Department of Defence, Bureau of
+      Meteorology and CSIRO.
   - name: soda3122
     root: /proj/cmip6/data/ocean_reanalysis/sodav3122
     builder: generic
@@ -189,8 +196,17 @@ products:
     caveats: >-
       Daily snapshots, not means. analysis/ 2013-08-01 to 08-15 are empty
       (0-byte) files.
-    citation: null  # FILL IN (Brett): HYCOM reanalysis reference
-    license: null   # FILL IN (Brett)
+    # HYCOM gives no citation or licence, only this acknowledgment, which it
+    # says applies to GLBu0.08 expt_19.0 and 19.1 (this product)
+    # (https://hycom.org/publications/acknowledgements/ocean-reanalysis-data,
+    # 2026-11-18).
+    citation: null
+    license: null
+    acknowledgment: >-
+      The 1/12 deg global HYCOM+NCODA Ocean Reanalysis was funded by the U.S.
+      Navy and the Modeling and Simulation Coordination Office. Computer time
+      was made available by the DoD High Performance Computing Modernization
+      Program. The output is publicly available at http://hycom.org.
   - name: hycom_gofs31
     root: /proj/cmip6/data/ocean_reanalysis/HYCOMvGOFS31
     builder: generic
@@ -204,8 +220,10 @@ products:
       Daily snapshots, not means. Regional subset, not global. 4 daily files
       are truncated (2001-10-08, 2007-05-11, 2007-10-15, 2008-01-20) and 4
       in global/2003 are empty.
-    citation: null  # FILL IN (Brett): HYCOM reanalysis reference
-    license: null   # FILL IN (Brett)
+    # HYCOM publishes no citation, licence, or acknowledgment for GLBv0.08
+    # expt 53.X (hycom.org GOFS 3.1 reanalysis page, 2026-11-18).
+    citation: null
+    license: null
   - name: eccov5
     root: /proj/cmip6/data/ocean_reanalysis/ECCOv5/Version5/Alpha
     builder: generic
@@ -217,8 +235,13 @@ products:
     caveats: >-
       Unreleased alpha version. nctiles_monthly/THETA/THETA_1992.nc is
       truncated (incomplete copy).
-    citation: null  # FILL IN (Brett): ECCO v5 alpha reference
-    license: null   # FILL IN (Brett)
+    # Citation suggested for V5 Alpha by ECCO support (ecco-support list,
+    # 2022-08-15). The DSpace record shows CC BY-SA 3.0 US, but it is not
+    # clear that covers the data files, so no licence is given here.
+    citation: >-
+      Zhang, H., Menemenlis, D. and Fenty, I. (2018) ECCO LLC270 Ocean-Ice
+      State Estimate. http://hdl.handle.net/1721.1/119821.
+    license: null
   - name: prism
     root: /proj/cmip6/data/prism/netcdf
     builder: generic
@@ -235,7 +258,9 @@ products:
       and provisional (M3) data.
     citation: >-
       PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.
-    license: null   # FILL IN (Brett): PRISM terms of use
+    license: >-
+      Free to reproduce and distribute with attribution (name, URL, and date
+      of access); see https://prism.oregonstate.edu/terms/.
 
 # --- Listed only: shown on the site's "Other holdings" page
 # (site/holdings.qmd), never catalogued. path is relative to /proj/cmip6/data.
@@ -252,7 +277,9 @@ listed:
       Zuo, H. et al. (2019) The ECMWF operational ensemble reanalysis-analysis
       system for ocean and sea ice: a description of the system and
       assessment. Ocean Sci. 15, 779-808, doi:10.5194/os-15-779-2019.
-    license: null   # FILL IN (Brett)
+      Dataset: Copernicus Climate Change Service, ORAS5 global ocean
+      reanalysis monthly data from 1958 to present, doi:10.24381/cds.67e8eeb7.
+    license: CC-BY licence (Copernicus Climate Data Store)
   - name: cfsr932
     path: ocean_reanalysis/cfsr932
     description: NCEP Climate Forecast System Reanalysis (CFSR, NCAR RDA ds093.2), converted from GRIB to NetCDF

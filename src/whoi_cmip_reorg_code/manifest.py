@@ -524,6 +524,8 @@ class Product(_Strict):
     # Shown on the site's dataset page (reanalysis: also in the product spec).
     citation: str | None = None
     license: str | None = None
+    # Text the provider asks users to put in their acknowledgments.
+    acknowledgment: str | None = None
     # Shown on the site's "Other holdings" page while the product is disabled.
     years: str | None = None
     caveats: str | None = None
@@ -568,6 +570,7 @@ class Listed(_Strict):
     caveats: str | None = None
     citation: str | None = None
     license: str | None = None
+    acknowledgment: str | None = None
 
     @field_validator("name")
     @classmethod
