@@ -53,6 +53,10 @@ website:
       # Temporary; remove with old_site_url in _variables.yml (task 6.3).
       - href: http://cmip6.whoi.edu
         text: Old site
+      # Keep in sync with github_repo in _variables.yml.
+      - icon: github
+        href: https://github.com/blongworth/cmipserver
+        aria-label: Source code and issues on GitHub
       - icon: rss
         href: blog/index.xml
         aria-label: Blog RSS feed
