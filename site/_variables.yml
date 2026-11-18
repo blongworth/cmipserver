@@ -25,8 +25,9 @@ smb_path: smb://vast.whoi.edu/proj/cmip6
 # HTTPS download prefix that maps to vast_prefix, e.g. <site_url>/data if the VM
 # aliases /data to /vast/cmip6/data (IT-8..IT-10, C-17).
 https_prefix: https://cmip.whoi.edu/download
-# Globus collection link; empty until Globus exists (task 6.1, S-4).
-globus_url: ""
+# Globus collection: file-manager link at the data root. Globus path
+# /cmip6/data/ is vast_prefix (task 6.1, S-4).
+globus_url: "https://app.globus.org/file-manager?origin_id=6bd93eaf-8acb-430f-9127-7a543afb091c&origin_path=/cmip6/data/&two_pane=false"
 
 # "internal" shows VAST paths in the browser; "external" hides them (PI-4, PI-5).
 audience: internal

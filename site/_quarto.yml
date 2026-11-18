@@ -15,7 +15,7 @@ shortcodes:
 website:
   title: "WHOI CMIP Data Server"
   site-url: https://cmip.whoi.edu  # keep in sync with site_url in _variables.yml
-  description: "CMIP6 model output and reanalysis on WHOI's VAST storage"
+  description: "CMIP6 model output and reanalysis products on WHOI's VAST storage"
   search: true
   navbar:
     left:
@@ -30,7 +30,7 @@ website:
       - text: Data Access
         menu:
           - href: access.qmd
-            text: Access (HPC, SMB, HTTPS)
+            text: Access (HPC, SMB, HTTPS, Globus)
           - href: download-guide.qmd
             text: Download guide
           - href: access.qmd#public-cloud-copies

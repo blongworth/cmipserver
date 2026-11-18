@@ -5,9 +5,9 @@ title: "Download guide"
 This page is for people who cannot use the HPC cluster or the SMB share
 (see [Access](access.qmd)).
 
-::: {.callout-warning}
-HTTPS downloads are not available yet. The prefix
-`{{< var https_prefix >}}` below is a placeholder.
+::: {.callout-note}
+HTTPS downloads from `{{< var https_prefix >}}` work only from the WHOI
+network or VPN. Off site, use [Globus](access.qmd#globus).
 :::
 
 ## 1. Make a URL list
@@ -36,12 +36,12 @@ aria2c --continue=true --max-concurrent-downloads=2 -i urls.txt
 
 ```python
 import xarray as xr
-ds = xr.open_mfdataset("cmip6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/v20190308/*.nc")
+ds = xr.open_mfdataset("cmip6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/1/*.nc")
 ```
 
 ## Limits
 
 - Downloads are rate limited per address. There is no directory listing:
   files are reachable only by exact URL.
-- For more than a few hundred GB, use the cluster or ask about Globus via
-  [Report a problem](report.qmd).
+- For more than a few hundred GB, use the cluster or
+  [Globus](access.qmd#globus). Questions: see [Help](report.qmd).

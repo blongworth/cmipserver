@@ -6,21 +6,23 @@ toc: false
 ::: {.callout-warning}
 ## Preview
 
-This site is under construction. Hosts, download URLs, and some contact
-details are still placeholders.
+This site is new and works only from the WHOI network or VPN. The SMB share
+name is still being confirmed. Please [tell us](report.qmd) what is missing
+or wrong.
 :::
 
-The WHOI CMIP data server holds CMIP6 model output and reanalysis products
-(ERA5 first) on WHOI's VAST storage at `{{< var vast_prefix >}}`, organized in
-the standard CMIP directory layout and indexed by an
-[intake-esm](https://intake-esm.readthedocs.io/) catalog.
+The WHOI CMIP data server holds CMIP6 model output and atmospheric and ocean
+reanalyses (ERA5, 20CRv3, GLORYS12V1, SODA3.12.2) on WHOI's VAST storage at
+`{{< var vast_prefix >}}`, indexed by
+[intake-esm](https://intake-esm.readthedocs.io/) catalogs. Other products on
+the store are listed on [Holdings](holdings.qmd#other-holdings).
 
 - **[Browse](browse.qmd)**: filter by model, experiment, variable, and more,
   then copy paths, URLs, or a Python snippet. See [Holdings](holdings.qmd) for
   everything on the server.
 - **[Data access](access.qmd)**: on HPC, over the SMB share, by HTTPS
-  download ([download guide](download-guide.qmd)), or from public cloud
-  mirrors. Use the [catalog](catalog.qmd) from Python.
+  download ([download guide](download-guide.qmd)), through Globus, or from
+  public cloud mirrors. Use the [catalog](catalog.qmd) from Python.
 - **Learn**: start with the [quickstart notebook](notebooks/quickstart.ipynb),
   or take the [WHOI short course on climate model output](https://ashleylasinsky.github.io/whoi-climate-tutorial_2026/pages/intro.html).
 - **[Help](report.qmd)**: report a problem, request data, or ask on Slack.

@@ -77,8 +77,8 @@ html`<div style="max-height: 480px; overflow-y: auto;"><table class="table table
 ## Other holdings {#other-holdings}
 
 These products are on the store but are **not in the intake catalog**, so
-they are not on the [Browse](browse.qmd) page. Open the files directly on the
-HPC cluster at the path shown. Some may be added to the catalog later.
+they are not on the [Browse](browse.qmd) page. Open the files at the path shown
+on the HPC cluster, over the SMB share, or through [Globus](access.qmd#globus). Some may be added to the catalog later.
 
 ```{ojs}
 //| echo: false

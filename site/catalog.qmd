@@ -2,16 +2,19 @@
 title: "Catalog"
 ---
 
-Every file on the server is listed in an
+Every file in the catalogued products (CMIP6, ERA5, 20CRv3, GLORYS12V1,
+SODA3.12.2) is listed in an
 [intake-esm](https://intake-esm.readthedocs.io/) catalog: a CSV with one row
 per NetCDF file, and a JSON descriptor that tells intake-esm how to combine
-files into datasets. The catalog is rebuilt nightly.
+files into datasets. Catalogs are rebuilt when the holdings change; the
+version below is the build date. Products without a catalog are listed on
+[Other holdings](holdings.qmd#other-holdings).
 
 ## Location
 
 | | |
 |---|---|
-| Catalog descriptor | `{{< var catalog_path >}}` (placeholder) |
+| CMIP6 catalog descriptor | `{{< var catalog_path >}}` |
 | Current version | `{{< var catalog_version >}}` |
 
 Each product has its own catalog. Open the one that holds your dataset (the
@@ -54,17 +57,18 @@ end to end.
 | Column | Meaning |
 |---|---|
 | `master_id` | Dataset id without version, e.g. `CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn` |
-| `collection` | `cmip6` or `reanalysis` |
+| `collection` | `cmip6`, `reanalysis`, or `ocean_reanalysis` |
 | `path` | Full path to the file under `{{< var vast_prefix >}}` |
-| `activity_id` ... `grid_label` | CMIP6 DRS facets (empty for reanalysis) |
-| `product`, `frequency`, `level` | Reanalysis product (`era5`, `20crv3`, ...), frequency, and level (`2m`, `sfc`, `prs`, ...); empty for CMIP6 |
-| `variable_id` | Variable name (both collections); for reanalysis, the variable's name inside the file |
-| `version` | CMIP6: dataset version directory, `vYYYYMMDD`. Reanalysis: the product version (e.g. `v3`) |
-| `time_range` | Time range from the file name (reanalysis: the file's year; empty for single-file datasets) |
+| `activity_id` ... `grid_label` | CMIP6 DRS facets (empty for other products) |
+| `product`, `frequency`, `level` | Product (`era5`, `20crv3`, `glorys12v1`, `soda3122`), frequency, and level (`2m`, `sfc`, `plev`, `reg`, ...); empty for CMIP6 |
+| `variable_id` | Variable name; for non-CMIP6 products, the variable's name inside the file (a dataset holding several variables joins them with `-`) |
+| `version` | CMIP6: the version directory as stored here (`1`, `2`; not the ESGF `vYYYYMMDD` dates). Other products: the product version (`v3`, `12v1`, `3_12_2`, ...) |
+| `time_range` | Time range from the file name (often the file's year or date for non-CMIP6 products; empty when a single file covers the whole record) |
 | `size_bytes` | File size |
 
 Datasets are grouped by `master_id` and `version`, so a dataset key looks like
-`CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn.v20190308`. The
+`CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn.1` (CMIP6) or
+`reanalysis.era5.1hr.sfc.2m_temperature.v1` (ERA5). The
 [browser](browse.qmd) uses the same keys, so you can paste them into
 `cat[key]`.
 
@@ -108,7 +112,7 @@ open without it.
 
 ## Versions
 
-The nightly build always updates `latest`. Dated snapshots (for example
+Each build replaces the catalogs in `catalog/live`. Dated snapshots (for example
 `2027-01`) that do not change are planned so analyses can pin a version; how
 often they are made and how long they are kept is still being decided.
 

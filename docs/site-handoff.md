@@ -127,7 +127,7 @@ or fonts at runtime. Checked in headless Chrome: every request from
 | `catalog_version` | `sample` | C-12, real catalog (4.1–4.4) |
 | `smb_path` | `SMB_PATH_TBD` | IT (share name) |
 | `https_prefix` | `HTTPS_PREFIX_TBD` (`https://cmip.whoi.edu/download`) | IT-8–IT-10, C-17, 5.13 |
-| `globus_url` | empty | 6.1, S-4 |
+| `globus_url` | set 2026-11-18 (collection file-manager link, `/cmip6/data/`) | who may use it (unknown) |
 | `audience` | `internal` | PI-4, PI-5 |
 | `wget_max_files` | 500 | tune after C-17 |
 | About page holdings | old-site figures, labelled "audit pending" | audit |

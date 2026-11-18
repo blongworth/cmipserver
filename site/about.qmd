@@ -7,36 +7,39 @@ reanalysis products for WHOI researchers, mainly in the Physical Oceanography
 Department. It replaces the older CMIP6 Community Storage Server
 ({{< old-site >}}), which stays online until this site is ready.
 
-See [Holdings](holdings.qmd) for what the server holds, including
-reanalysis and other products.
-
 ## Layout
 
-Files live on WHOI's VAST storage under `{{< var vast_prefix >}}`, in the
-CMIP Data Reference Syntax (DRS) directory layout:
+Files live on WHOI's VAST storage under `{{< var vast_prefix >}}`. CMIP6
+output uses the CMIP Data Reference Syntax (DRS) directory layout:
 
 ```
 {{< var vast_prefix >}}/
   cmip6/<activity_id>/<institution_id>/<source_id>/<experiment_id>/<member_id>/<table_id>/<variable_id>/<grid_label>/<version>/
-  cmip7/...              reserved, same scheme
-  reanalysis/<product>/...   e.g. reanalysis/20crv3/2mMO/air.2m.1981.nc
+  cmip7/...                      reserved, same scheme
+  reanalysis/20crv3/...          e.g. reanalysis/20crv3/Monthlies/2mSI-MO/air.2m.mon.mean.nc
+  era5/reanalysis/...            ERA5
+  ocean_reanalysis/<product>/... GLORYS12V1, SODA3.12.2, and others
+  cmems/..., prism/...           other products
 ```
 
-Reanalysis products keep their provider's own file names and directory layout
-under `reanalysis/<product>/`, so files match the product's documentation.
-The [catalog](catalog.qmd) gives every product the same facets: `product`,
-`frequency`, `level`, `variable_id`, `version`.
+Non-CMIP6 products keep their provider's own file names and directory layout,
+so files match the product's documentation. The [catalog](catalog.qmd) gives
+every catalogued product the same facets: `product`, `frequency`, `level`,
+`variable_id`, `version`. [Holdings](holdings.qmd) lists every product with
+its path.
 
 For example:
 
 ```
-{{< var vast_prefix >}}/cmip6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/v20190308/
-    tas_Amon_CESM2_historical_r1i1p1f1_gn_185001-189912.nc
+{{< var vast_prefix >}}/cmip6/CMIP/NCAR/CESM2/historical/r1i1p1f1/Amon/tas/gn/1/
+    tas_Amon_CESM2_historical_r1i1p1f1_gn_185001-201412.nc
 ```
 
 Each directory level is one facet (see the
 [CMIP6 DRS documentation](https://wcrp-cmip.github.io/WGCM_Infrastructure_Panel/Papers/CMIP6_global_attributes_filenames_CVs_v6.2.7.pdf)).
-The [catalog](catalog.qmd) indexes every file with these facets, and the
+Version directories here are numbered (`1`, `2`), not the ESGF
+`vYYYYMMDD` dates.
+The [catalog](catalog.qmd) indexes every catalogued file with these facets, and the
 [browser](browse.qmd) searches a dataset-level summary of it.
 
 ## Acknowledgment
