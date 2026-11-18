@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import dask
 import intake
 import make_sample_catalog as msc
 import polars as pl
@@ -86,15 +87,18 @@ def test_intake_loads_offline(sample):
     assert len(cat.search(product="era5").df) > 0
 
 
-def test_browser_snippet_loads_real_dataset(sample):
+def test_browser_snippet_loads_real_dataset(sample, monkeypatch):
     # same pattern as the browser's "Get data" snippet, with the path swap
     cat = intake.open_esm_datastore(str(sample / "sample_catalog.json"))
     cat.df["path"] = cat.df["path"].str.replace(
         "/proj/cmip6/data", str(sample / "sample_data"), regex=False
     )
-    ds = cat[REAL_KEY].to_dask()
-    assert ds["tas"].attrs["units"] == "K"
-    assert ds.sizes["time"] == (2014 - 1850 + 1) * 12
+    # netCDF4/HDF5 are not thread-safe; threaded loads segfault on CI.
+    monkeypatch.setenv("ITK_ESM_THREADING", "False")
+    with dask.config.set(scheduler="synchronous"):
+        ds = cat[REAL_KEY].to_dask()
+        assert ds["tas"].attrs["units"] == "K"
+        assert ds.sizes["time"] == (2014 - 1850 + 1) * 12
 
 
 def test_summary_columns_and_counts(sample, summary):
