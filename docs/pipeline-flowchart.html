@@ -8,7 +8,8 @@
   Self-contained: inline SVG, vanilla JS and CSS, no network requests.
   Not part of the Quarto site (not published). Open it directly in a browser.
   To edit: change the NODES / EDGES objects in the script below. Content comes
-  from scripts/, src/whoi_cmip_reorg_code/, docs/*.md and .github/workflows/check.yml.
+  from scripts/, slurm/, infra/, src/whoi_cmip_reorg_code/, manifests/, docs/*.md
+  and .github/workflows/check.yml. Keep it minimal: one box per pipeline step.
 -->
 <style>
   :root {
@@ -89,14 +90,14 @@
 <body>
 <header>
   <h1>WHOI CMIP pipeline</h1>
-  <p>Click a box (or Tab to it and press Enter) for details. Esc closes the panel.</p>
+  <p>Click a box (or Tab to it and press Enter) for details. Esc closes the panel. Updated 2026-11-18.</p>
   <div class="legend" aria-label="Legend">
     <span><i class="sw" style="background:var(--ro-f);border-color:var(--ro-s)"></i>read-only / dry run / report</span>
     <span><i class="sw" style="background:var(--stg-f);border-color:var(--stg-s)"></i>writes staging or outputs (<code>--execute</code>)</span>
     <span><i class="sw" style="background:var(--wr-f);border-color:var(--wr-s);border-width:3px"></i>writes the live store (<code>--execute</code>, after approval)</span>
     <span><i class="sw" style="background:var(--gate-f);border-color:var(--gate-s)"></i>human gate</span>
-    <span><i class="sw" style="background:var(--prop-f);border-color:var(--prop-s);border-style:dashed"></i>proposed / not built yet</span>
     <span><i class="sw" style="background:var(--ext-f);border-color:var(--ext-s)"></i>users</span>
+    <span><svg width="26" height="10" aria-hidden="true"><line x1="0" y1="5" x2="26" y2="5" stroke="var(--edge)" stroke-width="1.6" stroke-dasharray="5 4"/></svg>VM pulls (no push from HPC)</span>
   </div>
 </header>
 <div class="main">
@@ -138,7 +139,7 @@ const NODES = {
   check_nc: {
     label: ["check_nc"], sub: "NetCDF health", col: 1, y: 30, kind: "ro",
     runs: "HPC. Slurm array over the scan shards.",
-    purpose: "Open every .nc listed in the scan (read-only) and record whether it is readable, its global attributes, main variable, time axis, and whether attributes disagree with the filename facets (attr_mismatch). A bad file never stops the run; its problem goes in its row.",
+    purpose: "Open every .nc listed in the scan (read-only) and record whether it is readable, its global attributes, main variable, time axis, and whether attributes disagree with the filename facets (attr_mismatch). A bad file never stops the run; its problem goes in its row. Also run per non-CMIP6 tree: generic catalogs take their facets from this output.",
     inputs: ["scan/ holdings parquet"],
     outputs: ["ncinfo/ncinfo_<tag>.parquet (nc_status, nc_error, attrs, time axis, attr_mismatch)"],
     files: ["scripts/check_nc.py", "slurm/check_nc.sbatch", "src/.../ncinfo.py (check_file, check_files, nc_candidates, hdf5_eof)"],
@@ -207,7 +208,7 @@ const NODES = {
     purpose: "Plan adding a reanalysis product (ERA5 first, 20CRv3 manifests exist): list what is upstream, stat what the store already has, and write a fetch manifest of only the missing files. Prints a verdict: new, partial, complete or possible_duplicate.",
     inputs: ["manifests/products/<product>.yaml", "Upstream autoindex listing and HEAD per file", "Store under reanalysis/<product>/", "Optional scan to find same-named files elsewhere"],
     outputs: ["<out>.parquet (one row per expected file)", "<out>.md (review report)", "manifests/fetch/<date>-<product>.yaml (--fetch-out, missing files only)"],
-    files: ["scripts/plan_product.py", "src/.../products.py (expected_files, remote_status, store_status, verdict, fetch_items)", "manifests/products/20crv3.yaml"],
+    files: ["scripts/plan_product.py", "src/.../products.py (expected_files, remote_status, store_status, verdict, fetch_items)", "manifests/products/20crv3.yaml", "manifests/products/era5.yaml"],
     flags: ["--product", "--store-root", "--out", "--fetch-out", "--scan", "--offline", "--workers", "--group", "--variable", "--years"],
     safety: "Touches no data files. Files already present are never planned; present_differs is report-only. Use L1 first (one small group). Do not start a full-store scan for --scan.",
     docs: [D("audit-runbook: Adding a reanalysis product", RUN + "#adding-a-reanalysis-product")],
@@ -235,20 +236,20 @@ const NODES = {
     docs: [D("audit-runbook: 7. Moves", RUN + "#7-moves-written-approval-required"), D("audit-runbook: 7b. Reorg", RUN + "#7b-reorg-of-non-drs-files-written-approval-required")],
   },
   approval: {
-    label: ["Human approval"], sub: "Brett signs off", col: 7, y: 105, kind: "gate",
+    label: ["Human approval"], sub: "manual sign-off", col: 7, y: 105, kind: "gate",
     runs: "By hand, in the manifest YAML.",
-    purpose: "Brett reviews the move manifest and report, then fills in approved_by and approved_on in the YAML by hand. Without both fields, apply_moves --execute refuses to run.",
+    purpose: "A maintainer reviews the move manifest and report, then fills in approved_by and approved_on in the YAML by hand. Without both fields, apply_moves --execute refuses to run.",
     inputs: ["Unapproved move manifest and its report"],
     outputs: ["Approved move manifest"],
     files: ["src/.../manifest.py (MoveManifest.approved_by, approved_on)"],
     flags: [],
-    safety: "This gate is the only way live-store writes get authorised. Nobody else (and no agent) fills these fields.",
+    safety: "This gate is the only way live-store writes get authorized. Nobody else (and no agent) fills these fields.",
     docs: [D("audit-runbook: 7. Moves", RUN + "#7-moves-written-approval-required")],
   },
   apply_moves: {
     label: ["apply_moves"], sub: "+ rollback_moves", col: 8, y: 105, kind: "wr",
     runs: "HPC, as the account allowed to write the store.",
-    purpose: "Apply an approved move manifest: quarantine bad files, install staged files, or reorganise into DRS. Every step is written to an append-only JSONL log, so a re-run resumes. rollback_moves replays the log newest-first to undo.",
+    purpose: "Apply an approved move manifest: quarantine bad files, install staged files, or reorganize into DRS. Every step is written to an append-only JSONL log, so a re-run resumes. rollback_moves replays the log newest-first to undo.",
     inputs: ["Approved move manifest", "--log (append-only JSONL move log)"],
     outputs: ["Files moved in the live store", "Move log (needed for rollback)"],
     files: ["scripts/apply_moves.py", "scripts/rollback_moves.py", "src/.../movelog.py (check, apply, MoveLog, plan_rollback, rollback)"],
@@ -258,90 +259,90 @@ const NODES = {
   },
   build_catalog: {
     label: ["build_catalog"], sub: "intake-esm", col: 8, y: 445, kind: "ro",
-    runs: "HPC. Nightly scheduling is proposed (slurm/nightly.sbatch does not exist yet); the script exists.",
-    purpose: "Build intake-esm catalogs for CMIP6 and reanalysis from paths only (no data files opened). With --manifest each product uses its builder: cmip6 parses DRS paths, reanalysis matches paths against the product manifest.",
-    inputs: ["The store (paths)", "manifests/catalogs.yaml", "ncinfo/ (optional, to exclude files check_nc flagged)"],
-    outputs: ["<out>/<name>.csv and <name>.json (written to a temp file, then renamed)", "<out>/<name>_invalid.parquet (non-DRS or excluded files, for review)"],
-    files: ["scripts/build_catalog.py", "src/.../catalog/ (cmip6.py, reanalysis.py, io.py)", "src/.../catalog_schema.py (CATALOG_SCHEMA)", "manifests/catalogs.yaml"],
-    flags: ["--manifest", "--product", "--drs-root", "--name", "--root", "--out", "--ncinfo", "--exclude-pattern", "--jobs"],
-    safety: "Read-only on the store. Run check_catalog on the result before it replaces the live catalog.",
-    docs: [D("audit-runbook: 8. Catalog", RUN + "#8-catalog"), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
+    runs: "HPC, by hand: slurm/build_catalog.sbatch (build, check, summarize; stops at the first failure).",
+    purpose: "Build one intake-esm catalog per enabled product in manifests/catalogs.yaml (cmip6, 20crv3, era5, glorys12v1, soda3122) from paths. Builders: cmip6 (DRS paths), reanalysis (product manifest), generic (facets from check_nc output).",
+    inputs: ["The store (paths)", "manifests/catalogs.yaml", "ncinfo/ (excludes flagged files; required for generic products)"],
+    outputs: ["<out>/whoi_<product>.csv and .json", "<out>/whoi_<product>_invalid.parquet (for review)"],
+    files: ["scripts/build_catalog.py", "slurm/build_catalog.sbatch", "src/.../catalog/ (cmip6.py, reanalysis.py, generic.py)", "src/.../catalog_schema.py", "manifests/catalogs.yaml"],
+    flags: ["--manifest", "--product", "--ncinfo", "--out", "--jobs"],
+    safety: "Read-only on the store. Writes to runs/ or catalog/next, never straight to catalog/live.",
+    docs: [D("audit-runbook: 8. Catalog", RUN + "#8-catalog"), D("audit-runbook: Non-CMIP6 trees", RUN + "#non-cmip6-trees")],
   },
   check_catalog: {
-    label: ["check_catalog"], sub: "gate before publish", col: 9, y: 445, kind: "ro",
-    runs: "HPC.",
-    purpose: "Validate a built catalog: columns and types match CATALOG_SCHEMA, paths unique, key columns not null, sampled paths exist, intake-esm opens it and loads a few sample datasets, and the dataset count has not dropped more than --max-drop versus the last good catalog.",
-    inputs: ["Built catalog JSON", "--previous: last good catalog"],
-    outputs: ["Exit code 0 (all pass) or 1", "--report JSON of the results"],
-    files: ["scripts/check_catalog.py", "src/.../catalog_schema.py"],
-    flags: ["--catalog", "--previous", "--sample-paths", "--sample-datasets", "--max-drop", "--seed", "--report"],
-    safety: "Reports only; never changes anything. A failure should stop the nightly build and keep the previous site live.",
+    label: ["check + promote"], sub: "to catalog/live", col: 9, y: 445, kind: "stg",
+    runs: "HPC. check_catalog runs inside build_catalog.sbatch; promotion is by hand.",
+    purpose: "Validate each built catalog (schema, unique paths, sample paths exist, intake-esm opens samples, no large drop versus the last good one). If it passes, copy it to /proj/cmip6/catalog/live: CSV and invalid parquet first, JSON last, each via a temp name and rename.",
+    inputs: ["Built catalog JSON", "--previous: the live catalog"],
+    outputs: ["checks/<name>.json report (exit 1 on failure)", "/proj/cmip6/catalog/live/whoi_<product>.{csv,json}"],
+    files: ["scripts/check_catalog.py", "scripts/promote_catalog.py (TODO, docs/todo.md)"],
+    flags: ["--catalog", "--previous", "--max-drop", "--report"],
+    safety: "Promote only a catalog whose check passed. Writes only under catalog/live, never the data.",
     docs: [D("audit-runbook: 8. Catalog", RUN + "#8-catalog"), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
   },
   summarize: {
     label: ["Site data"], sub: "summarize + config", col: 10, y: 445, kind: "stg",
-    runs: "HPC (or locally against the sample catalog).",
-    purpose: "Turn the catalog into what the static site needs: a dataset-level summary and stats for the OJS browser, per-shard file lists, vendored JS/CSS/fonts checked against pinned hashes, and a site_config.json from _variables.yml.",
-    inputs: ["Catalog CSV", "site/_variables.yml", "site/vendor/vendor.yml"],
-    outputs: ["site/data/catalog_summary.json (+ .parquet)", "site/data/catalog_stats.json", "site/data/files/<shard>.json", "site/data/site_config.json", "site/vendor/*"],
-    files: ["scripts/summarize_catalog.py", "scripts/write_site_config.py", "scripts/vendor_js.py", "src/.../catalog_schema.py (SUMMARY_SCHEMA)", "scripts/make_sample_catalog.py (offline sample for development)"],
-    flags: ["summarize_catalog: --catalog --out --root --parquet", "vendor_js: --update (rewrite hashes after a version bump)", "write_site_config: none (run by Quarto as the pre-render step)"],
-    safety: "Reads the catalog and writes only under site/. The summary never contains absolute paths; prefixes come from config. Unresolved hosts, emails and prefixes stay placeholders in _variables.yml. vendor_js verifies each download's sha256 and never executes anything.",
-    docs: [D("static-site-plan: data contracts", SITE + "#5a-data-contracts-so-the-site-and-the-catalog-scripts-agree"), D("site-handoff: vendored libraries", "site-handoff.md#browser-upgrade-vendored-libraries-2026-11-05")],
+    runs: "HPC, in slurm/build_site.sbatch (or locally against the sample catalog).",
+    purpose: "Turn the live catalogs into the site's data: a dataset-level summary for the browser, per-shard file lists, product details, and site_config.json. holdings.json (the Other holdings page) comes from summarize_other.py after an inventory scan.",
+    inputs: ["/proj/cmip6/catalog/live/whoi_<product>.csv for every enabled product", "manifests/catalogs.yaml (--products)", "site/_variables.yml"],
+    outputs: ["site/data/catalog_summary.json, catalog_stats.json, products.json", "site/data/files/<shard>.json", "site/data/site_config.json", "site/data/holdings.json (summarize_other)"],
+    files: ["scripts/summarize_catalog.py", "scripts/enabled_catalogs.py", "scripts/summarize_other.py", "scripts/write_site_config.py (Quarto pre-render)", "scripts/vendor_js.py", "scripts/make_sample_catalog.py"],
+    flags: ["summarize_catalog: --catalog (one per product) --products --out", "summarize_other: --scan --products --site-json"],
+    safety: "Writes only under site/. No absolute paths in the summary; prefixes come from _variables.yml, whose unresolved values stay placeholders. A missing live CSV fails the build.",
+    docs: [D("static-site-plan: data contracts", SITE + "#5a-data-contracts-so-the-site-and-the-catalog-scripts-agree"), D("audit-runbook: Non-CMIP6 trees", RUN + "#non-cmip6-trees")],
   },
   render: {
     label: ["quarto render"], sub: "site/_site", col: 11, y: 445, kind: "stg",
-    runs: "HPC (nightly, proposed) or locally.",
-    purpose: "Render the Quarto site: pages, the OJS dataset browser over the summary, built-in search. Notebooks use freeze: auto; they are executed by hand on HPC and the frozen output is committed.",
-    inputs: ["site/ sources", "site/data/", "site/vendor/", "site/_freeze/ (frozen notebook output)"],
-    outputs: ["site/_site/ (the static site)"],
-    files: ["site/_quarto.yml (pre-render: scripts/write_site_config.py)", "site/*.qmd", "site/_variables.yml"],
+    runs: "HPC, in slurm/build_site.sbatch (or locally).",
+    purpose: "Render the Quarto site: pages, the OJS dataset browser, search. Notebooks are committed without outputs and executed here, where the catalog is reachable.",
+    inputs: ["site/ sources", "site/data/", "site/vendor/"],
+    outputs: ["site/_site/ (the static site)", "site/_freeze/ (generated, untracked)"],
+    files: ["site/_quarto.yml", "site/*.qmd", "site/notebooks/", "slurm/build_site.sbatch"],
     flags: ["uv run quarto render site", "Quarto 1.10.19 (same as CI)"],
-    safety: "Nightly renders should use the committed _freeze/ and fail if Quarto tries to execute a notebook. Production values (catalog_version, audience, catalog_path, https_prefix) come from the build, not the repo placeholders.",
-    docs: [D("static-site-plan", SITE), D("deploy-plan: nightly build rules", DEP + "#4-hpc")],
+    safety: "Production values (catalog_version, audience, prefixes) should come from the build, not the repo placeholders.",
+    docs: [D("static-site-plan", SITE), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
   },
   publish: {
-    label: ["publish_site"], sub: "proposed", col: 12, y: 445, kind: "prop",
-    runs: "HPC. Proposed: scripts/publish_site.sh does not exist yet.",
-    purpose: "Copy _site/ to the VAST release directory as releases/<UTC stamp>/, write BUILD_OK (stamp, commit, catalog version, file count, checksum), then update LATEST. Keep the last 14 releases.",
+    label: ["publish_site"], sub: "releases on VAST", col: 12, y: 445, kind: "stg",
+    runs: "HPC, last step of slurm/build_site.sbatch (run by hand; no nightly schedule yet).",
+    purpose: "Copy _site/ to /proj/cmip6/site/releases/<UTC stamp>/, write BUILD_OK (stamp, commit, catalog version, file count, checksum), then update LATEST. Keeps 14 releases.",
     inputs: ["site/_site/"],
-    outputs: ["<site dir>/releases/<stamp>/ with BUILD_OK", "<site dir>/LATEST"],
-    files: ["scripts/publish_site.sh (to write)", "slurm/nightly.sbatch (to write: runs every step, set -euo pipefail, mail on FAIL)"],
+    outputs: ["/proj/cmip6/site/releases/<stamp>/ with BUILD_OK", "/proj/cmip6/site/LATEST"],
+    files: ["scripts/publish_site.sh"],
     flags: ["--publish (otherwise a dry run)"],
-    safety: "Proposal pending approval. Writes only to the site directory on VAST, outside /proj/cmip6. HPC never connects to the VM: the VM pulls.",
+    safety: "Writes only under /proj/cmip6/site, never the data. Copies to a hidden .tmp- dir and renames, so the VM never sees a partial release. HPC never connects to the VM.",
     docs: [D("deploy-plan: 1. Overview", DEP + "#1-overview"), D("deploy-plan: 4. HPC", DEP + "#4-hpc")],
   },
   pull_site: {
-    label: ["VM: pull + Apache"], sub: "proposed", col: 12, y: 645, kind: "prop",
-    runs: "WHOI-managed Apache VM (Ubuntu), VAST mounted read-only. Proposed: infra/ does not exist yet.",
-    purpose: "Every 15 minutes, pull_site.sh finds a new LATEST with BUILD_OK, rsyncs it, checks the file count, runs a smoke test and switches the staging symlink. It promotes to current unless HOLD is set. Apache serves the site and read-only HTTPS downloads of .nc files.",
-    inputs: ["VAST release directory (read-only mount)", "VAST data mount for /data/"],
-    outputs: ["/srv/cmip/current (cmip.whoi.edu)", "/srv/cmip/staging (WHOI-only)", "/download/ -> read-only VAST mount, .nc only"],
-    files: ["infra/vm/pull_site.sh (--promote, --rollback <stamp>)", "infra/vm/smoke_test.sh", "infra/vm/cmip-pull.{service,timer}", "infra/apache/cmip.conf"],
-    flags: ["pull_site.sh --promote", "pull_site.sh --rollback <stamp>", "HOLD file blocks promotion"],
-    safety: "Proposal pending approval and IT security review. No directory listing, rate limits per connection and IP, security headers, fail2ban. Keeps 7 releases. Until go-live it runs alongside the current server.",
-    docs: [D("deploy-plan: 5. VM", DEP + "#5-vm-ubuntu-2404"), D("deploy-plan: 5.2 Apache", DEP + "#52-apache"), D("static-site-plan: 4.8 downloads", SITE + "#48-download-access-for-users-without-vast-access")],
+    label: ["VM: pull + Apache"], sub: "pulls every 15 min", col: 12, y: 645, kind: "stg",
+    runs: "WHOI Apache VM, /proj/cmip6 mounted read-only at /vast/cmip6. systemd timer as cmipsite.",
+    purpose: "pull_site.sh copies a new LATEST release (with BUILD_OK), checks the file count, runs the smoke test, points staging at it, then current unless HOLD is set. Apache serves the site and read-only .nc downloads.",
+    inputs: ["/vast/cmip6/site (releases)", "/vast/cmip6/data (downloads)"],
+    outputs: ["/srv/cmip/current (cmip.whoi.edu)", "/srv/cmip/staging (WHOI-only)", "/download/ (.nc only, no listing)"],
+    files: ["infra/vm/pull_site.sh", "infra/vm/smoke_test.sh", "infra/vm/cmip-pull.{service,timer}", "infra/apache/cmip.conf"],
+    flags: ["--promote", "--rollback <stamp>", "HOLD file blocks promotion"],
+    safety: "Never writes to VAST. Keeps 7 releases. cmip.conf still has Require all granted: restrict to WHOI ranges before DNS points here. Rate limits and IT security review are open before go-live.",
+    docs: [D("deploy-plan: 5. VM", DEP + "#5-vm-ubuntu-2404"), D("deploy-plan: 5.2 Apache", DEP + "#52-apache")],
   },
   users: {
     label: ["Users"], sub: "browse, page, download", col: 13, y: 645, kind: "ext",
     runs: "Browsers, the cluster, the SMB share.",
     purpose: "PIs, postdocs and students browse the dataset browser, open a dataset page and get the data: on the cluster or SMB by VAST path (and the intake-esm catalog), or elsewhere by HTTPS download from the VM. Globus is planned for bulk transfers.",
-    inputs: ["The static site", "/download/ downloads", "intake-esm catalog"],
+    inputs: ["The static site", "/download/ downloads", "/proj/cmip6/catalog/live/whoi_<product>.json"],
     outputs: ["Data in their own workflows", "Problem reports and data requests (GitHub issue forms or mailto:)"],
     files: ["site/browse.qmd", "site/dataset.qmd", "site/access.qmd", "site/download-guide.qmd", "site/_variables.yml (prefixes, audience)"],
     flags: [],
-    safety: "What the Get data panel shows depends on the audience setting (internal vs external), which is an open decision. Large external requests should go to Globus once it exists.",
+    safety: "What the Get data panel shows depends on the audience setting: internal for now (2026-11-16); external access is still open. Large external requests should go to Globus once it exists.",
     docs: [D("static-site-plan: 4.8 downloads", SITE + "#48-download-access-for-users-without-vast-access"), D("site-handoff: open questions", "site-handoff.md#open-questions--proposed-decisions")],
   },
   actions: {
     label: ["GitHub Actions"], sub: "checks only", col: 10, y: 545, kind: "ro",
     runs: "GitHub-hosted runner, on every push and pull request.",
-    purpose: "Check the repo: lint, format, tests, YAML validation, a Quarto render from the committed _freeze/ output (notebooks are not executed) and an offline link check of the rendered site.",
+    purpose: "Check the repo: lint, format, tests, YAML validation, site data from test fixtures, a Quarto render with --no-execute and an offline link check.",
     inputs: ["The pushed commit"],
     outputs: ["Pass/fail status"],
     files: [".github/workflows/check.yml"],
-    flags: ["uv sync --all-groups --locked", "uv run ruff check; ruff format --check", "uv run pytest", "uv run quarto render site", "lychee --offline link check"],
-    safety: "contents: read only. It never deploys; deploys come from the HPC nightly job and the VM pull.",
+    flags: ["uv sync --all-groups --locked", "uv run ruff check; ruff format --check", "uv run pytest", "quarto render site --no-execute", "lychee --offline link check"],
+    safety: "contents: read only. It never deploys; deploys come from the HPC site build and the VM pull.",
     docs: [D("static-site-plan: 4.7 build and deploy", SITE + "#47-build-container-and-deploy")],
   },
 };
@@ -360,7 +361,7 @@ const EDGES = [
 const LANES = [
   { name: "VAST / HPC", sub: "audit, repair, reorg", y: 0, h: 320 },
   { name: "DTN", sub: "internet access", y: 320, h: 100 },
-  { name: "HPC nightly build", sub: "service account; slurm/nightly.sbatch proposed", y: 420, h: 100 },
+  { name: "HPC site build", sub: "by hand for now", y: 420, h: 100 },
   { name: "Repo / GitHub", sub: "", y: 520, h: 100 },
   { name: "VM + users", sub: "Apache, cmip.whoi.edu", y: 620, h: 100 },
 ];
