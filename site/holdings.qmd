@@ -14,7 +14,48 @@ to reach the files and [How to cite](cite.qmd) for citations.
 summary = FileAttachment("data/catalog_summary.json").json()
 ```
 
-## Catalogued holdings
+```{ojs}
+//| echo: false
+// Overall totals. Catalogued: from the catalog summary (same numbers as the
+// table below). Not catalogued: from the inventory (holdings.json); products
+// without an inventory entry are counted but add no files or size.
+overall = {
+  const inv = rows.filter((r) => r.inv);
+  return {
+    cat: {n: new Set(summary.map((d) => d.product ?? d.collection)).size,
+          files: d3sum(summary, "n_files"), tb: d3sum(summary, "size_gb") / 1000},
+    other: {n: rows.length, n_inv: inv.length,
+            files: inv.reduce((a, r) => a + (r.inv.n_nc ?? 0) + (r.inv.n_other ?? 0), 0),
+            tb: inv.reduce((a, r) => a + (r.inv.size_tb ?? 0), 0)}
+  };
+}
+html`<table class="table table-sm w-auto">
+  <thead><tr><th></th><th class="text-end">Products</th><th class="text-end">Files</th><th class="text-end">Size (TB)</th></tr></thead>
+  <tbody>
+    <tr><td><a href="#catalogued-holdings">Catalogued</a></td>
+      <td class="text-end">${fmtN(overall.cat.n)}</td>
+      <td class="text-end">${fmtN(overall.cat.files)}</td>
+      <td class="text-end">${fmtN(overall.cat.tb, 2)}</td></tr>
+    <tr><td><a href="#other-holdings">Not catalogued</a></td>
+      <td class="text-end">${fmtN(overall.other.n)}</td>
+      <td class="text-end">${overall.other.n_inv ? fmtN(overall.other.files) : "—"}</td>
+      <td class="text-end">${overall.other.n_inv ? fmtN(overall.other.tb, 2) : "—"}</td></tr>
+  </tbody>
+  ${overall.other.n_inv
+    ? html`<tfoot><tr class="fw-bold"><td>Total</td>
+        <td class="text-end">${fmtN(overall.cat.n + overall.other.n)}</td>
+        <td class="text-end">${fmtN(overall.cat.files + overall.other.files)}</td>
+        <td class="text-end">${fmtN(overall.cat.tb + overall.other.tb, 2)}</td></tr></tfoot>`
+    : ""}
+</table>
+<p class="small text-body-secondary">${overall.other.n_inv === overall.other.n
+  ? `Not-catalogued counts are from the inventory of ${holdings.generated}.`
+  : overall.other.n_inv
+    ? `Not-catalogued counts cover the ${overall.other.n_inv} of ${overall.other.n} products in the inventory of ${holdings.generated}.`
+    : "File counts for products not in the catalog are not available yet."}</p>`
+```
+
+## Catalogued holdings {#catalogued-holdings}
 
 ```{ojs}
 //| echo: false

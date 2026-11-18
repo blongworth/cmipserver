@@ -21,12 +21,8 @@ website:
     left:
       - href: browse.qmd
         text: Browse
-      - text: Holdings
-        menu:
-          - href: holdings.qmd
-            text: All holdings
-          - href: holdings.qmd#other-holdings
-            text: Other holdings
+      - href: holdings.qmd
+        text: Holdings
       - text: Data Access
         menu:
           - href: access.qmd
