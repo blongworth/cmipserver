@@ -29,8 +29,8 @@
 # (single-levels/monthly-means/evaporation/x.nc, a partial 2022 file;
 # 1hr/evaporation/1993-05-03_evaporation_corrupted.nc), and the yearly 1hr
 # files 1hr/<var>/{2023,2024,2025}_<var>.nc of 7 variables: they hold the
-# same hours as the daily files, which are catalogued instead (Brett,
-# 2026-11-15; docs/audit-findings.md, "X4 header gaps").
+# same hours as the daily files, which are catalogued instead
+# (2026-11-15; docs/audit-findings.md, "ERA5").
 # *.nc.lck lock files are not .nc and are not crawled.
 schema_version: 1
 product: era5
