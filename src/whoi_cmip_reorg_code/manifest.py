@@ -488,7 +488,9 @@ Collection = Literal["cmip6", "reanalysis", "ocean_reanalysis", "observations"]
 class PathRule(_Strict):
     """Generic builder: facets for files whose path (relative to the product
     root) matches the regex ``match`` (``re.search``). Each facet comes from
-    the first matching rule that sets it."""
+    the first matching rule that sets it. A ``match`` with named groups
+    ``start`` and ``end`` gives ``time_range`` (``start-end``) to files whose
+    header has no time (PRISM ``ppt_monthly_1895-1899.nc``)."""
 
     match: str
     frequency: str | None = None
@@ -497,13 +499,35 @@ class PathRule(_Strict):
     @field_validator("match")
     @classmethod
     def _regex(cls, v: str) -> str:
-        re.compile(v)
+        groups = set(re.compile(v).groupindex)
+        if len(groups & {"start", "end"}) == 1:
+            raise ValueError(f"named groups start and end go together: {v!r}")
         return v
 
     @field_validator("frequency", "level")
     @classmethod
     def _tok(cls, v: str | None) -> str | None:
         return v if v is None else _token(v)
+
+    @property
+    def sets_time_range(self) -> bool:
+        return "start" in re.compile(self.match).groupindex
+
+
+class PathExclude(_Strict):
+    """Generic builder: files whose relative path matches ``match``
+    (``re.search``) are left out of the catalog and listed as invalid with
+    reason ``excluded: <reason>`` (duplicate copies, files with wrong
+    times)."""
+
+    match: str
+    reason: str
+
+    @field_validator("match")
+    @classmethod
+    def _regex(cls, v: str) -> str:
+        re.compile(v)
+        return v
 
 
 class Product(_Strict):
@@ -517,9 +541,14 @@ class Product(_Strict):
     description: str | None = None
     # Default: the builder's own (cmip6 / reanalysis). Required for generic.
     collection: Collection | None = None
-    # generic only: facet rules, version label, globs never catalogued.
+    # generic only: facet rules, version label, files listed as invalid
+    # (exclude), and the dimension files are joined along (default: the most
+    # common time name in the headers).
     rules: list[PathRule] = Field(default_factory=list)
     version: str | None = None
+    exclude: list[PathExclude] = Field(default_factory=list)
+    time_dim: str | None = None
+    # Globs never crawled (litter such as ._*): in neither catalog nor invalid.
     exclude_patterns: list[str] = Field(default_factory=list)
     # Shown on the site's dataset page (reanalysis: also in the product spec).
     citation: str | None = None
@@ -548,8 +577,12 @@ class Product(_Strict):
             )
         if self.builder == "generic" and self.collection is None:
             raise ValueError(f"{self.name}: generic products need a collection")
-        if self.builder != "generic" and (self.rules or self.version):
-            raise ValueError(f"{self.name}: rules and version are for generic only")
+        generic_only = self.rules or self.version or self.exclude or self.time_dim
+        if self.builder != "generic" and generic_only:
+            raise ValueError(
+                f"{self.name}: rules, version, exclude and time_dim are for "
+                "generic only"
+            )
         if self.builder == "cmip6" and self.collection not in (None, "cmip6"):
             raise ValueError(f"{self.name}: cmip6 builder is collection cmip6")
         return self

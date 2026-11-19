@@ -632,6 +632,164 @@ def test_catalogs_manifest_rules(tmp_path):
         )
 
 
+def _tree_ncinfo(root: Path, out: Path) -> Path:
+    """check_nc output for every .nc under ``root`` (one parquet in ``out``)."""
+    paths = sorted(str(p) for p in root.rglob("*.nc"))
+    files = pl.DataFrame(
+        {
+            "path": paths,
+            "rel_path": [os.path.relpath(p, root) for p in paths],
+            "size_bytes": [os.path.getsize(p) for p in paths],
+        }
+    )
+    check_files(files, out / "ncinfo_x.parquet")
+    return out
+
+
+def _generic(root: Path, **extra) -> dict:
+    return {
+        "name": "hy",
+        "root": str(root),
+        "builder": "generic",
+        "collection": "ocean_reanalysis",
+        "output": "whoi_hy",
+        **extra,
+    }
+
+
+def test_generic_collision_guard(tmp_path):
+    """Two dirs with the same variables and frequency (HYCOM year dirs and
+    analysis/) would merge into one intake-esm dataset: the build fails until
+    a level rule tells them apart."""
+    root = tmp_path / "data/hy"
+    for d in ("1993", "analysis"):
+        for i in range(2):
+            write(root / d / f"hycom_{d}_{i}.nc", {"water_temp": 3}, [float(i)])
+    nci = generic.load_ncinfo(_tree_ncinfo(root, tmp_path / "nci"))
+    m = CatalogsManifest.model_validate({"products": [_generic(root)]})
+    with pytest.raises(ValueError, match=r"span more than one directory") as e:
+        generic.build(m.products[0], nci, jobs=1)
+    assert "analysis" in str(e.value) and "level rule" in str(e.value)
+    m = CatalogsManifest.model_validate(
+        {"products": [_generic(root, rules=[{"match": "^analysis/", "level": "an"}])]}
+    )
+    df, invalid = generic.build(m.products[0], nci, jobs=1)
+    assert invalid.is_empty() and df.height == 4
+    assert sorted(df["master_id"].unique()) == [
+        "ocean_reanalysis.hy.day.an.water_temp",
+        "ocean_reanalysis.hy.day.water_temp",
+    ]
+
+
+def test_generic_manifest_exclude(tmp_path):
+    """exclude entries go to invalid with their reason, so catalog + invalid
+    rows still equal the .nc files (crawl-time exclude_patterns do not)."""
+    root = tmp_path / "data/gm"
+    write(root / "m_199301.nc", {"thetao": 4}, [15.5])
+    write(root / "m_199302.nc", {"thetao": 4}, [45.0])
+    write(root / "m_199302_(1).nc", {"thetao": 4}, [45.0])
+    write(root / "._m_199301.nc", {"thetao": 4}, [15.5])  # macOS litter
+    nci = generic.load_ncinfo(_tree_ncinfo(root, tmp_path / "nci"))
+    prod = _generic(
+        root,
+        exclude=[{"match": r"_\(1\)\.nc$", "reason": "duplicate copy"}],
+        exclude_patterns=["*/._*"],  # ecgtools globs the full path
+    )
+    m = CatalogsManifest.model_validate({"products": [prod]})
+    df, invalid = generic.build(m.products[0], nci, jobs=1)
+    assert invalid.to_dicts() == [
+        {"path": str(root / "m_199302_(1).nc"), "reason": "excluded: duplicate copy"}
+    ]
+    assert df.height + invalid.height == 3  # the ._ file is never crawled
+
+
+def test_generic_time_from_path_rule(tmp_path):
+    """A rule with start/end groups dates files with no time in the header
+    (PRISM); a header time wins over it."""
+    root = tmp_path / "data/pr"
+    write(root / "ppt_monthly_1895-1899.nc", {"ppt": 3}, [0.0] * 3, prism=True)
+    write(root / "ppt_monthly_1900-1909.nc", {"ppt": 3}, [0.0] * 3, prism=True)
+    write(root / "tmp_monthly_1993-1993.nc", {"tas": 3}, [0.0, 31.0])
+    nci = generic.load_ncinfo(_tree_ncinfo(root, tmp_path / "nci"))
+    rule = {"match": r"_(?P<start>\d{4})-(?P<end>\d{4})\.nc$", "frequency": "mon"}
+    m = CatalogsManifest.model_validate({"products": [_generic(root, rules=[rule])]})
+    df, _ = generic.build(m.products[0], nci, jobs=1)
+    assert sorted(df["time_range"].to_list()) == [
+        "1895-1899",
+        "1900-1909",
+        "19930101-19930201",
+    ]
+    # one date per file (ECCO latlon dirs named SSH.nc): nested groups; the
+    # time has no units, so check_nc records a raw number, not a date
+    write(root / "SSH.nc/SSH_19920101.nc", {"ssh": 3}, [0.5], units="")
+    nci = generic.load_ncinfo(_tree_ncinfo(root, tmp_path / "nci2"))
+    nested = {"match": r"^SSH\.nc/SSH_(?P<start>(?P<end>\d{8}))\.nc$"}
+    m = CatalogsManifest.model_validate(
+        {"products": [_generic(root, rules=[nested, rule])]}
+    )
+    df, _ = generic.build(m.products[0], nci, jobs=1)
+    ssh = df.filter(pl.col("variable_id") == "ssh")
+    assert ssh["time_range"].to_list() == ["19920101-19920101"]
+    for bad in (r"_(?P<start>\d{4})", r"(?P<end>\d{4})"):
+        with pytest.raises(ValueError, match="start and end go together"):
+            CatalogsManifest.model_validate(
+                {"products": [_generic(root, rules=[{"match": bad}])]}
+            )
+
+
+def test_generic_only_fields():
+    base = {"name": "x", "root": "/a/x", "output": "o", "builder": "cmip6"}
+    for extra in (
+        {"exclude": [{"match": "a", "reason": "r"}]},
+        {"time_dim": "t"},
+    ):
+        with pytest.raises(ValueError, match="generic only"):
+            CatalogsManifest.model_validate({"products": [{**base, **extra}]})
+
+
+def test_build_cli_disabled_time_dim_and_ncinfo_dirs(other, tmp_path):
+    """--include-disabled with --product, --ncinfo from two trees, and a
+    time_dim override reaching the intake-esm descriptor (PRISM ``t``)."""
+    nci_ocean = _tree_ncinfo(other.root / "ocean_reanalysis", tmp_path / "nci_ocean")
+    nci_prism = _tree_ncinfo(other.root / "prism", tmp_path / "nci_prism")
+    prods = [
+        {**CATALOGS["products"][0], "enabled": False},
+        {
+            **CATALOGS["products"][2],
+            "enabled": False,
+            "time_dim": "t",
+            "rules": [
+                {
+                    "match": r"^netcdf/monthly/.*_(?P<start>\d{4})-(?P<end>\d{4})\.nc$",
+                    "frequency": "mon",
+                }
+            ],
+        },
+    ]
+    cats = _catalogs(tmp_path, other.root, prods)
+    out = tmp_path / "next"
+    base = ["--manifest", str(cats), "--out", str(out), "--jobs", "1"]
+    nci = ["--ncinfo", str(nci_ocean), "--ncinfo", str(nci_prism)]
+    with pytest.raises(SystemExit):  # disabled and not asked for
+        build_catalog.main([*base, *nci, "--product", "prism"])
+    with pytest.raises(SystemExit):  # --include-disabled needs --product
+        build_catalog.main([*base, *nci, "--include-disabled"])
+    args = [*base, *nci, "--include-disabled"]
+    assert (
+        build_catalog.main([*args, "--product", "prism", "--product", "glorys12v1"])
+        == 0
+    )
+    desc = json.loads((out / "whoi_prism.json").read_text())
+    assert desc["aggregation_control"]["aggregations"][1]["options"]["dim"] == "t"
+    df = pl.read_csv(out / "whoi_prism.csv", infer_schema=False)
+    assert df["time_range"].to_list() == ["1895-1899"]
+    gl = json.loads((out / "whoi_glorys12v1.json").read_text())
+    assert gl["aggregation_control"]["aggregations"][1]["options"]["dim"] == "time"
+    assert pl.read_csv(out / "whoi_glorys12v1.csv").height == 4
+    res = check_catalog.run_checks(out / "whoi_prism.json", sample_datasets=5)
+    assert all(r["ok"] for r in res), res
+
+
 # --- curated ERA5-style product (date tokens, aliases, no source) ------------
 
 ERA5 = {

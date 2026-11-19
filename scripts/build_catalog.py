@@ -13,9 +13,13 @@ Examples:
     # from manifests/catalogs.yaml (every enabled product, or --product)
     uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --out catalog/next
 
-    # a generic product (ncinfo from check_nc.py over the same tree)
+    # a generic product (ncinfo from check_nc.py over the same tree; repeat
+    # --ncinfo for several trees). --include-disabled builds a product that
+    # is not enabled yet (with --product only), to check it before enabling.
     uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml \
-        --product bran2020 --ncinfo runs/x/ncinfo --out catalog/next
+        --product bran2020 --include-disabled \
+        --ncinfo runs/x/ncinfo_ocean_reanalysis --ncinfo runs/x/ncinfo_cmems \
+        --out catalog/next
 
     # ladder: one subtree of the DRS root, excluding files check_nc flagged
     uv run scripts/build_catalog.py --drs-root /proj/cmip6/data/cmip6 --name whoi_cmip6 \
@@ -42,19 +46,31 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--manifest", help="catalogs.yaml")
     src.add_argument("--drs-root", help="DRS root (holds activity_id dirs)")
     ap.add_argument("--product", action="append", help="with --manifest: only these")
+    ap.add_argument(
+        "--include-disabled",
+        action="store_true",
+        help="with --product: build the named products even if not enabled",
+    )
     ap.add_argument("--name", default="whoi_cmip6", help="with --drs-root")
     ap.add_argument("--root", action="append", help="crawl only these subtrees")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--ncinfo", help="dir of ncinfo_*.parquet: exclude nc_status != ok")
+    ap.add_argument(
+        "--ncinfo",
+        action="append",
+        help="dir of ncinfo_*.parquet (repeatable): exclude nc_status != ok",
+    )
     ap.add_argument("--exclude-pattern", action="append", default=[], help="glob")
     ap.add_argument("--jobs", type=int, default=-1, help="joblib workers")
     args = ap.parse_args(argv)
 
+    if args.include_disabled and not args.product:
+        ap.error("--include-disabled needs --product")
     if args.manifest:
         prods = [
             p
             for p in load(args.manifest, CatalogsManifest).products
-            if p.enabled and (not args.product or p.name in args.product)
+            if (p.enabled or args.include_disabled)
+            and (not args.product or p.name in args.product)
         ]
         here = Path(args.manifest).parent
         jobs = [
@@ -69,7 +85,8 @@ def main(argv: list[str] | None = None) -> int:
             for p in prods
         ]
         if args.product and (unknown := set(args.product) - {p.name for p in prods}):
-            ap.error(f"no enabled product(s) {sorted(unknown)} in {args.manifest}")
+            which = "" if args.include_disabled else "enabled "
+            ap.error(f"no {which}product(s) {sorted(unknown)} in {args.manifest}")
     else:
         jobs = [(args.name, args.drs_root, "WHOI CMIP6 holdings", "cmip6", None, None)]
     exclude = nci = None
@@ -106,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
                 if nci is None:
                     raise ValueError(f"{name}: generic products need --ncinfo")
                 df, invalid = generic.build(prod, nci, **kw)
-                extra = {"time_dim": generic.time_dim(nci, df["path"])}
+                extra = {"time_dim": prod.time_dim or generic.time_dim(nci, df["path"])}
             else:
                 df, invalid = cmip6.build(args.root or [root], root, **kw)
         except (OSError, ValueError) as exc:

@@ -519,6 +519,12 @@ as archives and list without a catalog.
 - Gaps: GOFS 3.0 year dirs 9 (mostly 2-15 days), `analysis/` 50 plus 44 files
   whose time is the previous day's; GOFS 3.1 year dirs 44, bottom files 134,
   `analysis/` 11, `global/` 247.
+- Layout (mount, 2026-11-18): GOFS 3.1 `analysis/` holds `GLBu0.08` expt
+  90.9 files (2015), not GLBv0.08; GOFS 3.0 `analysis/` holds `GLBu0.08`
+  2013 files. `global/1994` mixes the 363 GOFS 3.0 copies (`_190_`) with
+  325 GOFS 3.1 files (`_530_`); `global/2003` is expts 532 and 533. The
+  catalog entries give `analysis/`, `global/` and the NW Atlantic year dirs
+  their own `level` and exclude the `_190_` copies.
 
 ### ECCOv5 (open)
 - **`Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc` is truncated**:
@@ -527,8 +533,16 @@ as archives and list without a catalog.
   dated 2021-06-16, so a later copy or download stopped. The other 10,797
   files are `ok`. Proposal: re-fetch from ECCO; ask the owner (question 8).
 - `latlon_daily/SSH.nc`, `latlon_monthly/{SALT,THETA,UVEL,VVEL}.nc`:
-  `bad_time_label`, time values 0.5 / 1.0 with no `since` units (9,497 daily or
-  312 monthly steps per file). A catalog can't give them a time range.
+  `bad_time_label`, time values 0.5 / 1.0 with no `since` units. These
+  `.nc` names are **directories** of one-step files (`SSH_19920101.nc`,
+  9,497 daily; `THETA_199201.nc`, 312 monthly per variable; checked on the
+  mount 2026-11-18), which is where most of the 10,798 files are. The
+  catalog rules date them from the file names. Open: if the files share
+  one time value, intake-esm cannot order them; check on HPC with
+  `check_catalog.py`.
+- `nctiles_monthly/{SALT,THETA}/`: yearly files on the LLC270 grid (13
+  tiles of 270 x 270, 50 levels). `SALT.1` and `THETA.1` beside them are
+  small non-NetCDF files (about 20 KB, 2021-06-16), not dirs.
 - It's an alpha release. Decide: catalog it?
 
 ### SODA 3.12.2 (cataloged 2026-11-15)
@@ -554,6 +568,13 @@ name a WHOI contact and the converter (`aekholm-utils`).
 `prism/bil/monthly/ppt/<year>/` covers the same 1895-2019: `stable_4kmM2`
 annual zips early, `provisional_4kmM3` monthly zips for 2019. So the NetCDF
 mixes PRISM versions; the catalog uses version `1` until that is sorted out.
+Catalog trial (local, X1 ncinfo, 2026-11-18): 13 files, 1 dataset, decade
+time ranges from the file names, join dim `t`; `check_catalog.py` fails
+`to_dataset_dict`: intake-esm orders files with `combine_by_coords`, and no
+PRISM dimension has a coordinate. Decide: keep it listed (users open the 13
+files with `xr.open_mfdataset(..., combine="nested", concat_dim="t")`), or
+add a `preprocess` that builds `t` from `year`/`month` (as `normalize_cds`
+does for ERA5).
 
 ## CMIP5 tree `/proj/cmip6/cmip5` (open, decision)
 Shallow look on hydra (`ls`, `find -maxdepth 3`, `du`; no scan or headers). A

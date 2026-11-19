@@ -50,6 +50,19 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
 - [ ] Fix the flaky `tests/test_checksums.py::test_select_and_hash` (an
   unseeded random sample sometimes adds `,sample` to the expected reason).
 
+- [ ] **Catalog the remaining generic products** (tooling done 2026-11-18:
+  `exclude`, `time_dim`, `start`/`end` rules, repeated `--ncinfo`,
+  `--include-disabled`, the dataset-dir collision check; manifest entries
+  written). On HPC, per product in this order: `glorys12v1_statics`,
+  `grep_monthly`, `glorys12v1_monthly`, `bran2020`, `grep_daily`,
+  `hycom_gofs30`, `hycom_gofs31`: build with `--include-disabled`, then
+  `check_catalog.py --sample-datasets 10`. Gates: catalog + invalid rows = X4
+  `.nc` count; invalid reasons are only damaged or excluded; check passes;
+  datasets match `find_gaps.py`. Rebuild `glorys12v1` and `soda3122` and diff
+  them against `live` (should be identical). Then enable, promote, render.
+- [ ] Decide: catalog `eccov5` (alpha; rules written) and `prism` (fails to
+  load without a `preprocess`; `docs/audit-findings.md`, PRISM).
+
 ## Data updates (needs a plan)
 
 Found 2026-11-18: the plans cover a one-time fill and catalog rebuilds, not
@@ -74,6 +87,9 @@ planning in `docs/deploy-plan.md` and `docs/audit-runbook.md` first.
   (`manifests/core.yaml` is empty).
 - [ ] **Generic products** (GLORYS, SODA): new files stay invalid until
   `check_nc.py` is re-run on them; make that a required update step.
+  Proposal for scheduled rebuilds: a persistent ncinfo per tree
+  (`/proj/cmip6/catalog/ncinfo/<tree>/`) and an incremental `check_nc.py`
+  mode that reads only new paths or ones whose size or mtime changed.
 - [ ] **Runbook section "Updating a product"** (`docs/audit-runbook.md`), once
   the above is decided: plan, download, approve, move, `check_nc` (generic),
   rebuild, check and promote, site news post.

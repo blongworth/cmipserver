@@ -11,8 +11,11 @@
 # Chain the full build after a successful smoke test:
 #   J=$(sbatch --parsable ...smoke...); sbatch --dependency=afterok:$J ...full...
 #
-# Needs: OUT, NCINFO. Optional: MANIFEST (default manifests/catalogs.yaml),
-# PRODUCT (one product name), SUBTREE (crawl one subtree; cmip6 only; not ROOT, which
+# Needs: OUT, NCINFO (one ncinfo dir, or several separated by ":", e.g.
+# $R/ncinfo_ocean_reanalysis:$R/ncinfo_cmems:$R/ncinfo_prism).
+# Optional: MANIFEST (default manifests/catalogs.yaml),
+# PRODUCT (one product name), INCLUDE_DISABLED=1 (with PRODUCT: build it even
+# if not enabled yet), SUBTREE (crawl one subtree; cmip6 only; not ROOT, which
 # the runbook exports as the store root).
 # Outputs: $OUT/<output>.{csv,json}, <output>_invalid.parquet, checks/<output>.json,
 # $OUT/summary/ (site summary for whoi_cmip6; copy to site/data after review).
@@ -34,8 +37,11 @@ mkdir -p "$OUT/checks"
 # files are only read; HDF5 locking fails on VAST (check_catalog opens samples)
 export HDF5_USE_FILE_LOCKING=FALSE
 
-args=(--manifest "$MANIFEST" --out "$OUT" --ncinfo "$NCINFO" --jobs "${SLURM_CPUS_PER_TASK:-1}")
+args=(--manifest "$MANIFEST" --out "$OUT" --jobs "${SLURM_CPUS_PER_TASK:-1}")
+IFS=: read -ra ncinfo_dirs <<< "$NCINFO"
+for d in "${ncinfo_dirs[@]}"; do args+=(--ncinfo "$d"); done
 [[ -n "${PRODUCT:-}" ]] && args+=(--product "$PRODUCT")
+[[ -n "${INCLUDE_DISABLED:-}" ]] && args+=(--include-disabled)
 [[ -n "${SUBTREE:-}" ]] && args+=(--root "$SUBTREE")
 
 echo "host=$(hostname) out=${OUT} ncinfo=${NCINFO} product=${PRODUCT:-all} subtree=${SUBTREE:-all}"

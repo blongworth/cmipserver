@@ -31,6 +31,11 @@ products:
   # the check_nc output for their tree (build_catalog.py --ncinfo). How often
   # catalogs are rebuilt is undecided (docs/deploy-plan.md). A curated product
   # replaces its generic entry (enabled roots must not overlap).
+  # Generic fields: rules (frequency/level; a match with start/end groups
+  # dates files with no decoded header time), exclude (files listed as
+  # invalid with a reason), time_dim (dimension files are joined along).
+  # The build fails if one dataset id spans two dirs: add a level rule.
+  # Try a disabled one with build_catalog.py --product <name> --include-disabled.
   # Citations and licences are drafts: CONFIRM (Brett) before enabling.
 
   # Tier 2, curated: paths matched against the product manifest.
@@ -80,6 +85,9 @@ products:
     version: 12v1
     rules:
       - {match: "", frequency: mon}
+    exclude:
+      # byte-identical older copies (docs/audit-findings.md, GLORYS12V1)
+      - {match: '_\(1\)\.nc$', reason: duplicate copy}
     description: Mercator GLORYS12V1 global ocean reanalysis, monthly means, 1/12 deg (CMEMS GLOBAL_REANALYSIS_PHY_001_030)
     years: 1993-2024 (2024 January only)
     caveats: 2019-2021 also hold duplicate copies named *_(1).nc.
@@ -147,6 +155,11 @@ products:
       # daily files come in north and south halves of the domain
       - {match: "_north_", level: north}
       - {match: "_south_", level: south}
+    exclude:
+      # wrong time in the file (docs/audit-findings.md, BRAN2020)
+      - {match: '/bran2020_daily_south_salt_1999_330\.nc$', reason: wrong time}
+      - {match: '/bran2020_daily_north_temp_2000_085\.nc$', reason: wrong time}
+      - {match: '/bran2020_daily_north_temp_2003_229\.nc$', reason: wrong time}
     description: Bluelink ReANalysis BRAN2020 (CSIRO / Bureau of Meteorology), 1/10 deg, daily (north and south halves) and monthly
     caveats: >-
       Daily 1998 and 2000 are incomplete. Time is ocean_time; the files are
@@ -191,6 +204,9 @@ products:
     output: whoi_hycom_gofs30
     enabled: false
     version: GOFS3_0
+    rules:
+      # analysis/ (GLBu0.08, 2013) is its own dataset, apart from the year dirs
+      - {match: "^analysis/", level: analysis}
     description: HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)
     years: 1992-2012
     caveats: >-
@@ -214,6 +230,16 @@ products:
     output: whoi_hycom_gofs31
     enabled: false
     version: GOFS3_1
+    rules:
+      # year dirs: NW Atlantic subset (and bottom T/S/SSH files, which differ
+      # by variables); global/: expts 530-533; analysis/: GLBu0.08 expt 90.9
+      # (checked on the mount 2026-11-18)
+      - {match: '^\d{4}/', level: nwatl}
+      - {match: "^global/", level: global}
+      - {match: "^analysis/", level: analysis}
+    exclude:
+      # GOFS 3.0 1993 files copied here (docs/audit-findings.md, HYCOM)
+      - {match: '^global/1994/hycom_GLBu0\.08_190_', reason: copy of GOFS 3.0 1993}
     description: HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH
     years: 1994-2015
     caveats: >-
@@ -229,9 +255,17 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_eccov5
-    enabled: false
+    enabled: false   # alpha release: catalog it? (decision open)
     version: v5alpha
-    description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus nctiles
+    rules:
+      # latlon_*/<VAR>.nc/ are directories of one-step files whose time has
+      # no units: date them from the file name (YYYYMMDD daily, YYYYMM
+      # monthly). nctiles_monthly: 13 tiles of 270 x 270 (LLC270), yearly.
+      - {match: '^latlon_daily/', frequency: day, level: latlon}
+      - {match: '^latlon_monthly/', frequency: mon, level: latlon}
+      - {match: '^latlon_\w+/\w+\.nc/\w+_(?P<start>(?P<end>\d{6,8}))\.nc$'}
+      - {match: '^nctiles_', level: llc270}
+    description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus LLC270 nctiles monthly T/S
     caveats: >-
       Unreleased alpha version. nctiles_monthly/THETA/THETA_1992.nc is
       truncated (incomplete copy).
@@ -248,9 +282,11 @@ products:
     collection: observations
     output: whoi_prism
     enabled: false
+    time_dim: t
     rules:
-      # no time coordinate in the files (t dim with year/month variables)
-      - {match: "^monthly/", frequency: mon}
+      # no time coordinate in the files (t dim with year/month variables):
+      # the decade comes from the file name (ppt_monthly_1895-1899.nc)
+      - {match: '^monthly/.*_(?P<start>\d{4})-(?P<end>\d{4})\.nc$', frequency: mon}
     description: PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)
     years: 1895-2019
     caveats: >-

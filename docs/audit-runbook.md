@@ -304,10 +304,15 @@ uv run scripts/check_nc.py --scan $R/scan_<tree> --out $R/ncinfo_<tree> --shard 
 # 4. gaps from headers (dataset = dir with year dirs folded to *, + data_vars)
 uv run scripts/find_gaps.py --ncinfo $R/ncinfo_<tree> --out $R/gaps_<tree>
 
-# 5. catalogs: enable the product in manifests/catalogs.yaml, then
+# 5. catalogs: try a disabled product first (--include-disabled, with
+#    --product only); repeat --ncinfo for every tree. Enable it in
+#    manifests/catalogs.yaml once the build and check pass.
 uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product bran2020 \
-    --ncinfo $R/ncinfo_ocean_reanalysis --out catalog/next
-uv run scripts/check_catalog.py --catalog catalog/next/whoi_bran2020.json
+    --include-disabled --ncinfo $R/ncinfo_ocean_reanalysis --ncinfo $R/ncinfo_cmems \
+    --ncinfo $R/ncinfo_prism --out catalog/next
+uv run scripts/check_catalog.py --catalog catalog/next/whoi_bran2020.json --sample-datasets 10
+#    Slurm: NCINFO=$R/ncinfo_ocean_reanalysis:$R/ncinfo_cmems:$R/ncinfo_prism,
+#    PRODUCT=bran2020, INCLUDE_DISABLED=1 (slurm/build_catalog.sbatch)
 uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product era5 --out catalog/next
 ```
 
@@ -322,6 +327,22 @@ uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product era
 - `frequency`/`level` come from `rules` in `catalogs.yaml` (each facet from
   the first matching rule that sets it), else from the time step in the
   headers (`unknown` for one single-step file, `fx` with no time axis).
+- `time_range` comes from the header time. If that does not decode to a date
+  (PRISM has no time coordinate; ECCO latlon times have no units), a rule
+  whose `match` has named groups `start` and `end` supplies it from the path
+  (`(?P<start>(?P<end>\d{8}))` for one date per file); else it is null.
+- One dataset id (`master_id`) must not span two directories (year dirs are
+  folded to `*`): intake-esm would merge them (HYCOM `analysis/` with the
+  year dirs). The build fails for that product and names the dirs; add a
+  `level` rule.
+- `exclude` entries (`{match, reason}`) put files in the invalid list as
+  `excluded: <reason>` (duplicate copies, wrong times), so the invariant
+  holds. `exclude_patterns` (globs on the full path, e.g. `*/._*`) are never
+  crawled and appear in neither file.
+- `time_dim` sets the dimension files are joined along when the detected
+  one is wrong (PRISM `t`). intake-esm orders files by their dimension
+  coordinates, so a product with none (PRISM) does not load without a
+  `preprocess`.
 - `variable_id` of a generic file is its data variables joined with `,`
   (`thetao,so,zos`). Open these catalogs with the synchronous dask scheduler
   and `use_cftime=True`, like the CMIP6 one.

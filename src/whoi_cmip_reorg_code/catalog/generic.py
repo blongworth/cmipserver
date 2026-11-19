@@ -16,17 +16,24 @@ Per file:
   that path fails with intake-esm 2025.7.9 and polars 2 (``json_decode``
   needs a dtype), so the column stays a plain string.
 - ``time_range``: ``YYYYMMDD-YYYYMMDD`` from ``time_first``/``time_last``.
+  With no decoded time in the header (PRISM has no time coordinate; ECCO
+  latlon times have no units, so ``check_nc`` records raw numbers), from the
+  first path rule whose ``match`` has ``start``/``end`` groups, else null.
 - ``frequency``/``level``: each from the first matching path rule in
   ``catalogs.yaml`` that sets it;
   else ``frequency`` from the dataset's time step (``frequency_from_step``;
   ``unknown`` if one single-step file), ``fx`` if it has no time axis.
 
 A dataset is a directory (year dirs folded to ``*``) plus the set of data
-variables, the same grouping as ``find_gaps.py --ncinfo``.
+variables, the same grouping as ``find_gaps.py --ncinfo``. intake-esm groups
+on ``master_id``, which has no directory in it, so a ``master_id`` shared by
+two directories (HYCOM ``analysis/`` and the year dirs) is an error: add a
+``level`` rule to tell them apart.
 
 Invalid (same contract as the cmip6 builder): ``nc_status != ok``
 (``nc_status=<status>``), no ncinfo row (``no ncinfo row: run check_nc``),
-and anything in ``exclude_paths`` (``excluded``).
+the product's ``exclude`` entries (``excluded: <reason>``) and anything in
+``exclude_paths`` (``excluded``).
 """
 
 from __future__ import annotations
@@ -86,17 +93,54 @@ def _crawl(root: str, exclude_patterns: list[str], jobs: int) -> list[str]:
 
 
 def _apply_rules(df: pl.DataFrame, prod: Product) -> pl.DataFrame:
-    """Add ``rule_frequency`` and ``rule_level``: each from the first matching
-    rule that sets it."""
-    freq, level = [], []
+    """Add ``rule_frequency``, ``rule_level`` and ``rule_time_range``: each
+    from the first matching rule that sets it."""
+    freq, level, trange = [], [], []
     for rel in df["rel"].to_list():
-        hits = [r for r in prod.rules if re.search(r.match, rel)]
-        freq.append(next((r.frequency for r in hits if r.frequency), None))
-        level.append(next((r.level for r in hits if r.level), None))
+        hits = [(r, m) for r in prod.rules if (m := re.search(r.match, rel))]
+        freq.append(next((r.frequency for r, _ in hits if r.frequency), None))
+        level.append(next((r.level for r, _ in hits if r.level), None))
+        trange.append(
+            next(
+                (f"{m['start']}-{m['end']}" for r, m in hits if r.sets_time_range),
+                None,
+            )
+        )
     return df.with_columns(
         rule_frequency=pl.Series(freq, dtype=pl.String),
         rule_level=pl.Series(level, dtype=pl.String),
+        rule_time_range=pl.Series(trange, dtype=pl.String),
     )
+
+
+def _manifest_excluded(rels: list[str], prod: Product) -> list[str | None]:
+    """``excluded: <reason>`` from the first ``exclude`` entry matching each
+    relative path, else None."""
+    return [
+        next(
+            (f"excluded: {e.reason}" for e in prod.exclude if re.search(e.match, r)),
+            None,
+        )
+        for r in rels
+    ]
+
+
+def _check_collisions(df: pl.DataFrame) -> None:
+    """Raise if a ``master_id`` spans more than one dataset directory."""
+    bad = (
+        df.group_by("master_id")
+        .agg(pl.col("dir").unique().sort())
+        .filter(pl.col("dir").list.len() > 1)
+        .sort("master_id")
+    )
+    if bad.height:
+        lines = [
+            f"  {mid}: {', '.join(dirs)}" for mid, dirs in bad.head(10).iter_rows()
+        ]
+        raise ValueError(
+            f"{bad.height} master_id(s) span more than one directory; add a "
+            "level rule to tell them apart:\n" + "\n".join(lines)
+        )
 
 
 def build_from_paths(
@@ -127,19 +171,25 @@ def build_from_paths(
         .unique("path", keep="first")
         .collect()
     )
-    j = files.join(nci, on="path", how="left")
+    j = files.join(nci, on="path", how="left").with_columns(
+        manifest_excluded=pl.Series(
+            _manifest_excluded(files["rel"].to_list(), prod), dtype=pl.String
+        )
+    )
     excluded = pl.Series(sorted(exclude_paths or ()), dtype=pl.String).implode()
     reason = (
         pl.when(pl.col("nc_status").is_null())
         .then(pl.lit("no ncinfo row: run check_nc"))
         .when(pl.col("nc_status") != "ok")
         .then(pl.format("nc_status={}", "nc_status"))
+        .when(pl.col("manifest_excluded").is_not_null())
+        .then(pl.col("manifest_excluded"))
         .when(pl.col("path").is_in(excluded))
         .then(pl.lit("excluded"))
     )
     j = j.with_columns(reason=reason)
     invalid = j.filter(pl.col("reason").is_not_null()).select("path", pl.col("reason"))
-    ok = j.filter(pl.col("reason").is_null()).drop("reason")
+    ok = j.filter(pl.col("reason").is_null()).drop("reason", "manifest_excluded")
     if ok.is_empty():
         return pl.DataFrame(schema=CATALOG_SCHEMA), invalid.cast(INVALID_SCHEMA).sort(
             "path"
@@ -165,32 +215,43 @@ def build_from_paths(
         level="rule_level",
         variable_id=pl.col("data_vars").list.sort().list.join(","),
         version=pl.lit(prod.version or DEFAULT_VERSION),
-        time_range=pl.when(pl.col("time_first").is_not_null()).then(
+        time_range=pl.when(pl.col("time_first").str.contains(day))
+        .then(
             pl.concat_str(
                 pl.col("time_first").str.replace(day, "${1}${2}${3}"),
                 pl.col("time_last").str.replace(day, "${1}${2}${3}"),
                 separator="-",
             )
-        ),
+        )
+        .otherwise(pl.col("rule_time_range")),
         size_bytes="size_bytes",
+        dir="dir",
     )
     schema = {k: v for k, v in CATALOG_SCHEMA.items() if k != "master_id"}
     df = (
         df.with_columns(
             pl.lit(None, t).alias(c) for c, t in schema.items() if c not in df.columns
         )
-        .select([pl.col(c).cast(t) for c, t in schema.items()])
+        .select(*(pl.col(c).cast(t) for c, t in schema.items()), "dir")
         .with_columns(master_id_expr())
-        .select(list(CATALOG_SCHEMA))
-        .sort("path")
     )
+    _check_collisions(df)
+    df = df.select(list(CATALOG_SCHEMA)).sort("path")
     return df, invalid.cast(INVALID_SCHEMA).sort("path")
 
 
-def load_ncinfo(ncinfo_dir: str | os.PathLike) -> pl.LazyFrame:
-    files = sorted(Path(ncinfo_dir).glob("ncinfo_*.parquet"))
-    if not files:
-        raise ValueError(f"no ncinfo_*.parquet in {ncinfo_dir}")
+def load_ncinfo(
+    ncinfo_dirs: str | os.PathLike | list[str | os.PathLike],
+) -> pl.LazyFrame:
+    """Every ``ncinfo_*.parquet`` in one dir or several (one per tree)."""
+    if isinstance(ncinfo_dirs, (str, os.PathLike)):
+        ncinfo_dirs = [ncinfo_dirs]
+    files = []
+    for d in ncinfo_dirs:
+        found = sorted(Path(d).glob("ncinfo_*.parquet"))
+        if not found:
+            raise ValueError(f"no ncinfo_*.parquet in {d}")
+        files.extend(found)
     return pl.scan_parquet(files)
 
 

@@ -35,7 +35,9 @@ and rebuilt is undecided**: some may run on a schedule, some on demand, per
 product. Until that is settled, nothing here assumes they are rebuilt nightly;
 the summary uses each product's latest checked CSV. Generic products
 (`builder: generic`: `glorys12v1`, `soda3122`) need `--ncinfo` pointing at the
-`check_nc.py` output for their tree; files with no ncinfo row are left out
+`check_nc.py` output for their tree (repeat it for several trees; `NCINFO`
+in `slurm/build_catalog.sbatch` takes `:`-separated dirs); files with no
+ncinfo row are left out
 (invalid) until `check_nc.py` is re-run on them. `summarize_catalog.py` gets
 one `--catalog` per enabled product's CSV plus `--products
 manifests/catalogs.yaml` for the dataset pages' citations and the Other
