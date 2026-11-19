@@ -255,7 +255,9 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_eccov5
-    enabled: false   # alpha release: catalog it? (decision open)
+    # Catalog the alpha as is (decided 2026-11-18; no final V5 exists,
+    # docs/audit-findings.md ECCOv5). Enable after the HPC build and check.
+    enabled: false
     version: v5alpha
     rules:
       # latlon_*/<VAR>.nc/ are directories of one-step files whose time has
@@ -281,6 +283,11 @@ products:
     builder: generic
     collection: observations
     output: whoi_prism
+    # Listed, not catalogued (decided 2026-11-18): no dimension has a
+    # coordinate, so intake-esm cannot order the files (combine_by_coords)
+    # and check_catalog.py fails to_dataset_dict. A catalog would need a
+    # preprocess that builds t from year/month; not worth it for 13 files.
+    # time_dim and the rule below are kept in case that changes.
     enabled: false
     time_dim: t
     rules:
@@ -290,8 +297,10 @@ products:
     description: PRISM monthly precipitation for the contiguous US, 4 km, decadal NetCDF (converted at WHOI from PRISM .bil)
     years: 1895-2019
     caveats: >-
-      No time coordinate (year and month variables). Mixes PRISM stable (M2)
-      and provisional (M3) data.
+      No time coordinate (year and month variables), so it is not in the
+      catalog; open the 13 decadal files with xarray.open_mfdataset(files,
+      combine="nested", concat_dim="t"). Mixes PRISM stable (M2) and
+      provisional (M3) data.
     citation: >-
       PRISM Climate Group, Oregon State University, https://prism.oregonstate.edu.
     license: >-

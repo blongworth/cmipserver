@@ -543,7 +543,15 @@ as archives and list without a catalog.
 - `nctiles_monthly/{SALT,THETA}/`: yearly files on the LLC270 grid (13
   tiles of 270 x 270, 50 levels). `SALT.1` and `THETA.1` beside them are
   small non-NetCDF files (about 20 KB, 2021-06-16), not dirs.
-- It's an alpha release. Decide: catalog it?
+- It's an alpha release. Is there a better version to download? Checked
+  2026-11-18 (web): no final Version 5 has been published; the LLC270
+  physics run is still only under ECCO Drive `Version5/Alpha` (1992 to
+  about 2017-2018). The released products are Version 4: V4r4 on PO.DAAC
+  (1992-2017, llc90 and 0.5 deg lat-lon, daily and monthly) and V4r5
+  (same grids; AWS-cloud-only as of October 2025). Both are coarser (llc90,
+  about 1 deg) than V5 Alpha (LLC270, about 1/3 deg), so they would be an
+  additional product, not a replacement. Decision: catalog V5 Alpha as is,
+  labeled alpha.
 
 ### SODA 3.12.2 (cataloged 2026-11-15)
 `gridded/` (regridded `_reg_`, 2,774 5-day + 38 monthly) and `original/`
@@ -559,7 +567,7 @@ CFSR (NCAR RDA ds093.2) converted from GRIB, `.grb2.nc` names, some still
 times and variables (162 pairs). Decide what, if anything, is the product
 (owner question 4).
 
-### PRISM (report-only)
+### PRISM (resolved: listed, not cataloged)
 `prism/netcdf/monthly`: 13 decadal files, `ppt_monthly_1895-1899.nc` to
 `..._2010-2019.nc`, all `ok`. No time coordinate (dims `t, y, x` with
 `year(t)`, `month(t)`, `latitude(y)`, `longitude(x)`), so the gap check says
@@ -574,7 +582,8 @@ time ranges from the file names, join dim `t`; `check_catalog.py` fails
 PRISM dimension has a coordinate. Decide: keep it listed (users open the 13
 files with `xr.open_mfdataset(..., combine="nested", concat_dim="t")`), or
 add a `preprocess` that builds `t` from `year`/`month` (as `normalize_cds`
-does for ERA5).
+does for ERA5). Decision (2026-11-18): keep it listed; the reason and the
+open recipe are in its `caveats` on the Other holdings page.
 
 ## CMIP5 tree `/proj/cmip6/cmip5` (open, decision)
 Shallow look on hydra (`ls`, `find -maxdepth 3`, `du`; no scan or headers). A

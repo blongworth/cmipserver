@@ -55,13 +55,15 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   `--include-disabled`, the dataset-dir collision check; manifest entries
   written). On HPC, per product in this order: `glorys12v1_statics`,
   `grep_monthly`, `glorys12v1_monthly`, `bran2020`, `grep_daily`,
-  `hycom_gofs30`, `hycom_gofs31`: build with `--include-disabled`, then
+  `hycom_gofs30`, `hycom_gofs31`, `eccov5`: build with `--include-disabled`, then
   `check_catalog.py --sample-datasets 10`. Gates: catalog + invalid rows = X4
   `.nc` count; invalid reasons are only damaged or excluded; check passes;
   datasets match `find_gaps.py`. Rebuild `glorys12v1` and `soda3122` and diff
   them against `live` (should be identical). Then enable, promote, render.
-- [ ] Decide: catalog `eccov5` (alpha; rules written) and `prism` (fails to
-  load without a `preprocess`; `docs/audit-findings.md`, PRISM).
+- [x] Decided 2026-11-18: catalog `eccov5` (alpha, no final V5 exists);
+  keep `prism` listed (no coordinates, intake-esm cannot join it).
+- [ ] `eccov5`: confirm on HPC that the latlon one-step files load in
+  date order (their time has no units).
 
 ## Data updates (needs a plan)
 
