@@ -31,6 +31,13 @@ uv run quarto render site      # or: uv run quarto preview site
   downloads and checks them; after bumping a version, run it with `--update`
   to record the new hashes, then commit the files. `theme.scss` and
   `fonts.css` stop cosmo from loading Google Fonts.
+- Notebook pages also need require.js, jQuery, plotly.js and MathJax, which
+  Quarto and plotly inject as CDN URLs. The post-render step
+  `scripts/localize_site_scripts.py` points those at `vendor/` (each file's
+  `url` and `aliases` in `vendor.yml`) and fails the render if any other
+  external script or stylesheet is left. After upgrading Quarto or the plotly
+  Python package, a failing render names the new URL: add it to `vendor.yml`
+  and run `vendor_js.py --update`.
 - Notebooks (`notebooks/*.ipynb`) are committed without outputs (quarto writes
   outputs back into them, so strip before committing). `quarto render` executes
   them where the catalog is reachable (hydra, or a Mac with the mount) and
