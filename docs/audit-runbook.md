@@ -339,6 +339,11 @@ uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product era
   `excluded: <reason>` (duplicate copies, wrong times), so the invariant
   holds. `exclude_patterns` (globs on the full path, e.g. `*/._*`) are never
   crawled and appear in neither file.
+- `open_kwargs` (`drop_variables`, `decode_times`) are xarray options a
+  product's files need to load (HYCOM `tau`, ECCO V5 lat-lon months).
+  `check_catalog.py --products manifests/catalogs.yaml` opens with them
+  (the Slurm build passes it), and the dataset page shows them with the
+  product's caveats.
 - `time_dim` sets the dimension files are joined along when the detected
   one is wrong (PRISM `t`). intake-esm orders files by their dimension
   coordinates, so a product with none (PRISM) does not load without a

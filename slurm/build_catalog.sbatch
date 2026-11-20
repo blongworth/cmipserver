@@ -50,7 +50,8 @@ uv run --frozen scripts/build_catalog.py "${args[@]}"
 for js in "$OUT"/*.json; do
     name=$(basename "$js" .json)
     echo "== check $name"
-    uv run --frozen scripts/check_catalog.py --catalog "$js" --report "$OUT/checks/${name}.json"
+    uv run --frozen scripts/check_catalog.py --catalog "$js" --products "$MANIFEST" \
+        --report "$OUT/checks/${name}.json"
 done
 
 if [[ -f "$OUT/whoi_cmip6.csv" ]]; then

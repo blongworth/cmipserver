@@ -530,6 +530,20 @@ class PathExclude(_Strict):
         return v
 
 
+class OpenKwargs(_Strict):
+    """xarray open options a product's files need (``xarray_open_kwargs`` in
+    intake-esm). Used by ``check_catalog.py --products`` and shown on the
+    site's dataset page. HYCOM: ``drop_variables: [tau]`` (units ``hours
+    since analysis`` fail to decode); ECCO V5 latlon: ``decode_times: false``
+    (``months since`` with a standard calendar)."""
+
+    drop_variables: list[str] | None = None
+    decode_times: bool | None = None
+
+    def kwargs(self) -> dict:
+        return self.model_dump(exclude_none=True)
+
+
 class Product(_Strict):
     name: str
     root: str
@@ -550,6 +564,8 @@ class Product(_Strict):
     time_dim: str | None = None
     # Globs never crawled (litter such as ._*): in neither catalog nor invalid.
     exclude_patterns: list[str] = Field(default_factory=list)
+    # xarray open options needed to load the files (any builder)
+    open_kwargs: OpenKwargs | None = None
     # Shown on the site's dataset page (reanalysis: also in the product spec).
     citation: str | None = None
     license: str | None = None

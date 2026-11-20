@@ -6,6 +6,10 @@ to_dataset_dict() loads a few sample datasets (a dataset that opens only
 with ``normalize_cds`` passes, and the detail says so), and the dataset count did not
 drop more than --max-drop vs the last good catalog (--previous).
 
+With --products (catalogs.yaml), datasets open with the product's
+``open_kwargs`` (HYCOM drops ``tau``; ECCO V5 latlon needs
+``decode_times=False``), as users must.
+
 Exit 0 if every check passes, else 1. --report writes the results as JSON.
 
 Example:
@@ -26,6 +30,7 @@ from pathlib import Path
 import polars as pl
 
 from whoi_cmip_reorg_code.catalog_schema import CATALOG_SCHEMA
+from whoi_cmip_reorg_code.manifest import CatalogsManifest, load
 
 # Sample datasets are opened read-only. HDF5 file locking fails on VAST/NFS and
 # makes good files fail to open. Must be set before HDF5 loads (lazy imports).
@@ -103,8 +108,15 @@ def run_checks(
     max_drop: float = 0.05,
     seed: int = 0,
     datasets: list[str] | None = None,
+    open_kwargs: dict | None = None,
 ) -> list[dict]:
+    """``open_kwargs``: extra ``xarray_open_kwargs`` (the product's
+    ``open_kwargs`` in catalogs.yaml)."""
     rng = random.Random(seed)
+    xr_kw = {"use_cftime": True, **(open_kwargs or {})}
+    if xr_kw.get("decode_times") is False:
+        del xr_kw["use_cftime"]  # nothing to decode
+    note = f" (open_kwargs {open_kwargs})" if open_kwargs else ""
     results: list[dict] = []
 
     def add(name: str, ok: bool, detail: str = "") -> None:
@@ -173,8 +185,8 @@ def run_checks(
             try:
                 # long runs (piControl past year 2262) mix pandas and cftime
                 # time types unless cftime is forced; users need this too
-                cat[key](xarray_open_kwargs={"use_cftime": True}).to_dask()
-                add("to_dataset_dict", True, key)
+                cat[key](xarray_open_kwargs=xr_kw).to_dask()
+                add("to_dataset_dict", True, key + note)
                 continue
             except INTAKE_ERRORS as exc:
                 msg = str(exc).strip().splitlines()[0]
@@ -184,9 +196,7 @@ def run_checks(
             # known case: files in two time formats; passes only with the
             # documented preprocess, which the detail records
             try:
-                cat[key](
-                    xarray_open_kwargs={"use_cftime": True}, preprocess=normalize_cds
-                ).to_dask()
+                cat[key](xarray_open_kwargs=xr_kw, preprocess=normalize_cds).to_dask()
                 add("to_dataset_dict", True, f"{key} (only with preprocess)")
             except INTAKE_ERRORS:
                 add("to_dataset_dict", False, plain)
@@ -207,8 +217,21 @@ def main(argv: list[str] | None = None) -> int:
         help="open this dataset key instead of a random sample (repeatable); "
         "e.g. reanalysis.era5.mon.plev.geopotential.v1",
     )
+    ap.add_argument(
+        "--products",
+        help="catalogs.yaml: open datasets with the product's open_kwargs "
+        "(product found by its output name = the catalog JSON stem)",
+    )
     ap.add_argument("--report", help="write results JSON here")
     args = ap.parse_args(argv)
+
+    open_kwargs = None
+    if args.products:
+        stem = Path(args.catalog).stem
+        prods = load(args.products, CatalogsManifest).products
+        prod = next((p for p in prods if p.output == stem), None)
+        if prod is not None and prod.open_kwargs is not None:
+            open_kwargs = prod.open_kwargs.kwargs()
 
     res = run_checks(
         Path(args.catalog),
@@ -218,6 +241,7 @@ def main(argv: list[str] | None = None) -> int:
         args.max_drop,
         args.seed,
         args.dataset,
+        open_kwargs,
     )
     for r in res:
         print(f"{'PASS' if r['ok'] else 'FAIL'} {r['check']}: {r['detail']}")

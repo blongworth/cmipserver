@@ -42,9 +42,8 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   synchronous Dask scheduler for multi-file datasets) in the setup cell, as
   `20crv3.ipynb` does; users on hydra hit "NetCDF: HDF error" otherwise
   (`docs/audit-findings.md`, "HDF5 file locking on VAST").
-- [ ] Optional: show a product's `caveats` on its dataset page. ERA5 caveats no
-  longer appear on the site now that it is catalogued (only the recipe on the
-  Catalog page does).
+- [x] Show a product's `caveats` (and `open_kwargs`) on its dataset page
+  (2026-11-20; rendered, not yet checked in a browser).
 - [ ] Optional: `check_nc.py --deep` (reads the last time step of every file)
   on the catalogued products.
 - [ ] Fix the flaky `tests/test_checksums.py::test_select_and_hash` (an
@@ -66,9 +65,9 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   date order (their time has no units).
 - [x] HPC builds 2026-11-20: `glorys12v1_statics`, `grep_monthly`,
   `glorys12v1_monthly`, `bran2020`, `grep_daily` pass every gate.
-- [ ] `hycom_gofs30` (year-dir dataset) and `hycom_gofs31` (`global/`) fail
-  to load: find the cause. Both have stray copies to exclude (done in the
-  manifest).
+- [ ] `hycom_gofs30`, `hycom_gofs31` and `eccov5` fail to load without
+  xarray options (HYCOM `tau`, ECCO lat-lon `months since`): `open_kwargs`
+  added 2026-11-20; confirm on HPC with `check_catalog.py --products`.
 - [ ] Repair proposals: move the complete nested ECCO `THETA_1992.nc` over
   the truncated one; quarantine HYCOM `1999/1992/` stray file.
 

@@ -211,11 +211,14 @@ products:
       # 61 MB file named like the 2.9 GB 1992/ file (found by the HPC build,
       # 2026-11-20; docs/audit-findings.md, HYCOM)
       - {match: '^1999/1992/', reason: stray partial copy of a 1992 file}
+    # tau has units "hours since analysis", which xarray cannot decode
+    # (HPC check 2026-11-20)
+    open_kwargs: {drop_variables: [tau]}
     description: HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)
     years: 1992-2012
     caveats: >-
       Daily snapshots, not means. analysis/ 2013-08-01 to 08-15 are empty
-      (0-byte) files.
+      (0-byte) files. Open with xarray_open_kwargs={"drop_variables": ["tau"]}.
     # HYCOM gives no citation or licence, only this acknowledgment, which it
     # says applies to GLBu0.08 expt_19.0 and 19.1 (this product)
     # (https://hycom.org/publications/acknowledgements/ocean-reanalysis-data,
@@ -244,12 +247,15 @@ products:
     exclude:
       # GOFS 3.0 1993 files copied here (docs/audit-findings.md, HYCOM)
       - {match: '^global/1994/hycom_GLBu0\.08_190_', reason: copy of GOFS 3.0 1993}
+    open_kwargs: {drop_variables: [tau]}   # as hycom_gofs30
     description: HYCOM + NCODA GOFS 3.1 reanalysis (GLBv0.08 expt 53.X), daily snapshots, NW Atlantic subset (30-60N, 85-40W) and bottom T/S/SSH
     years: 1994-2015
     caveats: >-
-      Daily snapshots, not means. Regional subset, not global. 4 daily files
+      Daily snapshots, not means. The year dirs (level nwatl) are a NW
+      Atlantic subset; global/ (expts 53.0-53.3) is global. 4 daily files
       are truncated (2001-10-08, 2007-05-11, 2007-10-15, 2008-01-20) and 4
-      in global/2003 are empty.
+      in global/2003 are empty. Open with
+      xarray_open_kwargs={"drop_variables": ["tau"]}.
     # HYCOM publishes no citation, licence, or acknowledgment for GLBv0.08
     # expt 53.X (hycom.org GOFS 3.1 reanalysis page, 2026-11-18).
     citation: null
@@ -275,10 +281,18 @@ products:
       # complete copy of the truncated nctiles_monthly/THETA/THETA_1992.nc,
       # nested in a mirrored path (docs/audit-findings.md, ECCOv5)
       - {match: '^nctiles_monthly/THETA/Version5/', reason: nested copy of THETA_1992.nc (repair pending)}
+    # latlon TIME is "months since 1992-01-01" with a standard calendar, which
+    # xarray refuses to decode (HPC check 2026-11-20; daily SSH counts days
+    # under the same units). The files still join on the raw values.
+    open_kwargs: {decode_times: false}
     description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus LLC270 nctiles monthly T/S
     caveats: >-
-      Unreleased alpha version. nctiles_monthly/THETA/THETA_1992.nc is
-      truncated (incomplete copy).
+      Unreleased alpha version. Open with
+      xarray_open_kwargs={"decode_times": False}: the lat-lon files label time
+      "months since 1992-01-01" (monthly values 1 to 312 count months; daily
+      SSH values 0.5 to 9496.5 count days), so times stay numbers. The
+      nctiles THETA dataset lacks 1992 (the file is truncated; a repair is
+      pending).
     # Citation suggested for V5 Alpha by ECCO support (ecco-support list,
     # 2022-08-15). The DSpace record shows CC BY-SA 3.0 US, but it is not
     # clear that covers the data files, so no licence is given here.

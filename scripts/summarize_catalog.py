@@ -14,7 +14,8 @@ Only reads the catalogs; writes to --out:
                               source_id (cmip6) or product (reanalysis)
     products.json             with --products: product -> description,
                               citation, license, acknowledgment (dataset
-                              page), catalogued, path, years, caveats
+                              page), catalogued, path, years, caveats,
+                              open_kwargs
                               (holdings page)
 
 ``relative_path`` is the dataset directory relative to --root (for non-CMIP6
@@ -143,7 +144,7 @@ def product_info(
     catalogs_yaml: str | Path, data_root: str = DEFAULT_DATA_ROOT
 ) -> dict[str, dict]:
     """{product: {description, citation, license, acknowledgment, catalogued,
-    path, years, caveats}} for every non-CMIP6 product in ``catalogs.yaml``
+    path, years, caveats, open_kwargs}} for every non-CMIP6 product in ``catalogs.yaml``
     (enabled or not) and every ``listed`` holding (``catalogued: false``).
     A reanalysis spec's citation/license/acknowledgment fill in what the entry
     leaves out. Keys are the catalog ``product`` facet (the spec's ``product``
@@ -164,6 +165,7 @@ def product_info(
             "path": _rel_root(p.root, data_root),
             "years": p.years,
             "caveats": p.caveats,
+            "open_kwargs": p.open_kwargs.kwargs() if p.open_kwargs else None,
         }
         key = p.name
         if p.spec:
@@ -183,6 +185,7 @@ def product_info(
             "path": h.path,
             "years": h.years,
             "caveats": h.caveats,
+            "open_kwargs": None,
         }
     return out
 

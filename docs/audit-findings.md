@@ -530,8 +530,17 @@ as archives and list without a catalog.
   partial copy (found by the HPC build, 2026-11-20), excluded from the
   catalog. Proposal: quarantine.
 - HPC build 2026-11-20: counts match X4 for both. `to_dataset_dict` fails
-  for the GOFS 3.0 year-dir dataset and GOFS 3.1 `global/` (cause not yet
-  known; `check_catalog.py` now reports the root error).
+  for the GOFS 3.0 year-dir dataset (`Unable to parse date string
+  'analysis'`: the `tau` variable's units are `hours since analysis`) and
+  GOFS 3.1 `global/` (cause not reported; same file format, so probably
+  the same). Fix: `open_kwargs: {drop_variables: [tau]}` for both products
+  (users pass it as `xarray_open_kwargs`); to confirm on HPC.
+  **Upstream, not local** (checked 2026-11-20): the files are NAVO's own
+  (`institution: Naval Oceanographic Office`, `history: archv2ncdf3z`) and
+  `tau` carries a NAVO variable code; NOAA ERDDAP lists HYCOM `tau` as
+  "hours since analysis", and the oceanspy project hit the same xarray
+  error and drops `tau`. The GOFS 3.1 NW Atlantic files were cut from
+  HYCOM's THREDDS server (Netcdf-Java CFGridWriter2, 2021) and have no `tau`.
 
 ### ECCOv5 (open)
 - **`Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc` is truncated**:
@@ -546,7 +555,20 @@ as archives and list without a catalog.
   mount 2026-11-18), which is where most of the 10,798 files are. The
   catalog rules date them from the file names. Open: if the files share
   one time value, intake-esm cannot order them; check on HPC with
-  `check_catalog.py`.
+  `check_catalog.py`. Result (HPC 2026-11-20; headers read on the mount):
+  `TIME` is `months since 1992-01-01` with no calendar in every lat-lon
+  file, which xarray refuses to decode (`'months since' units only allowed
+  for '360_day' calendar`). Values are distinct and increasing (monthly 1
+  to 312; daily SSH 0.5 to 9496.5, which are days under month units). With
+  `decode_times=False` the files join on the raw values:
+  `open_kwargs: {decode_times: false}` (the nctiles then stay undecoded
+  too). Origin not confirmed (2026-11-20): no public upstream description of
+  the V5 Alpha latlon files was found (ECCO Drive needs an Earthdata login).
+  Likely upstream: the files carry no WHOI history, only `description: ECCO
+  LLC270 monthly average`, and have the same owner and 2021 dates as the
+  nctiles download; an ecco-support thread (May 2026) names `latlon_monthly`
+  as an upstream V5 Alpha folder. To settle: compare one file's listing and
+  checksum on ECCO Drive, or ask ecco-support.
 - **A complete `THETA_1992.nc` exists**, nested at
   `nctiles_monthly/THETA/Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc`
   (2,274,498,300 B, 2021-06-17, uid 100747, `nc_status` ok; found by the

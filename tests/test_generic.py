@@ -1109,3 +1109,66 @@ def test_product_info_from_repo_manifest():
     # acknowledgment set on a catalog entry (not a spec)
     assert info["hycom_gofs30"]["acknowledgment"].startswith("The 1/12 deg global")
     assert info["hycom_gofs31"]["acknowledgment"] is None
+
+
+def _odd_time_file(path: Path, kind: str, step: float) -> Path:
+    """HYCOM-like (``tau`` in ``hours since analysis``) or ECCO-latlon-like
+    (``TIME`` in ``months since``, standard calendar) one-step file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tname = "time" if kind == "hycom" else "TIME"
+    with Dataset(path, "w") as ds:
+        ds.createDimension(tname, 1)
+        ds.createDimension("lat", 2)
+        t = ds.createVariable(tname, "f8", (tname,))
+        if kind == "hycom":
+            t.units = "hours since 2000-01-01 00:00:00"
+            t[:] = [24.0 * step]
+            tau = ds.createVariable("tau", "f8", (tname,))
+            tau.units = "hours since analysis"
+            tau[:] = [0.0]
+        else:
+            t.units = "months since 1992-01-01 00:00:00"
+            t[:] = [step]
+        ds.createVariable("lat", "f4", ("lat",))[:] = [0, 1]
+        ds.createVariable("v", "f4", (tname, "lat"))[:] = 1.0
+    return path
+
+
+def test_check_catalog_open_kwargs(tmp_path):
+    """Products whose files load only with xarray open options (HYCOM tau,
+    ECCO V5 latlon months) fail check_catalog without --products and pass
+    with it."""
+    root = tmp_path / "data"
+    for i in range(3):
+        _odd_time_file(root / f"hy/2000/h_2000010{i + 1}.nc", "hycom", i)
+        _odd_time_file(root / f"ec/T.nc/T_19920{i + 1}.nc", "ecco", i + 1.0)
+    nci = _tree_ncinfo(root, tmp_path / "nci")
+    hy = {
+        **_generic(root / "hy"),
+        "open_kwargs": {"drop_variables": ["tau"]},
+    }
+    ec = {
+        **_generic(root / "ec"),
+        "name": "ec",
+        "output": "whoi_ec",
+        "rules": [{"match": r"_(?P<start>(?P<end>\d{6}))\.nc$", "frequency": "mon"}],
+        "open_kwargs": {"decode_times": False},
+    }
+    cats = tmp_path / "catalogs.yaml"
+    cats.write_text(yaml.safe_dump({"schema_version": 1, "products": [hy, ec]}))
+    out = tmp_path / "next"
+    args = ["--manifest", str(cats), "--out", str(out), "--ncinfo", str(nci)]
+    assert build_catalog.main([*args, "--jobs", "1"]) == 0
+    ecdf = pl.read_csv(out / "whoi_ec.csv", infer_schema=False)
+    assert ecdf["time_range"].to_list() == [
+        "199201-199201",
+        "199202-199202",
+        "199203-199203",
+    ]
+    for name in ("whoi_hy", "whoi_ec"):
+        js = str(out / f"{name}.json")
+        assert check_catalog.main(["--catalog", js]) == 1, name
+        assert check_catalog.main(["--catalog", js, "--products", str(cats)]) == 0
+    info = summarize_catalog.product_info(cats)
+    assert info["hy"]["open_kwargs"] == {"drop_variables": ["tau"]}
+    assert info["ec"]["open_kwargs"] == {"decode_times": False}

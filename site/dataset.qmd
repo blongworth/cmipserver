@@ -108,6 +108,28 @@ product === null
 
 ```{ojs}
 //| echo: false
+// Product caveats, and the xarray options its files need (catalogs.yaml
+// open_kwargs, e.g. HYCOM drop_variables, ECCO V5 decode_times).
+pyKwargs = (kw) =>
+  JSON.stringify(kw)
+    .replace(/\btrue\b/g, "True")
+    .replace(/\bfalse\b/g, "False")
+    .replace(/,/g, ", ")
+    .replace(/:/g, ": ")
+product === null || (!product.caveats && !product.open_kwargs)
+  ? html`<span></span>`
+  : html`<h3>Notes</h3>
+    ${product.caveats ? html`<p>${product.caveats}</p>` : ""}
+    ${product.open_kwargs
+      ? html`<p>These files open only with these xarray options:</p>
+        ${copyBlock(`dsets = cat.search(product="${row.product}").to_dataset_dict(
+    xarray_open_kwargs=${pyKwargs(product.open_kwargs)}
+)`, "python")}`
+      : ""}`
+```
+
+```{ojs}
+//| echo: false
 row === null
   ? html`<span></span>`
   : html`<h3>Files</h3>
