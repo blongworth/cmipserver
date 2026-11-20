@@ -75,6 +75,17 @@ def normalize_cds(ds):
     return ds
 
 
+def root_cause(exc: BaseException) -> str:
+    """``Type: first line`` of the innermost cause of ``exc``
+    (``ESMDataSourceError`` hides the xarray error that made a load fail)."""
+    seen = {id(exc)}
+    while (nxt := exc.__cause__ or exc.__context__) is not None and id(nxt) not in seen:
+        seen.add(id(nxt))
+        exc = nxt
+    lines = str(exc).strip().splitlines()
+    return f"{type(exc).__name__}: {lines[0] if lines else ''}"
+
+
 def _csv(json_path: Path) -> Path:
     desc = json.loads(json_path.read_text())
     return json_path.parent / desc["catalog_file"]
@@ -168,6 +179,8 @@ def run_checks(
             except INTAKE_ERRORS as exc:
                 msg = str(exc).strip().splitlines()[0]
                 plain = f"{key}: {type(exc).__name__}: {msg}"
+                if (cause := root_cause(exc)) != f"{type(exc).__name__}: {msg}":
+                    plain += f" (cause: {cause})"
             # known case: files in two time formats; passes only with the
             # documented preprocess, which the detail records
             try:

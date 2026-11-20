@@ -226,3 +226,16 @@ def test_site_summary_runs_on_built_catalog(built, messy_store, tmp_path):
     assert len(ids) == 7
     assert "CMIP6.CMIP.NCAR.CESM2.historical.r1i1p1f1.Amon.tas.gn.v20190308" in ids
     assert all(d["relative_path"].startswith("cmip6/CMIP/") for d in summary)
+
+
+def test_root_cause_unwraps_chained_errors():
+    try:
+        try:
+            raise ValueError("Resulting object does not have monotonic indexes\nmore")
+        except ValueError as inner:
+            raise RuntimeError("Failed to load dataset") from inner
+    except RuntimeError as exc:
+        assert check_catalog.root_cause(exc) == (
+            "ValueError: Resulting object does not have monotonic indexes"
+        )
+    assert check_catalog.root_cause(KeyError("x")) == "KeyError: 'x'"

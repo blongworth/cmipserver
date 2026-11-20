@@ -64,6 +64,13 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   keep `prism` listed (no coordinates, intake-esm cannot join it).
 - [ ] `eccov5`: confirm on HPC that the latlon one-step files load in
   date order (their time has no units).
+- [x] HPC builds 2026-11-20: `glorys12v1_statics`, `grep_monthly`,
+  `glorys12v1_monthly`, `bran2020`, `grep_daily` pass every gate.
+- [ ] `hycom_gofs30` (year-dir dataset) and `hycom_gofs31` (`global/`) fail
+  to load: find the cause. Both have stray copies to exclude (done in the
+  manifest).
+- [ ] Repair proposals: move the complete nested ECCO `THETA_1992.nc` over
+  the truncated one; quarantine HYCOM `1999/1992/` stray file.
 
 ## Data updates (needs a plan)
 

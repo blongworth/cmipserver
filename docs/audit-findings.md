@@ -525,6 +525,13 @@ as archives and list without a catalog.
   325 GOFS 3.1 files (`_530_`); `global/2003` is expts 532 and 533. The
   catalog entries give `analysis/`, `global/` and the NW Atlantic year dirs
   their own `level` and exclude the `_190_` copies.
+- GOFS 3.0 `1999/1992/hycom_GLBu0.08_190_1992100200_t000.nc`: 61 MB, uid
+  16165, 2021-04-23; the file of that name in `1992/` is 2.9 GB. A stray
+  partial copy (found by the HPC build, 2026-11-20), excluded from the
+  catalog. Proposal: quarantine.
+- HPC build 2026-11-20: counts match X4 for both. `to_dataset_dict` fails
+  for the GOFS 3.0 year-dir dataset and GOFS 3.1 `global/` (cause not yet
+  known; `check_catalog.py` now reports the root error).
 
 ### ECCOv5 (open)
 - **`Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc` is truncated**:
@@ -540,6 +547,13 @@ as archives and list without a catalog.
   catalog rules date them from the file names. Open: if the files share
   one time value, intake-esm cannot order them; check on HPC with
   `check_catalog.py`.
+- **A complete `THETA_1992.nc` exists**, nested at
+  `nctiles_monthly/THETA/Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc`
+  (2,274,498,300 B, 2021-06-17, uid 100747, `nc_status` ok; found by the
+  catalog build's directory check, 2026-11-20). The catalog excludes it, so
+  the THETA nctiles dataset lacks 1992 for now. Proposal (repair plan, needs
+  approval): sha256 it, quarantine the truncated file, and move the complete
+  copy into its place; no re-fetch needed.
 - `nctiles_monthly/{SALT,THETA}/`: yearly files on the LLC270 grid (13
   tiles of 270 x 270, 50 levels). `SALT.1` and `THETA.1` beside them are
   small non-NetCDF files (about 20 KB, 2021-06-16), not dirs.

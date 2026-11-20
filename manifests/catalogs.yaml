@@ -207,6 +207,10 @@ products:
     rules:
       # analysis/ (GLBu0.08, 2013) is its own dataset, apart from the year dirs
       - {match: "^analysis/", level: analysis}
+    exclude:
+      # 61 MB file named like the 2.9 GB 1992/ file (found by the HPC build,
+      # 2026-11-20; docs/audit-findings.md, HYCOM)
+      - {match: '^1999/1992/', reason: stray partial copy of a 1992 file}
     description: HYCOM + NCODA GOFS 3.0 reanalysis (GLBu0.08 expts 19.0/19.1), daily snapshots (spatial extent not yet checked)
     years: 1992-2012
     caveats: >-
@@ -267,6 +271,10 @@ products:
       - {match: '^latlon_monthly/', frequency: mon, level: latlon}
       - {match: '^latlon_\w+/\w+\.nc/\w+_(?P<start>(?P<end>\d{6,8}))\.nc$'}
       - {match: '^nctiles_', level: llc270}
+    exclude:
+      # complete copy of the truncated nctiles_monthly/THETA/THETA_1992.nc,
+      # nested in a mirrored path (docs/audit-findings.md, ECCOv5)
+      - {match: '^nctiles_monthly/THETA/Version5/', reason: nested copy of THETA_1992.nc (repair pending)}
     description: ECCO Version 5 Alpha state estimate (unreleased alpha), lat-lon daily SSH and monthly T/S/U/V, plus LLC270 nctiles monthly T/S
     caveats: >-
       Unreleased alpha version. nctiles_monthly/THETA/THETA_1992.nc is
