@@ -2,3 +2,163 @@
 // Cosmo imports Source Sans Pro from Google Fonts. fonts.css serves the same
 // font from vendor/ instead, so pages load nothing from other hosts.
 $web-font-path: false;
+
+// Colors from the WHOI palette (https://branding.whoi.edu/our-visual-system/color/).
+// Contrast on white: dark blue 16.5:1, blue 5.7:1, cool gray 11 7.4:1.
+// Bright blue (2.7:1) and teal (2.5:1) are too light for text on white: use
+// them only on dark blue or as borders and accents.
+$whoi-dark-blue: #041E42;   // PMS 282
+$whoi-bright-blue: #00A9E0; // PMS 2995
+$whoi-blue: #0069B1;        // PMS 2196
+$whoi-teal: #00B7BD;        // PMS 2397
+$whoi-gray-11: #53565A;     // Cool Gray 11
+$whoi-gray-4: #BBBCBC;      // Cool Gray 4
+$whoi-gray-10: #E6E7E8;     // Process Black 10%
+$whoi-yellow: #FFD100;      // PMS 109
+$whoi-coral: #EE5340;       // PMS 2027
+
+$primary: $whoi-blue;
+$secondary: $whoi-dark-blue;
+$info: $whoi-teal;
+$warning: $whoi-coral;
+$light: $whoi-gray-10;
+$dark: $whoi-dark-blue;
+
+$body-color: $whoi-gray-11;
+$headings-color: $whoi-dark-blue;
+$link-color: $whoi-blue;
+$code-color: $whoi-dark-blue;
+$code-bg: $whoi-gray-10;
+
+$navbar-bg: $whoi-dark-blue;
+$navbar-fg: #ffffff;
+$navbar-hl: $whoi-bright-blue;
+
+$callout-color-note: $whoi-blue;
+$callout-color-tip: $whoi-teal;
+$callout-color-warning: $whoi-coral;
+
+$table-striped-bg: rgba($whoi-gray-10, 0.6);
+
+/*-- scss:rules --*/
+// The one main action on a page (Download urls.txt, from OJS DOM.download).
+a[download] > button,
+.btn-whoi {
+  background: $whoi-yellow;
+  color: $whoi-dark-blue;
+  border: 0;
+  border-radius: 0.25rem;
+  padding: 0.35rem 0.9rem;
+  font-weight: 700;
+}
+a[download] > button:hover,
+.btn-whoi:hover {
+  background: mix(#000000, $whoi-yellow, 6%);
+}
+
+// Visible keyboard focus on light and dark backgrounds.
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid $whoi-blue;
+  outline-offset: 2px;
+}
+.navbar a:focus-visible {
+  outline-color: $whoi-bright-blue;
+}
+
+// Short coral rule under page titles (the palette's divider accent).
+.quarto-title h1.title::after {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 4px;
+  margin-top: 0.5rem;
+  background: $whoi-coral;
+}
+
+// Number columns line up.
+.text-end,
+.tabulator-cell[tabulator-field="n_files"],
+.tabulator-cell[tabulator-field="size_gb"] {
+  font-variant-numeric: tabular-nums;
+}
+
+// Browse table: selected rows get a light-gray band with a bright-blue edge.
+.browse-table .tabulator-row.tabulator-selected {
+  background: $whoi-gray-10;
+  box-shadow: inset 4px 0 0 $whoi-bright-blue;
+}
+.browse-table .tabulator-header {
+  color: $whoi-dark-blue;
+}
+
+// Dataset id heading: breaks only after the dots (see dataset.qmd).
+.dataset-id {
+  font-family: $font-family-monospace;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $whoi-dark-blue;
+  overflow-wrap: normal;
+}
+
+// Home page.
+.home-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  background: $whoi-dark-blue;
+  color: #ffffff;
+  border-radius: 0.25rem;
+}
+.home-stats .stat-n {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: $whoi-bright-blue;
+  font-variant-numeric: tabular-nums;
+}
+.home-stats .stat-label {
+  color: $whoi-gray-4;
+  font-size: 0.9rem;
+}
+.home-card {
+  height: 100%;
+  padding: 1rem 1.25rem;
+  background: $whoi-gray-10;
+  border-top: 4px solid $whoi-blue;
+  border-radius: 0.25rem;
+}
+.home-card h3 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+.home-card p:last-child {
+  margin-bottom: 0;
+}
+.home-card h3 a {
+  color: $whoi-dark-blue;
+  font-weight: 700;
+  text-decoration: none;
+}
+.home-card h3 a:hover {
+  text-decoration: underline;
+}
+.grid + p {
+  margin-top: 1.5rem;
+}
+
+// Secondary buttons (Copy, Clear all filters, Download table) stay outlined.
+// Quarto adds .btn-quarto (filled) to buttons in cell output; beat it.
+.btn-outline-secondary,
+.btn.btn-quarto.btn-outline-secondary,
+div.cell-output-display .btn-quarto.btn-outline-secondary {
+  --bs-btn-color: #{$whoi-dark-blue};
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: #{$whoi-dark-blue};
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: #{$whoi-dark-blue};
+  --bs-btn-hover-border-color: #{$whoi-dark-blue};
+}
