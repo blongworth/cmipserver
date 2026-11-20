@@ -34,7 +34,7 @@ trees"); one enabled later in `manifests/catalogs.yaml` needs an HPC build and
 and rebuilt is undecided**: some may run on a schedule, some on demand, per
 product. Until that is settled, nothing here assumes they are rebuilt nightly;
 the summary uses each product's latest checked CSV. Generic products
-(`builder: generic`: `glorys12v1`, `soda3122`) need `--ncinfo` pointing at the
+(`builder: generic`: GLORYS, GREP, SODA, HYCOM, ECCO) need `--ncinfo` pointing at the
 `check_nc.py` output for their tree (repeat it for several trees; `NCINFO`
 in `slurm/build_catalog.sbatch` takes `:`-separated dirs); files with no
 ncinfo row are left out

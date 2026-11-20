@@ -24,7 +24,9 @@ products:
 
   # --- Non-CMIP6 holdings, catalogued in place (docs/audit-findings.md,
   # "Non-CMIP6 holdings"). Catalogued (enabled): era5, glorys12v1, soda3122
-  # (Brett, 2026-11-15; each built and passed check_catalog.py on HPC).
+  # (2026-11-15), glorys12v1_monthly, glorys12v1_statics, grep_daily,
+  # grep_monthly, bran2020, hycom_gofs30, hycom_gofs31, eccov5 (2026-11-20); each built
+  # and passed check_catalog.py on HPC.
   # Every entry below with enabled: false is LISTED ONLY: it appears on the
   # site's Other holdings page (site/holdings.qmd) and has no catalog. Enable
   # one only after a build and check_catalog.py pass: generic products need
@@ -81,7 +83,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_glorys12v1_monthly
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20
     version: 12v1
     rules:
       - {match: "", frequency: mon}
@@ -100,7 +102,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_glorys12v1_statics
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20
     version: 12v1
     description: GLORYS12V1 static fields (coordinates, mask and bathymetry, mean dynamic topography)
     citation: >-
@@ -111,7 +113,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_grep_daily
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20
     version: v2
     rules:
       - {match: "", frequency: day}
@@ -131,7 +133,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_grep_monthly
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20
     version: v2
     rules:
       - {match: "", frequency: mon}
@@ -147,7 +149,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_bran2020
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20 (all 14 datasets opened)
     version: "2020"
     rules:
       - {match: "^daily/", frequency: day}
@@ -202,7 +204,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_hycom_gofs30
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20 (with open_kwargs)
     version: GOFS3_0
     rules:
       # analysis/ (GLBu0.08, 2013) is its own dataset, apart from the year dirs
@@ -235,7 +237,7 @@ products:
     builder: generic
     collection: ocean_reanalysis
     output: whoi_hycom_gofs31
-    enabled: false
+    enabled: true   # built and checked on HPC 2026-11-20 (with open_kwargs)
     version: GOFS3_1
     rules:
       # year dirs: NW Atlantic subset (and bottom T/S/SSH files, which differ
@@ -266,8 +268,8 @@ products:
     collection: ocean_reanalysis
     output: whoi_eccov5
     # Catalog the alpha as is (decided 2026-11-18; no final V5 exists,
-    # docs/audit-findings.md ECCOv5). Enable after the HPC build and check.
-    enabled: false
+    # docs/audit-findings.md ECCOv5).
+    enabled: true   # built and checked on HPC 2026-11-20 (with open_kwargs)
     version: v5alpha
     rules:
       # latlon_*/<VAR>.nc/ are directories of one-step files whose time has

@@ -49,7 +49,7 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
 - [ ] Fix the flaky `tests/test_checksums.py::test_select_and_hash` (an
   unseeded random sample sometimes adds `,sample` to the expected reason).
 
-- [ ] **Catalog the remaining generic products** (tooling done 2026-11-18:
+- [x] **Catalog the remaining generic products** (tooling done 2026-11-18:
   `exclude`, `time_dim`, `start`/`end` rules, repeated `--ncinfo`,
   `--include-disabled`, the dataset-dir collision check; manifest entries
   written). On HPC, per product in this order: `glorys12v1_statics`,
@@ -59,15 +59,20 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   `.nc` count; invalid reasons are only damaged or excluded; check passes;
   datasets match `find_gaps.py`. Rebuild `glorys12v1` and `soda3122` and diff
   them against `live` (should be identical). Then enable, promote, render.
+  Done 2026-11-20: all eight promoted to `live` and enabled (`bran2020`
+  after opening all 14 datasets in a Slurm array); `glorys12v1` and
+  `soda3122` rebuilt identical to `live`.
+- [ ] Re-run the site summary and render with the 13 enabled catalogs
+  (`sbatch slurm/build_site.sbatch`); check a HYCOM or ECCO dataset page
+  shows the Notes block with the open options.
 - [x] Decided 2026-11-18: catalog `eccov5` (alpha, no final V5 exists);
   keep `prism` listed (no coordinates, intake-esm cannot join it).
-- [ ] `eccov5`: confirm on HPC that the latlon one-step files load in
-  date order (their time has no units).
+- [x] `eccov5`: the latlon one-step files load in date order with
+  `decode_times=False` (HPC 2026-11-20).
 - [x] HPC builds 2026-11-20: `glorys12v1_statics`, `grep_monthly`,
   `glorys12v1_monthly`, `bran2020`, `grep_daily` pass every gate.
-- [ ] `hycom_gofs30`, `hycom_gofs31` and `eccov5` fail to load without
-  xarray options (HYCOM `tau`, ECCO lat-lon `months since`): `open_kwargs`
-  added 2026-11-20; confirm on HPC with `check_catalog.py --products`.
+- [x] `hycom_gofs30`, `hycom_gofs31` and `eccov5` load with their
+  `open_kwargs` (HYCOM `tau`, ECCO lat-lon `months since`; HPC 2026-11-20).
 - [ ] Repair proposals: move the complete nested ECCO `THETA_1992.nc` over
   the truncated one; quarantine HYCOM `1999/1992/` stray file.
 

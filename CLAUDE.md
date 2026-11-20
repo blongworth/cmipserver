@@ -31,7 +31,9 @@ Maintainer: Brett Longworth.
 - Catalog, not a search server: intake-esm CSV + JSON (ecgtools), rebuilt
   nightly on HPC, plus a small dataset-level summary for the site.
   Enabled catalogs (`manifests/catalogs.yaml`): `cmip6`, `20crv3`, `era5`,
-  `glorys12v1` (daily), `soda3122`; the rest of the
+  `glorys12v1` (daily), `glorys12v1_monthly`, `glorys12v1_statics`,
+  `grep_daily`, `grep_monthly`, `bran2020`, `soda3122`, `hycom_gofs30`,
+  `hycom_gofs31`, `eccov5`; the rest of the
   non-CMIP6 holdings are listed on `site/holdings.qmd`, not catalogued. How
   often non-CMIP6 products are checked and rebuilt is undecided (regular or
   on demand, per product).
@@ -51,6 +53,9 @@ Maintainer: Brett Longworth.
 - Never move, rename, or delete anything on `/proj/cmip6`. Data-touching
   scripts default to dry run. Do not scan the full store; use the sample
   catalog (`scripts/make_sample_catalog.py`).
+- On HPC, give anything likely to take more than a few seconds (builds,
+  checks that open files, scans) as a Slurm job (`sbatch`, arrays for
+  independent pieces), not a command for the login node.
 - Do not contact users, PIs, or IT; draft messages for Brett.
 - Unresolved hosts, emails, and prefixes are placeholders in
   `site/_variables.yml`. Do not guess them.
