@@ -11,9 +11,10 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
 - [x] **Copy the new catalogs to `/proj/cmip6/catalog/live`** (HPC, Brett;
   done 2026-11-15). `whoi_era5`, `whoi_glorys12v1` and `whoi_soda3122` (csv,
   `_invalid.parquet`, json) are in `live`.
-- [ ] **Write `scripts/promote_catalog.py`** (`next` -> `live`; design in the
-  `docs/deploy-plan.md` "Code to write" table: dry run by default, require a
-  passing check report, `--previous` comparison, temp-and-rename copy).
+- [x] **Write `scripts/promote_catalog.py`** (2026-11-20): dry run unless
+  `--execute`; refuses without a passing check report newer than the build,
+  or on a dataset drop over 5% vs `live` (`--allow-drop`); temp-and-rename
+  copy, JSON last. Dry run against the mounted store checked.
 - [ ] **Re-run the site summary and render** with every enabled catalog
   (`sbatch slurm/build_site.sbatch` now uses all enabled catalogs by default;
   summary checked locally 2026-11-17: five catalogs, 31,162 datasets), on HPC
@@ -26,18 +27,18 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   CONFIRM): licence for `soda3122`, `bran2020`, `hycom_gofs30/31`, `eccov5`,
   `prism`, `oras5`, `cfsr932`; confirm the draft citations and the ERA5 DOIs
   and licence text.
-- [ ] **Self-host plotly.js for the notebook figures** (found 2026-11-17).
-  Notebook figures did not show on the live site: Quarto's rendered plotly
-  output loads plotly.js/require.js from CDNs, and the Apache CSP
-  (`infra/apache/cmip.conf`, `script-src 'self' ...`) blocked them. Confirmed by
-  turning the CSP off on the VM (figures appeared); restore it afterwards.
-  Plan: copy `plotly/package_data/plotly.min.js` from the Python package (same
-  version as the code that builds the figures, about 4.7 MB) into
-  `site/vendor/` and record it in `site/vendor/vendor.yml`; make the notebooks
-  load that one file instead of a CDN (renderer or `include_plotlyjs`; not yet
-  tested with Quarto); then rebuild, publish and pull. Do not leave the CSP
-  open. Stopgap if needed: add only the observed CDN hosts to `script-src`.
-  Applies to `quickstart.ipynb` and `20crv3.ipynb`.
+- [x] **Self-host plotly.js for the notebook figures** (2026-11-20). Quarto
+  adds require.js and jQuery for any HTML cell output, and plotly adds
+  plotly.js and MathJax, all from CDNs, which the CSP blocks. They are now in
+  `site/vendor/` (`vendor.yml`, with the injected URLs as `aliases`), and the
+  post-render step `scripts/localize_site_scripts.py` points the pages at
+  them and fails the render if any other external script remains. Both
+  notebooks executed locally draw their figures with the production CSP and
+  no violations. Also: the blog listing no longer loads MathJax (`html-math-method:
+  plain`), `catalog.qmd` loads `htl` from `vendor/`, and `infra/apache/cmip.conf`
+  allows `data:` fonts (the OJS runtime's icon font). **To do on the VM:**
+  install the updated `cmip.conf` and reload Apache; then rebuild, publish
+  and pull.
 - [ ] **Quickstart notebook: set `HDF5_USE_FILE_LOCKING=FALSE`** (and the
   synchronous Dask scheduler for multi-file datasets) in the setup cell, as
   `20crv3.ipynb` does; users on hydra hit "NetCDF: HDF error" otherwise

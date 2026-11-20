@@ -4,6 +4,8 @@ project:
   type: website
   output-dir: _site
   pre-render: ../scripts/write_site_config.py
+  # Points CDN scripts (notebook pages) at site/vendor/; fails on any other.
+  post-render: ../scripts/localize_site_scripts.py
   resources:
     - data/
     - vendor/

@@ -71,3 +71,41 @@ packages:
       - url: https://cdn.jsdelivr.net/npm/@fontsource/source-sans-pro@5.3.0/LICENSE
         path: "@fontsource/source-sans-pro/LICENSE"
         sha256: "18aabf190848725e2576eefb5c29ba06aac1029d02132252a7f312eac2e50cf3"
+  # Loaded by notebook pages. Quarto and plotly inject the `aliases` URLs into
+  # the rendered HTML; scripts/localize_site_scripts.py (post-render) points
+  # them at these copies. Versions must match what the render injects: require.js
+  # and jQuery are pinned by Quarto 1.10.19, plotly.js by the plotly Python
+  # package (7.1.0 -> plotly.js 4.1.1), MathJax by plotly.
+  - name: requirejs
+    version: 2.3.6
+    license: MIT
+    files:
+      - url: https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js
+        path: requirejs/require.min.js
+        sha256: "08820fe928391c47d804d54b5ee8f07f7c1eda5df6ab5da99c3c32b494563962"
+  - name: jquery
+    version: 3.5.1
+    license: MIT
+    files:
+      - url: https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js
+        path: jquery/jquery.min.js
+        sha256: "f7f6a5894f1d19ddad6fa392b2ece2c5e578cbf7da4ea805b6885eb6985b6e3d"
+  - name: plotly.js-dist-min
+    version: 4.1.1
+    license: MIT
+    files:
+      - url: https://cdn.jsdelivr.net/npm/plotly.js-dist-min@4.1.1/plotly.min.js
+        path: plotly.js-dist-min/plotly.min.js
+        sha256: "3b6e15d45dbb7fca5bd2094291e961ddc5472cd887009e6009a56dab668d721f"
+        aliases:
+          - https://cdn.plot.ly/plotly-4.1.1.min.js
+          - https://cdn.plot.ly/plotly-4.1.1.min
+  - name: mathjax
+    version: 3.2.2
+    license: Apache-2.0
+    files:
+      - url: https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.min.js
+        path: mathjax/es5/tex-svg.min.js
+        sha256: "e45390b63c8ddf5041426bd3b027f58b2a6049adfb37c9fef0aca7f359a05318"
+        aliases:
+          - https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js

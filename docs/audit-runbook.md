@@ -310,7 +310,12 @@ uv run scripts/find_gaps.py --ncinfo $R/ncinfo_<tree> --out $R/gaps_<tree>
 uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product bran2020 \
     --include-disabled --ncinfo $R/ncinfo_ocean_reanalysis --ncinfo $R/ncinfo_cmems \
     --ncinfo $R/ncinfo_prism --out catalog/next
-uv run scripts/check_catalog.py --catalog catalog/next/whoi_bran2020.json --sample-datasets 10
+uv run scripts/check_catalog.py --catalog catalog/next/whoi_bran2020.json --sample-datasets 10 \
+    --previous catalog/live/whoi_bran2020.json --products manifests/catalogs.yaml \
+    --report $R/check_bran2020.json
+# 6. promote next -> live (dry run first; refuses without a passing report)
+uv run scripts/promote_catalog.py --name whoi_bran2020 --report $R/check_bran2020.json
+uv run scripts/promote_catalog.py --name whoi_bran2020 --report $R/check_bran2020.json --execute
 #    Slurm: NCINFO=$R/ncinfo_ocean_reanalysis:$R/ncinfo_cmems:$R/ncinfo_prism,
 #    PRODUCT=bran2020, INCLUDE_DISABLED=1 (slurm/build_catalog.sbatch)
 uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product era5 --out catalog/next

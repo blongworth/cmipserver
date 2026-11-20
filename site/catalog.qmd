@@ -23,6 +23,15 @@ not exist in another. The CMIP6 catalog is the one in the table above.
 
 ```{ojs}
 //| echo: false
+//| output: false
+// Served from site/vendor/ (see vendor/vendor.yml) instead of jsDelivr.
+vendor = (p) => new URL(`vendor/${p}`, document.baseURI).href
+htl = require(vendor("htl/htl.min.js"))
+html = htl.html
+```
+
+```{ojs}
+//| echo: false
 catalogStats = FileAttachment("data/catalog_stats.json").json()
 catalogConfig = FileAttachment("data/site_config.json").json()
 catalogDir = catalogConfig.catalog_path.replace(/[^/]*$/, "")
