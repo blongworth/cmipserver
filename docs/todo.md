@@ -76,14 +76,21 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
 - [ ] Repair proposals: move the complete nested ECCO `THETA_1992.nc` over
   the truncated one; quarantine HYCOM `1999/1992/` stray file.
 
-- [ ] **Build the store vocabulary on HPC** (code written 2026-11-23;
-  `docs/audit-runbook.md` 8b): run `slurm/scan_var_attrs.sbatch` and
-  `slurm/build_vocab.sbatch` over the live catalogs, review the report
-  (ERA5 parameters matched, units differences, undefined variables), promote
-  `whoi_cmip_vocabulary.csv` to `live`, then rebuild the site. Not yet run on
-  real files (the store was not mounted when it was written). If ERA5
-  variables fail to match the ECMWF database, add explicit parameter ids to
-  `manifests/products/era5.yaml` (not implemented).
+- [x] **Build the store vocabulary on HPC** (live 2026-11-23;
+  `docs/audit-runbook.md` 8b). All ERA5 variables matched the ECMWF
+  database: by long name, `GRIB_paramId`, short name, or the
+  `p<param>.<table>` names of GRIB1 parameters with no short name
+  (`p71.162` = 162071), so no parameter ids are needed in `era5.yaml`.
+- [ ] **Vocabulary in the build pipeline.** For now it is a by-hand step of
+  catalog promotion (`docs/audit-runbook.md` 8, "Promoting a catalog").
+  Make it part of the pipeline: run the vocabulary scan and build after each
+  catalog build (`slurm/scan_var_attrs.sbatch` then
+  `slurm/build_vocab.sbatch`, chained with `--dependency=afterok`), have
+  `promote_catalog.py` promote the vocabulary with the catalogs, and fail
+  promotion if `check_catalog.py --vocabulary` does not pass.
+- [ ] Vocabulary `nc_check`: optionally treat equivalent unit spellings
+  (`psu` = `0.001`, `K` = `degK`) as a match, so only real unit differences
+  are reported.
 - [ ] **Vocabulary phase 2: concepts across products.** A curated
   `manifests/vocab/concepts.yaml` (label, synonyms, match rules on
   `standard_name` plus level, e.g. "sea surface temperature" =

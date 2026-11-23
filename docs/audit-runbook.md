@@ -195,6 +195,37 @@ uv run scripts/check_catalog.py --catalog $R/catalog/whoi_cmip6.json --report $R
 uv run scripts/summarize_catalog.py --catalog $R/catalog/whoi_cmip6.csv --out site/data
 ```
 
+### Promoting a catalog to `live` (by hand)
+
+Until `scripts/promote_catalog.py` exists (`docs/deploy-plan.md`), after
+`check_catalog.py` passes:
+
+1. Copy each file to a hidden temp name in `live`, then rename: CSV and
+   `_invalid.parquet` first, JSON last.
+2. Rebuild the store vocabulary (8b): `slurm/scan_var_attrs.sbatch` for the
+   promoted catalog (only new variables are opened), then
+   `slurm/build_vocab.sbatch`. Review the report and promote
+   `whoi_cmip_vocabulary.csv` the same way. Skip only if the catalog gained
+   no new variables. Without it the new variables have no definition on the
+   site (`summarize_catalog.py` prints "N datasets have no vocabulary entry").
+3. Rebuild the site: `sbatch slurm/build_site.sbatch`.
+
+```bash
+L=/proj/cmip6/catalog/live; C=whoi_era5; S=catalog/next
+for f in $C.csv ${C}_invalid.parquet $C.json; do
+  cp $S/$f $L/.$f.tmp && mv $L/.$f.tmp $L/$f; done
+i=$(uv run scripts/enabled_catalogs.py | grep -nx $C | cut -d: -f1)
+J=$(sbatch --parsable --array=$((i - 1)) --export=ALL,OUT=$PWD/runs/vocab \
+    slurm/scan_var_attrs.sbatch)
+sbatch --dependency=afterok:$J \
+    --export=ALL,VAR_ATTRS=$PWD/runs/vocab,OUT=$PWD/runs/$(date +%F)_vocab \
+    slurm/build_vocab.sbatch
+# review runs/<date>_vocab/whoi_cmip_vocabulary_report.json, then
+V=runs/$(date +%F)_vocab/whoi_cmip_vocabulary.csv
+cp $V $L/.whoi_cmip_vocabulary.csv.tmp && mv $L/.whoi_cmip_vocabulary.csv.tmp $L/whoi_cmip_vocabulary.csv
+sbatch slurm/build_site.sbatch
+```
+
 ## 8b. Store vocabulary
 
 `whoi_cmip_vocabulary.csv` defines every catalogued variable (long name, CF
@@ -226,7 +257,9 @@ Review `runs/<date>_vocab/whoi_cmip_vocabulary_report.json`. Its lists:
 
 - `undefined`: no long name or standard name.
 - `nc_check`: files whose units differ from the official definition.
-- `ecmwf_unmatched`: ERA5 variables not found in the ECMWF database.
+- `ecmwf_unmatched`: ERA5 variables not found in the ECMWF database
+  (matched by `GRIB_paramId`, a `p<param>.<table>` name, long name, then
+  short name; `ecmwf_matched_by` counts each).
 - `unknown_standard_names`: standard names not in the CF table.
 - `attr_conflicts`: a variable's attributes differ between its sampled files.
 - `scan_errors`: sampled files that did not open.
@@ -234,7 +267,7 @@ Review `runs/<date>_vocab/whoi_cmip_vocabulary_report.json`. Its lists:
 Nothing is fixed; record real problems in `docs/audit-findings.md`. Then
 promote by hand like a catalog (copy to a hidden temp name in `live`, then
 rename). `slurm/build_site.sbatch` picks it up from `live`. Rebuild it after
-promoting a catalog with new variables. `check_catalog.py --vocabulary
+promoting a catalog with new variables (section 8, "Promoting a catalog"). `check_catalog.py --vocabulary
 <csv>` checks one catalog is covered.
 
 ## Adding a reanalysis product
