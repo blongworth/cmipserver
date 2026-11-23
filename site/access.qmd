@@ -32,6 +32,16 @@ The directory layout is the same as on the cluster.
 ::: {.callout-tip}
 Many people reading the same files over SMB at once has caused errors in the
 past. For heavy or parallel reads, work on the cluster instead.
+
+If opening a file fails with `NetCDF: HDF error`, turn off HDF5 file locking
+before importing xarray or netCDF4:
+
+```python
+import os
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+```
+
+or set `export HDF5_USE_FILE_LOCKING=FALSE` in your shell.
 :::
 
 ## HTTPS download
