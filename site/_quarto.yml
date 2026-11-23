@@ -21,6 +21,8 @@ website:
     left:
       - href: browse.qmd
         text: Browse
+      - href: variables.qmd
+        text: Variables
       - href: holdings.qmd
         text: Holdings
       - text: Data Access

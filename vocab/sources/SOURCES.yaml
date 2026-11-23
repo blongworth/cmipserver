@@ -1,0 +1,19 @@
+# Snapshots of the official vocabularies (scripts/fetch_vocab_sources.py).
+cf-standard-names:
+  fetched: '2026-11-23'
+  file: cf_standard_names.csv
+  rows: 5697
+  url: https://cfconventions.org/Data/cf-standard-names/95/src/cf-standard-name-table.xml
+  version: '95'
+cmip6-cmor-tables:
+  fetched: '2026-11-23'
+  file: cmip6_cmor_tables.csv
+  rows: 2062
+  url: https://github.com/PCMDI/cmip6-cmor-tables/archive/refs/tags/6.9.33.tar.gz
+  version: 6.9.33
+ecmwf-param-db:
+  fetched: '2026-11-23'
+  file: ecmwf_params.csv
+  rows: 8403
+  url: https://codes.ecmwf.int/parameter-database/api/v1/param/
+  version: '2026-11-23'

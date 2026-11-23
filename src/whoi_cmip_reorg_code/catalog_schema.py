@@ -112,3 +112,39 @@ SUMMARY_SCHEMA = {
 # Default data root; the catalog's ``path`` column starts with this. Notebooks
 # and the site swap it for another prefix (HTTPS, a local copy).
 DEFAULT_DATA_ROOT = "/proj/cmip6/data"
+
+# Store vocabulary, one row per catalogued variable: whoi_cmip_vocabulary.csv,
+# shipped next to the catalogs (``vocab.py``). Keys match catalog rows:
+# CMIP6 rows have ``table_id`` (``product`` and ``level`` null), the rest have
+# ``product`` and maybe ``level``. ``variable_id`` is as in the catalog (may be
+# ``thetao,so,zos``); ``nc_name`` is one NetCDF variable in those files.
+VOCAB_KEYS = (
+    "catalog",
+    "collection",
+    "product",
+    "table_id",
+    "level",
+    "variable_id",
+    "nc_name",
+)
+VOCAB_SCHEMA = {
+    **{k: pl.String for k in VOCAB_KEYS},
+    "long_name": pl.String,
+    "standard_name": pl.String,
+    "units": pl.String,
+    "description": pl.String,
+    "cell_methods": pl.String,
+    "dimensions": pl.String,
+    "realm": pl.String,
+    "cf_description": pl.String,
+    # cmip6-cmor-tables | ecmwf-param-db | netcdf
+    "source": pl.String,
+    "source_version": pl.String,
+    # official definition vs the sampled file: match | units_differ |
+    # missing_in_file | not_checked; null for netcdf rows (the file is the
+    # source). Reported, never fixed.
+    "nc_check": pl.String,
+    # sampled file, relative to the data root
+    "sample_path": pl.String,
+}
+VOCAB_NAME = "whoi_cmip_vocabulary"

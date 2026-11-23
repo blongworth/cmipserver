@@ -35,6 +35,13 @@ for c in $cats; do
   args+=(--catalog "$L/whoi_$c.csv")
 done
 [[ ${#args[@]} -gt 0 ]] || { echo "no catalogs" >&2; exit 1; }
+# store vocabulary (slurm/build_vocab.sbatch, promoted by hand): the site's
+# variable search and Variables page; without it they are empty
+if [[ -f $L/whoi_cmip_vocabulary.csv ]]; then
+  args+=(--vocab "$L/whoi_cmip_vocabulary.csv")
+else
+  echo "no $L/whoi_cmip_vocabulary.csv: building without variable definitions" >&2
+fi
 echo "catalogs: $cats"
 uv run scripts/summarize_catalog.py "${args[@]}" --products manifests/catalogs.yaml --out site/data
 uv run quarto render site

@@ -6,9 +6,43 @@ toc: false
 
 ```{ojs}
 //| echo: false
-summary = FileAttachment("data/catalog_summary.json").json()
+summaryRaw = FileAttachment("data/catalog_summary.json").json()
+// Store vocabulary (whoi_cmip_vocabulary.csv) for the variables in the summary.
+variables = FileAttachment("data/variables.json").json()
 config = FileAttachment("data/site_config.json").json()
 stats = FileAttachment("data/catalog_stats.json").json()
+```
+
+```{ojs}
+//| echo: false
+//| output: false
+// Join the vocabulary to datasets (same key as summarize_catalog.VOCAB_JOIN_KEYS).
+// long_name and var_tip are shown in the table; var_text is only searched,
+// with "-" and "_" as spaces so "surface" finds "Near-Surface" and
+// "sea_surface_temperature".
+vocabKey = (d) => ["collection", "product", "table_id", "level", "variable_id"]
+  .map((k) => d[k] ?? "").join("|")
+summary = {
+  const byKey = new Map();
+  for (const v of variables) {
+    const k = vocabKey(v);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(v);
+  }
+  return summaryRaw.map((d) => {
+    const vs = byKey.get(vocabKey(d)) ?? [];
+    return {
+      ...d,
+      long_name: vs.map((v) => v.long_name).filter(Boolean).join("; ") || null,
+      var_tip: vs.map((v) => [
+        `${v.nc_name}: ${v.long_name ?? "(no long name)"}${v.units ? ` [${v.units}]` : ""}`,
+        v.standard_name ? `standard name: ${v.standard_name}` : null
+      ].filter(Boolean).join("\n")).join("\n\n") || null,
+      var_text: vs.flatMap((v) => [v.long_name, v.standard_name])
+        .filter(Boolean).join(" ").replace(/[-_]/g, " ") || null
+    };
+  });
+}
 ```
 
 ```{ojs}
@@ -58,7 +92,9 @@ html`<p>Catalog <strong>${config.catalog_version}</strong>: ${stats.n_datasets.t
 ${stats.n_files.toLocaleString()} files, ${stats.size_tb.toLocaleString()} TB.
 Filter with the boxes on the left, then pick rows in the table. The
 <strong>Get data</strong> panel uses the rows you pick, or every matching dataset if you
-pick none. Products not in the catalog are listed on
+pick none. The search box also matches variable descriptions (long and
+standard names); every catalogued variable is defined on
+<a href="variables.html">Variables</a>. Products not in the catalog are listed on
 <a href="holdings.html#other-holdings">Other holdings</a>.
 ${config.catalog_version === "sample" ? html`<strong>This is a preview catalog: datasets from a synthetic sample are not real.</strong>` : ""}</p>
 <p class="small text-body-secondary">Data sources: ${stats.catalogs.map((c, i) => html`${i ? "; " : ""}<code>${c.name}</code> (${c.n_datasets.toLocaleString()} datasets${c.synthetic ? html`, <strong>synthetic sample</strong>` : ""})`)}.</p>`
@@ -215,7 +251,7 @@ updateCounts = {
 //| echo: false
 viewof searchBox = Inputs.search(summary, {
   query: urlState.q,
-  placeholder: "Search within results (any column)",
+  placeholder: "Search within results, e.g. surface temperature",
   label: "Search",
   width: 380,
   format: () => ""
@@ -282,7 +318,14 @@ viewof selected = {
       col("table_id", "table"),
       col("frequency", "freq"),
       col("level", "level"),
-      col("variable_id", "variable"),
+      col("variable_id", "variable", {
+        tooltip: (e, cell) => cell.getRow().getData().var_tip ?? ""
+      }),
+      col("long_name", "long name", {
+        maxWidth: 260,
+        formatter: (cell) => cell.getValue() ?? "—",
+        tooltip: (e, cell) => cell.getRow().getData().var_tip ?? ""
+      }),
       col("grid_label", "grid"),
       col("version", "version"),
       col("n_files", "files", {hozAlign: "right", sorter: "number"}),

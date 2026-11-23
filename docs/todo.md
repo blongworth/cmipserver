@@ -76,6 +76,22 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
 - [ ] Repair proposals: move the complete nested ECCO `THETA_1992.nc` over
   the truncated one; quarantine HYCOM `1999/1992/` stray file.
 
+- [ ] **Build the store vocabulary on HPC** (code written 2026-11-23;
+  `docs/audit-runbook.md` 8b): run `slurm/scan_var_attrs.sbatch` and
+  `slurm/build_vocab.sbatch` over the live catalogs, review the report
+  (ERA5 parameters matched, units differences, undefined variables), promote
+  `whoi_cmip_vocabulary.csv` to `live`, then rebuild the site. Not yet run on
+  real files (the store was not mounted when it was written). If ERA5
+  variables fail to match the ECMWF database, add explicit parameter ids to
+  `manifests/products/era5.yaml` (not implemented).
+- [ ] **Vocabulary phase 2: concepts across products.** A curated
+  `manifests/vocab/concepts.yaml` (label, synonyms, match rules on
+  `standard_name` plus level, e.g. "sea surface temperature" =
+  `sea_surface_temperature`, or `sea_water_potential_temperature` at the top
+  level), a `whoi_cmip_concepts.csv` next to the vocabulary, and a concept
+  picker on the site, so one search leads to the matching variable in each
+  product.
+
 ## Data updates (needs a plan)
 
 Found 2026-11-18: the plans cover a one-time fill and catalog rebuilds, not

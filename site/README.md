@@ -9,6 +9,7 @@ Static site for `cmip.whoi.edu`. Plan: `../docs/static-site-plan.md`.
 # from the repo root
 L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
 uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data
+# add --vocab $L/whoi_cmip_vocabulary.csv once the vocabulary is in live
 uv run quarto render site      # or: uv run quarto preview site
 ```
 
@@ -16,7 +17,9 @@ uv run quarto render site      # or: uv run quarto preview site
   placeholders. The pre-render step copies the browser's settings into
   `data/site_config.json`.
 - `data/` is generated and not committed: the catalog summary from
-  `summarize_catalog.py` (above) and `site_config.json` from the pre-render
+  `summarize_catalog.py` (above; `variables.json`, the store vocabulary for
+  the Variables page and the browser's search, is empty without `--vocab`)
+  and `site_config.json` from the pre-render
   step. The exception is `holdings.json` (Other holdings page), which comes
   from an occasional inventory scan via `summarize_other.py` and is committed. For a quick preview without
   the store, build it from the test fixtures:

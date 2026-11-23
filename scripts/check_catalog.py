@@ -4,7 +4,9 @@ Checks: columns/types match CATALOG_SCHEMA, paths unique, key columns not
 null, a sample of paths exists, intake-esm opens the catalog and
 to_dataset_dict() loads a few sample datasets (a dataset that opens only
 with ``normalize_cds`` passes, and the detail says so), and the dataset count did not
-drop more than --max-drop vs the last good catalog (--previous).
+drop more than --max-drop vs the last good catalog (--previous). With
+--vocabulary, every variable key of the catalog has a row in the store
+vocabulary (whoi_cmip_vocabulary.csv, scripts/build_vocab.py).
 
 With --products (catalogs.yaml), datasets open with the product's
 ``open_kwargs`` (HYCOM drops ``tau``; ECCO V5 latlon needs
@@ -29,8 +31,9 @@ from pathlib import Path
 
 import polars as pl
 
-from whoi_cmip_reorg_code.catalog_schema import CATALOG_SCHEMA
+from whoi_cmip_reorg_code.catalog_schema import CATALOG_SCHEMA, VOCAB_SCHEMA
 from whoi_cmip_reorg_code.manifest import CatalogsManifest, load
+from whoi_cmip_reorg_code.vocab import catalog_keys, missing_keys
 
 # Sample datasets are opened read-only. HDF5 file locking fails on VAST/NFS and
 # makes good files fail to open. Must be set before HDF5 loads (lazy imports).
@@ -109,9 +112,11 @@ def run_checks(
     seed: int = 0,
     datasets: list[str] | None = None,
     open_kwargs: dict | None = None,
+    vocabulary: Path | None = None,
 ) -> list[dict]:
     """``open_kwargs``: extra ``xarray_open_kwargs`` (the product's
-    ``open_kwargs`` in catalogs.yaml)."""
+    ``open_kwargs`` in catalogs.yaml). ``vocabulary``: store vocabulary CSV
+    that must cover the catalog."""
     rng = random.Random(seed)
     xr_kw = {"use_cftime": True, **(open_kwargs or {})}
     if xr_kw.get("decode_times") is False:
@@ -159,6 +164,16 @@ def run_checks(
         )
     else:
         add("dataset_count_vs_previous", True, f"no previous; {n_ds} datasets")
+
+    if vocabulary is not None:
+        voc = pl.read_csv(vocabulary, schema=VOCAB_SCHEMA)
+        miss = missing_keys(catalog_keys(_csv(catalog).stem, df), voc)
+        add(
+            "vocabulary_covers",
+            miss.height == 0,
+            f"{miss.height} variable keys not in {vocabulary.name}; "
+            f"e.g. {miss.head(3).to_dicts()}",
+        )
 
     import dask
     import intake
@@ -222,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
         help="catalogs.yaml: open datasets with the product's open_kwargs "
         "(product found by its output name = the catalog JSON stem)",
     )
+    ap.add_argument(
+        "--vocabulary", help="whoi_cmip_vocabulary.csv that must cover the catalog"
+    )
     ap.add_argument("--report", help="write results JSON here")
     args = ap.parse_args(argv)
 
@@ -242,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
         args.seed,
         args.dataset,
         open_kwargs,
+        Path(args.vocabulary) if args.vocabulary else None,
     )
     for r in res:
         print(f"{'PASS' if r['ok'] else 'FAIL'} {r['check']}: {r['detail']}")

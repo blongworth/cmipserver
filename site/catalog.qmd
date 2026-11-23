@@ -72,6 +72,29 @@ Datasets are grouped by `master_id` and `version`, so a dataset key looks like
 [browser](browse.qmd) uses the same keys, so you can paste them into
 `cat[key]`.
 
+## Variables {#variables}
+
+`whoi_cmip_vocabulary.csv`, next to the catalogs, defines every catalogued
+variable: long name, CF standard name, units and description. One row is one
+variable of one catalog (and, for CMIP6, one table), with the name used
+inside the files (`nc_name`; ERA5 `t2m` for `2m_temperature`). Definitions
+come from the official vocabulary (CMIP6 data request, ECMWF parameter
+database) or else from the files (column `source`). The
+[Variables](variables.qmd) page shows the same list.
+
+Find variables by description or standard name, then search the catalog:
+
+```python
+import pandas as pd
+
+voc = pd.read_csv("{{< var catalog_dir >}}whoi_cmip_vocabulary.csv")
+hits = voc[voc["standard_name"].eq("sea_surface_temperature")]
+hits[["catalog", "table_id", "product", "variable_id", "long_name", "units"]]
+
+# then, in the catalog that holds them, e.g. CMIP6 Omon tos
+sub = cat.search(table_id="Omon", variable_id="tos")
+```
+
 ## Using it without VAST access
 
 The `path` column holds VAST paths. If you read the files another way,

@@ -1,0 +1,109 @@
+---
+title: "Variables"
+page-layout: full
+toc: false
+---
+
+Every variable in the catalogued products, with its definition. Search by
+description ("surface temperature", "salinity"), CF standard name, or
+variable name. **Datasets** opens the [browser](browse.qmd) filtered to that
+variable.
+
+Definitions come from the product's official vocabulary where there is one,
+and otherwise from the attributes in the NetCDF files (column *source*):
+
+- **cmip6-cmor-tables**: CMIP6 variables, from the CMIP6 data request
+  ([CMOR tables](https://github.com/PCMDI/cmip6-cmor-tables)), per table
+  (`Amon`, `Omon`, ...).
+- **ecmwf-param-db**: ERA5, from the
+  [ECMWF parameter database](https://codes.ecmwf.int/grib/param-db/). The
+  catalog's variable is the Copernicus download name (`2m_temperature`); the
+  name inside the files is the ECMWF short name (`t2m`).
+- **netcdf**: the `long_name`, `standard_name` and `units` attributes in the
+  files (20CRv3, GLORYS, BRAN, SODA, HYCOM, ECCO, ...).
+
+Standard names follow the
+[CF standard name table](https://cfconventions.org/Data/cf-standard-names/current/build/cf-standard-name-table.html),
+the best way to find the same quantity in different products. One product can
+use the same standard name at several levels (2 m air temperature and air
+temperature on pressure levels are both `air_temperature`), so check the
+level or table too.
+
+```{ojs}
+//| echo: false
+//| output: false
+vendor = (p) => new URL(`vendor/${p}`, document.baseURI).href
+htl = require(vendor("htl/htl.min.js"))
+html = htl.html
+Inputs = require.alias({"htl@0.3.1/dist/htl.min.js": vendor("htl/htl.min.js")})(
+  vendor("@observablehq/inputs/inputs.min.js")
+)
+variables = FileAttachment("data/variables.json").json()
+config = FileAttachment("data/site_config.json").json()
+rows = variables.map((v) => ({
+  ...v,
+  where: v.collection === "cmip6"
+    ? `CMIP6 ${v.table_id}`
+    : `${v.product}${v.level ? ` (${v.level})` : ""}`,
+  // searched only: "-" and "_" as spaces (see browse.qmd)
+  text: [v.long_name, v.standard_name, v.description]
+    .filter(Boolean).join(" ").replace(/[-_]/g, " "),
+  browse: browseUrl(v)
+}))
+browseUrl = (v) => {
+  const p = new URLSearchParams();
+  for (const k of ["collection", "product", "table_id", "level", "variable_id"]) {
+    if (v[k] != null) p.append(k, v[k]);
+  }
+  return `browse.html?${p}`;
+}
+```
+
+```{ojs}
+//| echo: false
+variables.length === 0
+  ? html`<div class="alert alert-warning">The variable list is not available in this build.</div>`
+  : html`<span></span>`
+```
+
+```{ojs}
+//| echo: false
+viewof found = Inputs.search(rows, {
+  placeholder: "e.g. surface temperature",
+  label: "Search",
+  columns: ["where", "variable_id", "nc_name", "text"],
+  width: 380
+})
+```
+
+```{ojs}
+//| echo: false
+Inputs.table(found, {
+  columns: [
+    "where", "variable_id", "nc_name", "long_name", "standard_name", "units",
+    "description", "source", "browse"
+  ],
+  header: {
+    where: "product / table", variable_id: "variable", nc_name: "in file",
+    long_name: "long name", standard_name: "standard name", browse: ""
+  },
+  format: {
+    description: (d) => d == null ? "" : html`<span title=${d}>${d}</span>`,
+    source: (d, i, data) => html`<span title=${data[i].source_version ?? ""}>${d ?? "—"}</span>`,
+    browse: (d) => html`<a href=${d}>Datasets</a>`
+  },
+  width: {description: 320, long_name: 240, standard_name: 220},
+  rows: 25,
+  select: false,
+  layout: "auto"
+})
+```
+
+```{ojs}
+//| echo: false
+html`<p class="small text-body-secondary">The full list (all columns, including
+the file each definition was checked against) is
+<code>${config.catalog_path.replace(/[^/]*$/, "")}whoi_cmip_vocabulary.csv</code>,
+next to the catalogs. See <a href="catalog.html#variables">Catalog</a> for how
+to use it with intake-esm.</p>`
+```

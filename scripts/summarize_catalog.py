@@ -17,6 +17,11 @@ Only reads the catalogs; writes to --out:
                               page), catalogued, path, years, caveats,
                               open_kwargs
                               (holdings page)
+    variables.json            store vocabulary rows (--vocab,
+                              whoi_cmip_vocabulary.csv) for the variables in
+                              the summary (SITE_VOCAB_COLS); the browser joins
+                              them to datasets by VOCAB_JOIN_KEYS. Empty list
+                              without --vocab
 
 ``relative_path`` is the dataset directory relative to --root (for non-CMIP6
 products split into year dirs, the directory that holds them all). The
@@ -43,6 +48,7 @@ from whoi_cmip_reorg_code.catalog_schema import (
     DATASET_KEYS,
     DEFAULT_DATA_ROOT,
     SUMMARY_SCHEMA,
+    VOCAB_SCHEMA,
     dataset_id_expr,
 )
 from whoi_cmip_reorg_code.manifest import CatalogsManifest, ProductManifest, load
@@ -50,6 +56,19 @@ from whoi_cmip_reorg_code.manifest import CatalogsManifest, ProductManifest, loa
 GB = 1e9
 # Catalog names (CSV stem, which is also the descriptor id) of synthetic catalogs.
 SYNTHETIC_CATALOGS = {"sample_catalog"}
+# Vocabulary key shared with the summary (no catalog: the summary has none).
+VOCAB_JOIN_KEYS = ["collection", "product", "table_id", "level", "variable_id"]
+SITE_VOCAB_COLS = [
+    *VOCAB_JOIN_KEYS,
+    "nc_name",
+    "long_name",
+    "standard_name",
+    "units",
+    "description",
+    "realm",
+    "source",
+    "source_version",
+]
 
 
 def shard_expr() -> pl.Expr:
@@ -190,6 +209,22 @@ def product_info(
     return out
 
 
+def site_vocabulary(vocab: pl.DataFrame, ds: pl.DataFrame) -> pl.DataFrame:
+    """Vocabulary rows for the variables in the summary ``ds``, with only
+    the columns the site uses."""
+    return (
+        vocab.join(
+            ds.select(VOCAB_JOIN_KEYS).unique(),
+            on=VOCAB_JOIN_KEYS,
+            how="semi",
+            nulls_equal=True,
+        )
+        .select(SITE_VOCAB_COLS)
+        .unique(maintain_order=True)
+        .sort(SITE_VOCAB_COLS[:6], nulls_last=True)
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
@@ -203,6 +238,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--parquet", action="store_true", help="also write parquet")
     ap.add_argument(
         "--products", help="catalogs.yaml: write products.json for the dataset page"
+    )
+    ap.add_argument(
+        "--vocab", help="whoi_cmip_vocabulary.csv: write variables.json for the site"
     )
     args = ap.parse_args(argv)
 
@@ -277,6 +315,13 @@ def main(argv: list[str] | None = None) -> int:
         (out / "products.json").write_text(
             json.dumps(product_info(args.products, args.root), indent=2) + "\n"
         )
+    voc = pl.DataFrame(schema={c: VOCAB_SCHEMA[c] for c in SITE_VOCAB_COLS})
+    if args.vocab:
+        voc = site_vocabulary(pl.read_csv(args.vocab, schema=VOCAB_SCHEMA), ds)
+        n_none = ds.join(voc, on=VOCAB_JOIN_KEYS, how="anti", nulls_equal=True).height
+        if n_none:
+            print(f"{n_none} datasets have no vocabulary entry", file=sys.stderr)
+    voc.write_json(out / "variables.json")
     print(json.dumps(stats), file=sys.stderr)
     return 0
 

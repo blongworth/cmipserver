@@ -11,6 +11,9 @@ Code for reorganizing and cataloguing the WHOI CMIP6 holdings on VAST
   Hosting and nightly build: `docs/deploy-plan.md` (proposal).
 - Audit: `docs/audit-runbook.md` (HPC steps, rollout ladder);
   `docs/audit-findings.md` (what the audit found, open decisions).
+- Store vocabulary (`whoi_cmip_vocabulary.csv`, variable definitions next to
+  the catalogs): `vocab.py`, `vocab_sources.py`, snapshots in `vocab/sources/`;
+  steps in `docs/audit-runbook.md` 8b.
 - Open items: `docs/todo.md`.
 
 ## Project
@@ -69,6 +72,7 @@ uv sync --all-groups
 uv run ruff check && uv run ruff format --check && uv run pytest
 L=/proj/cmip6/catalog/live   # ~/mnt/cmip6/catalog/live on a mac with the mount
 uv run scripts/summarize_catalog.py --catalog $L/whoi_cmip6.csv --catalog $L/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data
+# add --vocab $L/whoi_cmip_vocabulary.csv once the vocabulary is in live
 # non-CMIP6 products (era5, glorys12v1, bran2020, ...; docs/audit-runbook.md
 # "Non-CMIP6 trees"): add --catalog $L/whoi_<output>.csv for each one enabled
 # in manifests/catalogs.yaml. site/data/holdings.json (Other holdings page)

@@ -230,6 +230,41 @@ def _data_vars(ds) -> list[str]:
     return cands
 
 
+# Variable attributes read for the store vocabulary (vocab.py): name in the
+# result -> attributes tried, in order. ``var_desc`` is NOAA PSL (20CRv3).
+VAR_ATTRS = {
+    "long_name": ("long_name",),
+    "standard_name": ("standard_name",),
+    "units": ("units",),
+    "description": ("comment", "description", "var_desc"),
+    "cell_methods": ("cell_methods",),
+    "grib_param_id": ("GRIB_paramId",),
+}
+
+
+def var_attrs(ds, names: list[str] | None = None) -> list[dict]:
+    """Describing attributes of each data variable (``names``, else
+    ``_data_vars``): ``nc_name``, ``dimensions`` (space-separated) and the
+    ``VAR_ATTRS`` keys, as strings (None if absent). Values are not
+    changed."""
+    out = []
+    for n in names if names is not None else _data_vars(ds):
+        if n not in ds.variables:
+            continue
+        v = ds.variables[n]
+        row = {"nc_name": n, "dimensions": " ".join(v.dimensions)}
+        for key, attrs in VAR_ATTRS.items():
+            val = None
+            for a in attrs:
+                got = getattr(v, a, None)
+                if got is not None and str(got).strip():
+                    val = str(got).strip()[:ATTR_MAX_CHARS]
+                    break
+            row[key] = val
+        out.append(row)
+    return out
+
+
 def _attr_str(ds, name: str) -> str | None:
     v = getattr(ds, name, None)
     if v is None:

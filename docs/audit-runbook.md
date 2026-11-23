@@ -195,6 +195,48 @@ uv run scripts/check_catalog.py --catalog $R/catalog/whoi_cmip6.json --report $R
 uv run scripts/summarize_catalog.py --catalog $R/catalog/whoi_cmip6.csv --out site/data
 ```
 
+## 8b. Store vocabulary
+
+`whoi_cmip_vocabulary.csv` defines every catalogued variable (long name, CF
+standard name, units, description). It ships next to the catalogs in
+`catalog/live` (`src/whoi_cmip_reorg_code/vocab.py`). Definitions come from
+the official vocabulary where there is one (CMIP6 CMOR tables, ECMWF
+parameter database), else from the NetCDF attributes of one sampled file per
+variable key. The official vocabularies are committed snapshots in
+`vocab/sources/` (`SOURCES.yaml`: URL, version, fetch date), so HPC needs no
+network.
+
+```bash
+# refresh the snapshots (needs network; not on HPC). Dry run, then --write;
+# commit vocab/sources/ and note the versions in the commit message
+uv run scripts/fetch_vocab_sources.py
+uv run scripts/fetch_vocab_sources.py --write   # --cmor-tag 6.9.33 --cf-version 95
+
+# headers of one file per variable key, one array task per live catalog.
+# Keep runs/vocab between runs: only new variables are opened.
+N=$(uv run scripts/enabled_catalogs.py | wc -l)
+J=$(sbatch --parsable --array=0-$((N - 1)) --export=ALL,OUT=$PWD/runs/vocab \
+    slurm/scan_var_attrs.sbatch)
+sbatch --dependency=afterok:$J \
+    --export=ALL,VAR_ATTRS=$PWD/runs/vocab,OUT=$PWD/runs/$(date +%F)_vocab \
+    slurm/build_vocab.sbatch
+```
+
+Review `runs/<date>_vocab/whoi_cmip_vocabulary_report.json`. Its lists:
+
+- `undefined`: no long name or standard name.
+- `nc_check`: files whose units differ from the official definition.
+- `ecmwf_unmatched`: ERA5 variables not found in the ECMWF database.
+- `unknown_standard_names`: standard names not in the CF table.
+- `attr_conflicts`: a variable's attributes differ between its sampled files.
+- `scan_errors`: sampled files that did not open.
+
+Nothing is fixed; record real problems in `docs/audit-findings.md`. Then
+promote by hand like a catalog (copy to a hidden temp name in `live`, then
+rename). `slurm/build_site.sbatch` picks it up from `live`. Rebuild it after
+promoting a catalog with new variables. `check_catalog.py --vocabulary
+<csv>` checks one catalog is covered.
+
 ## Adding a reanalysis product
 
 A product is a YAML manifest, `manifests/products/<product>.yaml` (what to
