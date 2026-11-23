@@ -55,6 +55,7 @@ ECMWF_PARAMS = [
     },
     {"id": 300128, "name": "2 metre temperature", "shortname": "tp2m", "unit_id": 2},
     {"id": 34, "name": "Sea surface temperature", "shortname": "sst", "unit_id": 2},
+    {"id": 235, "name": "Skin temperature", "shortname": "skt", "unit_id": 2},
     {"id": 999, "name": "Old thing", "shortname": "old", "unit_id": 2, "retired": True},
 ]
 CF_XML = """<?xml version="1.0"?>
@@ -108,7 +109,7 @@ def test_cmor_rows():
 
 def test_ecmwf_rows_strip_html_and_skip_retired():
     rows = vs.ecmwf_rows(ECMWF_PARAMS, {2: "K"})
-    assert [r["param_id"] for r in rows] == [167, 300128, 34]
+    assert [r["param_id"] for r in rows] == [167, 300128, 34, 235]
     assert rows[0]["description"] == "Air temperature at 2m. See here."
     assert rows[0]["units"] == "K"
 
@@ -198,6 +199,10 @@ def store(tmp_path):
                 "units": "1e-3",
             },
         },
+        # no GRIB_paramId, long_name not in the database: found by short name
+        "era5/skin_temperature/2000-01-01_skin_temperature.nc": {
+            "skt": {"long_name": "Skin temp", "units": "K"}
+        },
     }
     for rel, dv in files.items():
         _nc(data / rel, dv)
@@ -233,7 +238,11 @@ def store(tmp_path):
             level="sfc",
             variable_id=v,
         )
-        for i, v in [(2, "2m_temperature"), (3, "sea_surface_temperature")]
+        for i, v in [
+            (2, "2m_temperature"),
+            (3, "sea_surface_temperature"),
+            (6, "skin_temperature"),
+        ]
     ]
     c20 = [
         _row(
@@ -315,7 +324,13 @@ def test_build_vocabulary(store, sources):
     assert t2m["nc_check"] == "match"
     sst = by["whoi_era5", "sea_surface_temperature", "sst"]
     assert sst["long_name"] == "Sea surface temperature"  # by GRIB_paramId
-    assert rep["ecmwf_matched_by"] == {"long_name": 1, "GRIB_paramId": 1}
+    skt = by["whoi_era5", "skin_temperature", "skt"]
+    assert skt["long_name"] == "Skin temperature"
+    assert rep["ecmwf_matched_by"] == {
+        "long_name": 1,
+        "GRIB_paramId": 1,
+        "short name": 1,
+    }
 
     air = by["whoi_20crv3", "air", "air"]
     assert air["source"] == "netcdf"
@@ -381,9 +396,9 @@ def test_scripts_end_to_end(store, sources, capsys):
     )
     assert rc == 0
     voc = pl.read_csv(out / "whoi_cmip_vocabulary.csv", schema=VOCAB_SCHEMA)
-    assert voc.height == 8
+    assert voc.height == 9
     rep = json.loads((out / "whoi_cmip_vocabulary_report.json").read_text())
-    assert rep["counts"]["rows"] == 8
+    assert rep["counts"]["rows"] == 9
     assert rep["catalogs"] == list(store["cats"])
 
     # site: only the variables of the summarized catalogs

@@ -156,7 +156,7 @@ def _ecmwf_lookup(ecmwf: pl.DataFrame):
         if r["shortname"]:
             by_short.setdefault(r["shortname"], r)
 
-    def find(nc: dict) -> tuple[dict | None, str | None]:
+    def find(nc_name: str, nc: dict) -> tuple[dict | None, str | None]:
         pid = nc.get("grib_param_id")
         if pid is not None:
             try:
@@ -167,7 +167,7 @@ def _ecmwf_lookup(ecmwf: pl.DataFrame):
         ln = (nc.get("long_name") or "").lower()
         if ln and (r := by_name.get(ln)) is not None:
             return r, "long_name"
-        if (r := by_short.get(nc["nc_name"])) is not None:
+        if (r := by_short.get(nc_name)) is not None:
             return r, "short name"
         return None, None
 
@@ -330,7 +330,7 @@ def build_vocabulary(
                         "source_version": version("cmip6-cmor-tables"),
                     }
             elif k["product"] in ECMWF_PRODUCTS and nc:
-                p, how = ecmwf(nc)
+                p, how = ecmwf(n, nc)
                 if p is not None:
                     matched_by[how] += 1
                     official = {
