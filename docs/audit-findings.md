@@ -17,11 +17,13 @@ action planned), **resolved**.
 on the store was moved, renamed or deleted.
 
 **Size.** 286.55 TB (apparent) and 1,346,890 `.nc` under `/proj/cmip6/data`.
-The 5 enabled catalogs (`cmip6`, `20crv3`, `era5`, `glorys12v1`, `soda3122`)
-hold 1,209,289 files, 211.90 TB. About 70 TB of `.nc` is not cataloged (most
-of it is listed on the site), and 3.6 TB is non-`.nc`. Disk and catalogs
-agree exactly apart from each catalog's invalid list. CMIP5 adds 18 TB
-outside `data/`.
+13 catalogs are enabled and in `catalog/live` (2026-11-20). The first 5
+(`cmip6`, `20crv3`, `era5`, `glorys12v1`, `soda3122`) hold 1,209,289 files
+(211.90 TB). The 8 added on 2026-11-20 hold 111,853 files in 34 datasets
+(about 70 TB by the X4 sizes), for 1,321,142 files in all. Not cataloged:
+PRISM, ORAS5 and cfsr932 (listed on the site), `emu`, and each catalog's
+invalid list. 3.6 TB is non-`.nc`. Disk and catalogs agree exactly apart
+from each catalog's invalid list. CMIP5 adds 18 TB outside `data/`.
 
 **Health.**
 - CMIP6: 717,672 of 732,134 files (98.0%) read `ok`. The 14,462 empty files
@@ -41,6 +43,10 @@ outside `data/`.
   one or two ocean products and list the rest.
 - 2026-11-15: catalog ERA5, GLORYS12V1 daily and SODA 3.12.2; catalog ERA5's
   1hr daily files, leaving out the 2023-2025 yearly copies.
+- 2026-11-18: catalog the remaining NetCDF products with the generic builder,
+  ECCOv5 included (alpha, labeled as such); keep PRISM listed.
+- 2026-11-20: 8 more catalogs built, checked and enabled (see "Non-CMIP6
+  catalogs").
 
 **Main open items.**
 - CMIP6 version mapping (numeric `1` dirs; bare-date dirs to rename?).
@@ -50,8 +56,10 @@ outside `data/`.
 - Site docs for users: synchronous dask scheduler, locking off, `use_cftime`.
 - Cleanup proposals (quarantines, duplicates, stray files) and the owner
   questions, both waiting on approval.
-- Unsettled products: ORAS5 archives, cfsr932, ECCOv5 alpha, the CMIP5 tree;
-  rebuild cadence for non-CMIP6 catalogs.
+- Unsettled products: ORAS5 archives, cfsr932, the CMIP5 tree; rebuild
+  cadence for non-CMIP6 catalogs.
+- HYCOM and ECCOv5 open only with xarray options (`open_kwargs`); the site
+  dataset pages show them, not yet checked in a browser.
 
 ## Store layout
 
@@ -289,23 +297,59 @@ catalog in place, no moves; anything below that implies a move is a
 | `ocean_reanalysis/ORAS5/oras5/monthly/oras5` | decide | ORAS5 as yearly `.tar.gz` archives (opa0-4), a few extracted `.nc` |
 | `ocean_reanalysis/bran2020` | catalog | BRAN2020 daily (north/south halves) and monthly |
 | `ocean_reanalysis/sodav3122` | catalog | SODA 3.12.2, 5-day and monthly, regridded and native |
-| `ocean_reanalysis/HYCOMvGOFS30`, `HYCOMvGOFS31` | catalog | HYCOM reanalysis daily snapshots, regional subset |
-| `ocean_reanalysis/ECCOv5` | catalog (decide: alpha) | ECCO v5 alpha, lat-lon and nctiles |
+| `ocean_reanalysis/HYCOMvGOFS30`, `HYCOMvGOFS31` | catalog | HYCOM reanalysis daily snapshots, global and NW Atlantic subset |
+| `ocean_reanalysis/ECCOv5` | catalog | ECCO v5 alpha, lat-lon and nctiles |
 | `ocean_reanalysis/cfsr932` | decide | CFSR (ds093.2) GRIB converted to `.grb2.nc`, `.gz`, wget scripts, `good/new/old` dirs |
 | `ocean_reanalysis/emu` | exclude | EMU (ECCO Modeling Utilities) install: software, container, inputs |
 | `ocean_reanalysis/NWA_downscaling` | exclude | empty |
-| `prism/netcdf` | catalog | PRISM monthly precipitation, decadal NetCDF 1895-2019 |
+| `prism/netcdf` | listed | PRISM monthly precipitation, decadal NetCDF 1895-2019 (no coordinates; see PRISM) |
 | `prism/bil` | exclude (source) | the PRISM `.bil.zip` the NetCDF was made from |
 | `.DS_Store`, `._*` | exclude | macOS litter |
 
-Every `catalog` entry is in `manifests/catalogs.yaml`, disabled until its HPC
-`check_nc` and `check_catalog.py` pass. Decision (2026-11-13): catalog ERA5
-plus one or two ocean products and list the rest. Chosen 2026-11-15: ERA5,
-GLORYS12V1 daily (1 dataset, 11,681 files) and SODA 3.12.2 (3 datasets, 5,586
-files), all enabled, 0 invalid, `check_catalog.py` passing. Every disabled
-product and the `listed:` entries (`oras5` archives, `cfsr932`) are on the
-Other holdings page (`site/holdings.qmd`) with path, years, caveats and
-citation. Check/rebuild cadence per product is undecided.
+Every `catalog` entry is in `manifests/catalogs.yaml` and enabled
+(2026-11-20). Decision (2026-11-13): catalog ERA5 plus one or two ocean
+products and list the rest. Chosen 2026-11-15: ERA5, GLORYS12V1 daily (1
+dataset, 11,681 files) and SODA 3.12.2 (3 datasets, 5,586 files), all
+enabled, 0 invalid, `check_catalog.py` passing. Extended 2026-11-18 to every
+NetCDF product (see "Non-CMIP6 catalogs"). The disabled `prism` and the
+`listed:` entries (`oras5` archives, `cfsr932`) are on the Other holdings
+page (`site/holdings.qmd`) with path, years, caveats and citation.
+Check/rebuild cadence per product is undecided.
+
+### Non-CMIP6 catalogs (built 2026-11-20)
+Generic builder (`catalog/generic.py`) from the X4 ncinfo, built and checked
+on hydra (`build_catalog.sbatch` with `INCLUDE_DISABLED=1`, then
+`check_catalog.py --sample-datasets 10 --products manifests/catalogs.yaml`),
+promoted to `catalog/live` and enabled. For every product, catalog + invalid
+equals the X4 `.nc` count, and the only invalid reasons are damaged
+(`nc_status`) or a manifest `exclude`.
+
+| Catalog | Files | Datasets | Invalid | X4 `.nc` | Invalid are |
+|---|---:|---:|---:|---:|---|
+| `glorys12v1_statics` | 3 | 3 | 0 | 3 | |
+| `glorys12v1_monthly` | 373 | 1 | 36 | 409 | `_(1).nc` copies |
+| `grep_monthly` | 27 | 1 | 0 | 27 of ORAS5's 135 | |
+| `grep_daily` | 5,711 | 1 | 12 | 5,723 | truncated |
+| `bran2020` | 64,639 | 14 | 3 | 64,642 | wrong-time files |
+| `hycom_gofs30` | 9,367 | 3 | 16 | 9,383 | 15 empty, the `1999/1992/` stray copy |
+| `hycom_gofs31` | 20,937 | 4 | 371 | 21,308 | 363 GOFS 3.0 copies, 8 damaged |
+| `eccov5` | 10,796 | 7 | 2 | 10,798 | truncated `THETA_1992.nc`, its nested copy |
+| **Total** | **111,853** | **34** | **440** | | |
+
+- Opening datasets: `check_catalog.py` opened sampled datasets in every
+  catalog, and all 14 BRAN2020 datasets in a Slurm array. HYCOM needs
+  `drop_variables: [tau]` and ECCOv5 needs `decode_times: false`
+  (`open_kwargs` in `catalogs.yaml`; upstream file issues, see HYCOM and
+  ECCOv5). `check_catalog.py --products` applies them, and the site dataset
+  pages print them for users.
+- Regression: `glorys12v1` and `soda3122` rebuilt with the new code are
+  identical to `live`.
+- Tooling added for these (2026-11-18 to 20): manifest `exclude` (to the
+  invalid list with a reason), `time_dim`, `start`/`end` path rules for
+  `time_range`, `open_kwargs`, repeated `--ncinfo`, `--include-disabled`,
+  and a build error when one `master_id` spans two directories (it found
+  the HYCOM and ECCOv5 strays below).
+- PRISM was tried and stays listed (see PRISM).
 
 ### X4 inventory (scan, 2026-11-14)
 `summarize_other.py --depth era5=3 --depth cmems=2`. `.nc` files and TB
@@ -448,13 +492,14 @@ the incomplete files were re-fetched and the old ones set aside; nothing in the
 quarantine is needed. Proposal: delete after the owner confirms. Outside the
 catalog root.
 
-### GLORYS12V1 (open)
+### GLORYS12V1 (cataloged; open: duplicates)
 - **Monthly: 36 duplicate `_(1).nc` files.** 2019-2021 each have 24 files,
   `mercatorglorys12v1_gl12_mean_YYYYMM.nc` and `..._(1).nc`. Two pairs compared
   with `cmp` (2019-01, 2019-06): byte-identical, 1.29 GB each; the `(1)` copies
   are older (2023-11-19 vs 2024-01-22). ~46 GB. They show as `duplicate` in the
   gap check. Proposal: quarantine the `(1)` copies after a full checksum pass on
-  HPC. 2024 has only January.
+  HPC. 2024 has only January. The `glorys12v1_monthly` catalog lists the
+  copies as invalid (`exclude`).
 - **Daily: naming and product change.** 1993-2019
   `mercatorglorys12v1_gl12_mean_YYYYMMDD_RYYYYMMDD.nc`; from 2020
   `cmems_mod_glo_phy_my_0.083deg_P1D-m_..._YYYY-MM-DD.nc`; from mid-2021
@@ -465,7 +510,7 @@ catalog root.
   GLOBAL_(MULTIYEAR|REANALYSIS)_PHY_001_030), same grid and variables. Not
   duplicates.
 
-### GREP (open)
+### GREP (cataloged; open: gaps)
 - **Daily** (`CMEMS_ENSAMBLE/daily`): 4 members x 6 variables per file
   (`*_cglo`, `*_foam`, `*_glor`, `*_oras`), so `variable_id` is long;
   1993-01-01 to 2011-06-01. Besides the 12 truncated files, whole runs are
@@ -485,7 +530,7 @@ few extracted `.nc` (e.g. `votemper/opa0`, `sossheig/opa0`,
 archives; `ORCA025/vomecrtn` has no `opa0`). Decide: extract (where?) or leave
 as archives and list without a catalog.
 
-### BRAN2020 (open)
+### BRAN2020 (cataloged 2026-11-20; open: re-fetch)
 - **3 daily files with the wrong time** (headers read `ok`; units `days since
   1979-01-01`):
 
@@ -496,7 +541,8 @@ as archives and list without a catalog.
   | `2003/bran2020_daily_north_temp_2003_229.nc` | 2003-08-17 | 1982-01-20T07:31:13.83 |
 
   Fractional-second garbage suggests corrupted bytes, so the data is suspect
-  too (not deep-read). Proposal: re-fetch from NCI; exclude them meanwhile.
+  too (not deep-read). Proposal: re-fetch from NCI. The catalog excludes
+  them meanwhile.
 - One file per variable (`eta_t`, `salt`, `temp`, `u`, `v`); daily files come in
   `north`/`south` halves (rules set `level`), which explains the ~7,000
   `duplicate`s per variable.
@@ -505,7 +551,7 @@ as archives and list without a catalog.
 - Time is `ocean_time` (no `axis`/`standard_name`; `ncinfo` finds it by
   units). `lat` units are `"tcell latitude"` (not CF).
 
-### HYCOM (open; listed, not cataloged)
+### HYCOM (cataloged 2026-11-20; open: repairs)
 - GOFS 3.0 (`GLBu0.08` expts 190/191, 1992-2012) and 3.1 (`GLBv0.08_53x`,
   1994-2015). The 3.1 files seen are a NW Atlantic subset (30-60N,
   85.04-40W); 3.1 also has `hycom_bottomtempsaltssh_*` files (NETCDF3) and
@@ -534,7 +580,8 @@ as archives and list without a catalog.
   'analysis'`: the `tau` variable's units are `hours since analysis`) and
   GOFS 3.1 `global/` (cause not reported; same file format, so probably
   the same). Fix: `open_kwargs: {drop_variables: [tau]}` for both products
-  (users pass it as `xarray_open_kwargs`); to confirm on HPC.
+  (users pass it as `xarray_open_kwargs`); with it, both catalogs pass
+  `check_catalog.py` (HPC 2026-11-20).
   **Upstream, not local** (checked 2026-11-20): the files are NAVO's own
   (`institution: Naval Oceanographic Office`, `history: archv2ncdf3z`) and
   `tau` carries a NAVO variable code; NOAA ERDDAP lists HYCOM `tau` as
@@ -542,7 +589,7 @@ as archives and list without a catalog.
   error and drops `tau`. The GOFS 3.1 NW Atlantic files were cut from
   HYCOM's THREDDS server (Netcdf-Java CFGridWriter2, 2021) and have no `tau`.
 
-### ECCOv5 (open)
+### ECCOv5 (cataloged 2026-11-20, alpha; open: THETA_1992 repair, origin)
 - **`Version5/Alpha/nctiles_monthly/THETA/THETA_1992.nc` is truncated**:
   366,788,608 B of the 2,274,498,300 B its HDF5 superblock gives (16%). The
   other `THETA_*.nc` are exactly 2,274,498,300 B, dated 2020-10-06; this one is
@@ -562,7 +609,7 @@ as archives and list without a catalog.
   to 312; daily SSH 0.5 to 9496.5, which are days under month units). With
   `decode_times=False` the files join on the raw values:
   `open_kwargs: {decode_times: false}` (the nctiles then stay undecoded
-  too). Origin not confirmed (2026-11-20): no public upstream description of
+  too); with it, the catalog passes `check_catalog.py` (HPC 2026-11-20). Origin not confirmed (2026-11-20): no public upstream description of
   the V5 Alpha latlon files was found (ECCO Drive needs an Earthdata login).
   Likely upstream: the files carry no WHOI history, only `description: ECCO
   LLC270 monthly average`, and have the same owner and 2021 dates as the
@@ -663,8 +710,9 @@ Draft questions (not sent):
    of the data tree (proposal)?
 8. (owner of `ECCOv5/.../THETA/THETA_1992.nc`) The file was rewritten on
    2021-06-16 and is truncated (367 MB of 2.27 GB; the other years date from
-   2020-10-06). Was it replaced on purpose, and from which source can it be
-   fetched again?
+   2020-10-06). Was it replaced on purpose? A complete copy sits nested at
+   `nctiles_monthly/THETA/Version5/Alpha/nctiles_monthly/THETA/`; OK to move
+   it into place?
 9. License and citation for each product (drafts in `manifests/catalogs.yaml`,
    marked FILL IN / CONFIRM).
 
@@ -683,5 +731,6 @@ Draft questions (not sent):
 | X3 | `era5/{quarantine_*,download-scripts,_root_files}` (laptop: stat scans, quarantine headers + sha256); `ocean_reanalysis/{emu,cfsr932,ECCOv5,ORAS5}`, `prism/bil` (hydra, one task each) | 28 + 19,387 `.nc` | 19,386 ok, 1 truncated | quarantine reason found; 0 scan errors; entries / TB: emu 198,731 / 1.129, ORAS5 3,144 / 2.511, ECCOv5 10,810 / 0.417, cfsr932 8,509 / 0.354, bil 625 / 0.003; truncated: `THETA_1992.nc` |
 | X4 scan | `era5`, `ocean_reanalysis`, `cmems`, `prism` (hydra arrays; era5 split by product) | 614,746 `.nc`, ~124.5 TB | 614,710 ok, 17 truncated, 19 empty | see X4 inventory, damaged files and header gap check |
 | DU | `/proj/cmip6/data`, 26 shards (`du_shard.sh`, job 358247, %16) | 1,346,890 `.nc` + 194,947 other | n/a | 266,870.6 GiB apparent; catalog vs disk differences equal the invalid lists; split rerun 358301 identical |
+| X catalogs | 8 generic products (hydra, one Slurm task each; BRAN2020 open check as an array), 2026-11-20 | 111,853 cataloged + 440 invalid | n/a | 34 datasets; counts equal X4; builds 4-7 s each; see "Non-CMIP6 catalogs"; `glorys12v1`, `soda3122` rebuilds identical to `live` |
 
 In X2-X4, ncinfo rows equal the scan's `.nc` count.
