@@ -20,6 +20,7 @@ differences and gaps go to the build report.
 from __future__ import annotations
 
 import os
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -145,6 +146,11 @@ def _cmor_index(cmor: pl.DataFrame) -> tuple[dict, list]:
     return idx, amb
 
 
+# GRIB1 parameter with no short name, as converters name it: p<param>.<table>
+# (p71.162 is paramId 162071)
+_GRIB1_NAME = re.compile(r"p(\d{1,3})\.(\d{3})")
+
+
 def _ecmwf_lookup(ecmwf: pl.DataFrame):
     by_id: dict[int, dict] = {}
     by_name: dict[str, dict] = {}
@@ -164,6 +170,10 @@ def _ecmwf_lookup(ecmwf: pl.DataFrame):
                     return r, "GRIB_paramId"
             except ValueError:
                 pass
+        if (m := _GRIB1_NAME.fullmatch(nc_name)) is not None:
+            pid = int(m[2]) * 1000 + int(m[1])
+            if (r := by_id.get(pid)) is not None:
+                return r, "p<param>.<table> name"
         ln = (nc.get("long_name") or "").lower()
         if ln and (r := by_name.get(ln)) is not None:
             return r, "long_name"

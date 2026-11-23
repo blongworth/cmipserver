@@ -56,6 +56,12 @@ ECMWF_PARAMS = [
     {"id": 300128, "name": "2 metre temperature", "shortname": "tp2m", "unit_id": 2},
     {"id": 34, "name": "Sea surface temperature", "shortname": "sst", "unit_id": 2},
     {"id": 235, "name": "Skin temperature", "shortname": "skt", "unit_id": 2},
+    {
+        "id": 162071,
+        "name": "Total column vertically-integrated eastward water vapour flux",
+        "shortname": "viwve",
+        "unit_id": 2,
+    },
     {"id": 999, "name": "Old thing", "shortname": "old", "unit_id": 2, "retired": True},
 ]
 CF_XML = """<?xml version="1.0"?>
@@ -109,7 +115,7 @@ def test_cmor_rows():
 
 def test_ecmwf_rows_strip_html_and_skip_retired():
     rows = vs.ecmwf_rows(ECMWF_PARAMS, {2: "K"})
-    assert [r["param_id"] for r in rows] == [167, 300128, 34, 235]
+    assert [r["param_id"] for r in rows] == [167, 300128, 34, 235, 162071]
     assert rows[0]["description"] == "Air temperature at 2m. See here."
     assert rows[0]["units"] == "K"
 
@@ -203,6 +209,13 @@ def store(tmp_path):
         "era5/skin_temperature/2000-01-01_skin_temperature.nc": {
             "skt": {"long_name": "Skin temp", "units": "K"}
         },
+        # GRIB1 parameter with no short name: p<param>.<table>, old long name
+        "era5/vert-int/2000-01-01_vert-int.nc": {
+            "p71.162": {
+                "long_name": "Vertical integral of eastward water vapour flux",
+                "units": "kg m**-1 s**-1",
+            }
+        },
     }
     for rel, dv in files.items():
         _nc(data / rel, dv)
@@ -242,6 +255,7 @@ def store(tmp_path):
             (2, "2m_temperature"),
             (3, "sea_surface_temperature"),
             (6, "skin_temperature"),
+            (7, "vert-int"),
         ]
     ]
     c20 = [
@@ -330,7 +344,11 @@ def test_build_vocabulary(store, sources):
         "long_name": 1,
         "GRIB_paramId": 1,
         "short name": 1,
+        "p<param>.<table> name": 1,
     }
+    viwve = by["whoi_era5", "vert-int", "p71.162"]
+    assert viwve["long_name"].startswith("Total column vertically-integrated")
+    assert rep["ecmwf_unmatched"] == []
 
     air = by["whoi_20crv3", "air", "air"]
     assert air["source"] == "netcdf"
@@ -396,9 +414,9 @@ def test_scripts_end_to_end(store, sources, capsys):
     )
     assert rc == 0
     voc = pl.read_csv(out / "whoi_cmip_vocabulary.csv", schema=VOCAB_SCHEMA)
-    assert voc.height == 9
+    assert voc.height == 10
     rep = json.loads((out / "whoi_cmip_vocabulary_report.json").read_text())
-    assert rep["counts"]["rows"] == 9
+    assert rep["counts"]["rows"] == 10
     assert rep["catalogs"] == list(store["cats"])
 
     # site: only the variables of the summarized catalogs
