@@ -18,6 +18,11 @@
   ```
 
   Then regenerate `site/data` (see `site/README.md`).
+- `whoi_cmip_vocabulary.csv`: **hand-written** store vocabulary for the
+  variables in the two catalogs above (long names, CF standard names, units;
+  key columns as in `catalog_schema.VOCAB_SCHEMA`). Approximate, for site
+  previews and CI renders only (`summarize_catalog.py --vocab`); the real file
+  is built by `scripts/build_vocab.py` on HPC.
 - `20crv3_land.nc`: **real** 20CRv3 land-sea mask (`land`, 0 = water,
   1 = land, same 1° grid as the monthly means), downloaded 2026-11-11 from
   <https://downloads.psl.noaa.gov/Datasets/20thC_ReanV3/timeInvariantSI/land.nc>

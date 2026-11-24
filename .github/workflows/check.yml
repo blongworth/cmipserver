@@ -46,12 +46,20 @@ jobs:
           uv run scripts/summarize_catalog.py
           --catalog tests/fixtures/sample_catalog.csv
           --catalog tests/fixtures/whoi_20crv3.csv
-          --products manifests/catalogs.yaml --out site/data
+          --products manifests/catalogs.yaml
+          --vocab tests/fixtures/whoi_cmip_vocabulary.csv --out site/data
 
       # Notebooks are committed without outputs and need the store, so CI renders
       # without executing them.
       - name: Render site
         run: uv run quarto render site --no-execute
+
+      # The dataset browser in headless Chrome (preinstalled on the runner);
+      # skipped by the Test step above because the site is not rendered yet.
+      - name: Browser tests
+        run: uv run pytest tests/test_browse_page.py
+        env:
+          REQUIRE_BROWSER: "1"
 
       - name: Link check
         uses: lycheeverse/lychee-action@v2

@@ -112,6 +112,15 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   picker on the site, so one search leads to the matching variable in each
   product.
 
+- [x] **Browse page redesign** (2026-11-23): search box, collection chooser,
+  filter chips, checkbox facets with counts ordered by use (variables and CF
+  standard names from the store vocabulary; multi-variable datasets listed
+  per variable), picks kept across searches, sticky Get data bar. Plain JS
+  (`site/js/`), not OJS; same URLs, Python snippet and `urls.txt` as before
+  (compared on synthetic data). **Check after the next HPC render** with the
+  13 catalogs and `--vocab`: facet sizes, page load time, and that the
+  Variables page's "Datasets" links open the right datasets.
+
 ## Data updates (needs a plan)
 
 Found 2026-11-18: the plans cover a one-time fill and catalog rebuilds, not

@@ -23,9 +23,15 @@ uv run quarto render site      # or: uv run quarto preview site
   step. The exception is `holdings.json` (Other holdings page), which comes
   from an occasional inventory scan via `summarize_other.py` and is committed. For a quick preview without
   the store, build it from the test fixtures:
-  `uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --catalog tests/fixtures/whoi_20crv3.csv --products manifests/catalogs.yaml --out site/data`
-- `vendor/` holds pinned third-party JavaScript, CSS, and fonts (Tom Select,
-  Tabulator, Arquero, the OJS stdlib pieces the browser uses, and the cosmo
+  `uv run scripts/summarize_catalog.py --catalog tests/fixtures/sample_catalog.csv --catalog tests/fixtures/whoi_20crv3.csv --products manifests/catalogs.yaml --vocab tests/fixtures/whoi_cmip_vocabulary.csv --out site/data`
+- The dataset browser (`browse.qmd`) is a plain ES module, `js/browse.js`,
+  with shared helpers in `js/common.js` (no build step; the other interactive
+  pages are still OJS, see `docs/js-conversion-plan.md`). Its headless-Chrome
+  tests are `tests/test_browse_page.py`: they run against `_site/`, so render
+  first; without Chrome or a rendered site they are skipped (CI sets
+  `REQUIRE_BROWSER=1` so they cannot be).
+- `vendor/` holds pinned third-party JavaScript, CSS, and fonts (Tabulator for
+  the browser, the OJS stdlib pieces the other pages use, and the cosmo
   font), so pages load nothing from CDNs. `vendor/vendor.yml` lists each file
   with its version, source URL, and sha256. `uv run scripts/vendor_js.py`
   downloads and checks them; after bumping a version, run it with `--update`

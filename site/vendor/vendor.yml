@@ -4,16 +4,6 @@
 #   uv run scripts/vendor_js.py --update
 # and commit the downloaded files with the new hashes.
 packages:
-  - name: tom-select
-    version: 2.6.2
-    license: Apache-2.0
-    files:
-      - url: https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/js/tom-select.complete.min.js
-        path: tom-select/tom-select.complete.min.js
-        sha256: "8f9d7d3420e938c2c9817818b56df43ea46feae5bf1f5a2e828863c034df0e37"
-      - url: https://cdn.jsdelivr.net/npm/tom-select@2.6.2/dist/css/tom-select.default.min.css
-        path: tom-select/tom-select.default.min.css
-        sha256: "f1d39d120d83e42f08a4f0fbc33f99e92333079e05fecfecd3c22da37b8427c8"
   - name: tabulator-tables
     version: 6.7.1
     license: MIT
@@ -24,22 +14,8 @@ packages:
       - url: https://cdn.jsdelivr.net/npm/tabulator-tables@6.7.1/dist/css/tabulator_bootstrap5.min.css
         path: tabulator-tables/tabulator_bootstrap5.min.css
         sha256: "f1fe11a28e4f1a1ecd690b3ed32d8665534a7970b1c6a37d97a6dccc5537c437"
-  - name: arquero
-    version: 8.0.3
-    license: BSD-3-Clause
-    files:
-      - url: https://cdn.jsdelivr.net/npm/arquero@8.0.3/dist/arquero.min.js
-        path: arquero/arquero.min.js
-        sha256: "730a1a09201c8ef2420bd31a609b701e92d0f2f8c83b73bea211b81f70494aed"
   # Quarto's OJS runtime would otherwise load these from jsDelivr on first use.
   # Same versions as Quarto 1.10.19 pins (site_libs/quarto-ojs runtime).
-  - name: d3
-    version: 7.8.5
-    license: ISC
-    files:
-      - url: https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js
-        path: d3/d3.min.js
-        sha256: "d6b03aefc9f6c44c7bc78713679c78c295028fa914319119e5cc4b4954855b1c"
   - name: htl
     version: 0.3.1
     license: ISC

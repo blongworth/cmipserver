@@ -162,3 +162,151 @@ div.cell-output-display .btn-quarto.btn-outline-secondary {
   --bs-btn-hover-bg: #{$whoi-dark-blue};
   --bs-btn-hover-border-color: #{$whoi-dark-blue};
 }
+
+// ---- Browse page (site/js/browse.js) ----
+.browse-top {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+.browse-search {
+  font-size: 1.1rem;
+  padding: 0.55rem 0.8rem;
+  border: 2px solid $whoi-dark-blue;
+}
+.browse-collections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.browse-collections .btn .badge-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+  margin-left: 0.15rem;
+}
+.browse-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+}
+.browse-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.25rem 0.1rem 0.6rem;
+  background: $whoi-gray-10;
+  border-left: 3px solid $whoi-blue;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+  color: $whoi-dark-blue;
+}
+.browse-chip-x {
+  border: 0;
+  background: transparent;
+  color: $whoi-dark-blue;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.35rem;
+}
+.browse-chip-x:hover {
+  color: $whoi-coral;
+}
+.browse-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+@media (min-width: 992px) {
+  .browse-main {
+    grid-template-columns: 18rem minmax(0, 1fr);
+  }
+  .browse-facets {
+    position: sticky;
+    top: 4.5rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+}
+.browse-facets .facet,
+.browse-facets .facet-more-group {
+  border-bottom: 1px solid $whoi-gray-10;
+  padding: 0.45rem 0;
+}
+.browse-facets summary {
+  font-weight: 700;
+  color: $whoi-dark-blue;
+  cursor: pointer;
+}
+.browse-facets .facet-picked {
+  color: $whoi-blue;
+}
+.browse-facets .facet-filter {
+  margin: 0.35rem 0;
+}
+.facet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.3rem 0 0;
+}
+.facet-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.1rem 0;
+  font-size: 0.92rem;
+}
+.facet-list label {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.facet-list .facet-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: $whoi-gray-11;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.facet-list .facet-count {
+  font-variant-numeric: tabular-nums;
+  color: $whoi-gray-11;
+  font-size: 0.85rem;
+}
+.facet-list .facet-zero {
+  opacity: 0.5;
+}
+.browse-results-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.browse-results-head .dropdown-menu li {
+  white-space: nowrap;
+}
+.browse-table .tabulator-cell a {
+  white-space: nowrap;
+}
+// Sticky bar with the picked datasets and the way to Get data.
+.browse-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding: 0.6rem 1rem;
+  background: $whoi-dark-blue;
+  color: #ffffff;
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+.browse-bar-text {
+  margin-right: auto;
+}

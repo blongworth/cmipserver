@@ -1,8 +1,11 @@
 # Plan: replace the OJS pages with plain JavaScript modules
 
-Status: **proposal, 2026-11-20.** Not started. Do it after go-live is stable
-(about two weeks without site incidents), or earlier if Browse needs a large
-new feature.
+Status: **in progress.** Browse is done (2026-11-23, with the layout redesign:
+`site/js/common.js`, `site/js/browse.js`, `site/browse.qmd`; headless test
+`tests/test_browse_page.py`). Tom Select, Arquero and d3 were removed from
+`vendor/`. Still OJS: `dataset.qmd`, `holdings.qmd`, `index.qmd`,
+`catalog.qmd`, `variables.qmd`. Step 1 uses headless-Chrome probes (no new
+dependency), not Playwright.
 
 ## Why
 
