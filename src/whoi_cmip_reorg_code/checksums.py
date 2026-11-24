@@ -73,11 +73,15 @@ def select_candidates(
             .collect()
         )
     if sample_per_source > 0:
+        # healthy files only, ranked by rel_path so the sample does not depend
+        # on where the store is mounted
+        flagged = pl.concat([q.select("path") for q in parts]) if parts else None
+        healthy = files if flagged is None else files.join(flagged, "path", "anti")
         parts.append(
-            files.filter(pl.col("source_id").is_not_null())
+            healthy.filter(pl.col("source_id").is_not_null())
             .sort("path")
             .with_columns(
-                _r=pl.col("path").hash(seed).rank("ordinal").over("source_id")
+                _r=pl.col("rel_path").hash(seed).rank("ordinal").over("source_id")
             )
             .filter(pl.col("_r") <= sample_per_source)
             .select("path", reason=pl.lit("sample"))

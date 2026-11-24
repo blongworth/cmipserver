@@ -47,8 +47,9 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   (2026-11-20; rendered, not yet checked in a browser).
 - [ ] Optional: `check_nc.py --deep` (reads the last time step of every file)
   on the catalogued products.
-- [ ] Fix the flaky `tests/test_checksums.py::test_select_and_hash` (an
-  unseeded random sample sometimes adds `,sample` to the expected reason).
+- [x] Fix the flaky `tests/test_checksums.py::test_select_and_hash`
+  (2026-11-24: the sample now takes healthy files only, ranked by `rel_path`,
+  so it no longer depends on the mount point or pytest's temp dir).
 
 - [x] **Catalog the remaining generic products** (tooling done 2026-11-18:
   `exclude`, `time_dim`, `start`/`end` rules, repeated `--ncinfo`,
