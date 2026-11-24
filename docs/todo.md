@@ -101,6 +101,24 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   CSV. Keep CSV as the published default until users can be told a minimum
   intake-esm version; `summarize_catalog.py`, `check_catalog.py`,
   `build_vocab.py` and the docs read `.csv` today.
+- [ ] **`variable_id` as a list column for multi-variable products** (found
+  2026-11-24; GLORYS, GREP, HYCOM, SODA). The generic builder joins a file's
+  variables with `,` (`so,thetao,zos`). intake-esm takes that as one variable
+  name, so `search(variable_id="thetao")` finds nothing, a search on the
+  joined string or a pattern loads no variables, and a dataset of several
+  files loads its variables as coordinates (confirmed on HPC with
+  `whoi_glorys12v1_monthly`). Interim (2026-11-24): `check_catalog.py` fails
+  `data_vars` for these datasets, promoted with `promote_catalog.py
+  --accept-failed data_vars`; the Catalog page ("Several variables per
+  file"), the browse Python snippet and the dataset page give the
+  `reset_coords` workaround. Fix: write `variable_id` as a list and open with
+  `columns_with_iterables=["variable_id"]`. Tested on a synthetic catalog:
+  plain search and loading work with intake-esm 2025.7.9 or 2025.12.12 and
+  `polars<1.33` and `pandas<3`, not with polars 2 (`json_decode` needs a
+  dtype) or pandas 3 (`.str` accessor on list values). Wait for the release
+  in the Parquet item above (list columns are part of it), then switch, drop
+  the workarounds and the `--accept-failed`, and check whether the JSON can
+  carry `columns_with_iterables` so users need not pass it.
 - [ ] Vocabulary `nc_check`: optionally treat equivalent unit spellings
   (`psu` = `0.001`, `K` = `degK`) as a match, so only real unit differences
   are reported.
