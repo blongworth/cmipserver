@@ -88,6 +88,18 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   `slurm/build_vocab.sbatch`, chained with `--dependency=afterok`), have
   `promote_catalog.py` promote the vocabulary with the catalogs, and fail
   promotion if `check_catalog.py --vocabulary` does not pass.
+- [ ] **Parquet catalogs** (found 2026-11-23). intake-esm 2025.12.12 (current
+  on PyPI and conda-forge) opens a JSON whose `catalog_file` is `.parquet`;
+  writing Parquet and real list columns (`variable_id`) are merged upstream
+  (intake/intake-esm #797, #802) but not released. Blocker: 2025.12.12 pins
+  `polars<1.33`, so with our `polars>=2.0.0` uv resolves 2025.7.9 (CSV only),
+  and users on a recent polars can't open Parquet; the open refactor (#800)
+  moves to `polars>=1.34`. Plan: once a release lifts the cap, raise the
+  `intake-esm` pin, time CSV against Parquet on the sample catalog, and have
+  the build also write `whoi_<output>.parquet` plus its own JSON next to the
+  CSV. Keep CSV as the published default until users can be told a minimum
+  intake-esm version; `summarize_catalog.py`, `check_catalog.py`,
+  `build_vocab.py` and the docs read `.csv` today.
 - [ ] Vocabulary `nc_check`: optionally treat equivalent unit spellings
   (`psu` = `0.001`, `K` = `degK`) as a match, so only real unit differences
   are reported.
