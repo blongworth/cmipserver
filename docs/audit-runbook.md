@@ -195,25 +195,28 @@ uv run scripts/check_catalog.py --catalog $R/catalog/whoi_cmip6.json --report $R
 uv run scripts/summarize_catalog.py --catalog $R/catalog/whoi_cmip6.csv --out site/data
 ```
 
-### Promoting a catalog to `live` (by hand)
+### Promoting a catalog to `live`
 
-Until `scripts/promote_catalog.py` exists (`docs/deploy-plan.md`), after
-`check_catalog.py` passes:
+After `check_catalog.py --report` (section "Non-CMIP6 trees", steps 5-6):
 
-1. Copy each file to a hidden temp name in `live`, then rename: CSV and
-   `_invalid.parquet` first, JSON last.
-2. Rebuild the store vocabulary (8b): `slurm/scan_var_attrs.sbatch` for the
-   promoted catalog (only new variables are opened), then
-   `slurm/build_vocab.sbatch`. Review the report and promote
-   `whoi_cmip_vocabulary.csv` the same way. Skip only if the catalog gained
-   no new variables. Without it the new variables have no definition on the
-   site (`summarize_catalog.py` prints "N datasets have no vocabulary entry").
+1. `scripts/promote_catalog.py` (dry run, then `--execute`). It refuses
+   unless every check passed. Multi-variable products (GLORYS, GREP, HYCOM,
+   SODA) fail `data_vars` (variables load as coordinates; `docs/todo.md`):
+   promote them with `--accept-failed data_vars`, after checking that
+   `data_vars` is the only failure.
+2. Rebuild the store vocabulary (8b), by hand for now:
+   `slurm/scan_var_attrs.sbatch` for the promoted catalog (only new
+   variables are opened), then `slurm/build_vocab.sbatch`. Review the report
+   and promote `whoi_cmip_vocabulary.csv` (hidden temp name in `live`, then
+   rename). Skip only if the catalog gained no new variables. Without it the
+   new variables have no definition on the site (`summarize_catalog.py`
+   prints "N datasets have no vocabulary entry").
 3. Rebuild the site: `sbatch slurm/build_site.sbatch`.
 
 ```bash
-L=/proj/cmip6/catalog/live; C=whoi_era5; S=catalog/next
-for f in $C.csv ${C}_invalid.parquet $C.json; do
-  cp $S/$f $L/.$f.tmp && mv $L/.$f.tmp $L/$f; done
+L=/proj/cmip6/catalog/live; C=whoi_glorys12v1; REP=$R/check_glorys12v1.json
+uv run scripts/promote_catalog.py --name $C --report $REP --accept-failed data_vars
+uv run scripts/promote_catalog.py --name $C --report $REP --accept-failed data_vars --execute
 i=$(uv run scripts/enabled_catalogs.py | grep -nx $C | cut -d: -f1)
 J=$(sbatch --parsable --array=$((i - 1)) --export=ALL,OUT=$PWD/runs/vocab \
     slurm/scan_var_attrs.sbatch)
@@ -388,7 +391,8 @@ uv run scripts/build_catalog.py --manifest manifests/catalogs.yaml --product bra
 uv run scripts/check_catalog.py --catalog catalog/next/whoi_bran2020.json --sample-datasets 10 \
     --previous catalog/live/whoi_bran2020.json --products manifests/catalogs.yaml \
     --report $R/check_bran2020.json
-# 6. promote next -> live (dry run first; refuses without a passing report)
+# 6. promote next -> live (dry run first; refuses without a passing report;
+#    multi-variable products: add --accept-failed data_vars, section 8)
 uv run scripts/promote_catalog.py --name whoi_bran2020 --report $R/check_bran2020.json
 uv run scripts/promote_catalog.py --name whoi_bran2020 --report $R/check_bran2020.json --execute
 #    Slurm: NCINFO=$R/ncinfo_ocean_reanalysis:$R/ncinfo_cmems:$R/ncinfo_prism,

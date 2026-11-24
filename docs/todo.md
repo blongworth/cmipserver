@@ -102,6 +102,62 @@ approval, apply (`docs/audit-runbook.md`). Tick items off and date them.
   CSV. Keep CSV as the published default until users can be told a minimum
   intake-esm version; `summarize_catalog.py`, `check_catalog.py`,
   `build_vocab.py` and the docs read `.csv` today.
+- [ ] **`variable_id` as a list column for multi-variable products** (found
+  2026-11-24; GLORYS, GREP, HYCOM, SODA). The generic builder joins a file's
+  variables with `,` (`so,thetao,zos`). intake-esm takes that as one variable
+  name, so `search(variable_id="thetao")` finds nothing, a search on the
+  joined string or a pattern loads no variables, and a dataset of several
+  files loads its variables as coordinates (confirmed on HPC with
+  `whoi_glorys12v1_monthly`). Interim (2026-11-24): `check_catalog.py` fails
+  `data_vars` for these datasets, promoted with `promote_catalog.py
+  --accept-failed data_vars`; the Catalog page ("Several variables per
+  file"), the browse Python snippet and the dataset page give the
+  `reset_coords` workaround. Fix: write `variable_id` as a list and open with
+  `columns_with_iterables=["variable_id"]`. Tested on a synthetic catalog:
+  plain search and loading work with intake-esm 2025.7.9 or 2025.12.12 and
+  `polars<1.33` and `pandas<3`, not with polars 2 (`json_decode` needs a
+  dtype) or pandas 3 (`.str` accessor on list values). Wait for the release
+  in the Parquet item above (list columns are part of it), then switch, drop
+  the workarounds and the `--accept-failed`, and check whether the JSON can
+  carry `columns_with_iterables` so users need not pass it.
+
+  Tested 2026-11-24 on a synthetic catalog (one dataset of two files, each
+  holding `so`, `thetao`, `zos`):
+
+  - intake-esm `main` (GitHub `bf6f91e`, 2026-11-11; `polars>=1.34`, no upper
+    cap) with polars 2.1 and pandas 3.1: a Parquet catalog with a list column
+    works with no extra argument (detected from the Parquet type); a CSV of
+    lists works with `columns_with_iterables`. Search by product loads every
+    variable as a data variable; `variable_id="thetao"` loads only `thetao`.
+    Today's comma format stays broken on `main` too: the fix needs both the
+    new intake-esm and our list column.
+  - Older releases reading a list-column catalog:
+
+    | intake-esm | Parquet | CSV list + `columns_with_iterables` |
+    |---|---|---|
+    | 2025.7.9, polars 2, pandas 3 | fails to open | fails to open (`json_decode` needs a dtype) |
+    | 2025.12.12, polars 1.32, pandas 2 | works | works |
+    | 2025.12.12, polars 1.32, pandas 3 | opens; variable search errors | same |
+    | 2024.2.6, pandas 2 | fails to open (no Parquet support) | works |
+
+    A CSV of lists opened without `columns_with_iterables` behaves like
+    today's comma format on every version (no variables, no error).
+    2025.7.9 with polars 2 is the newest release pip or uv installs next to a
+    current polars, so it is probably the most common setup, and it opens
+    neither format.
+
+  Plan:
+  1. Don't tell users to install from GitHub. Wait for the release and make
+     it the documented minimum version.
+  2. Then publish Parquet (list column, no extra argument on the new
+     release) as the main catalog, and a CSV of lists with the documented
+     `columns_with_iterables` for pandas 2 environments.
+  3. Have `check_catalog.py` (and the Catalog page) name the minimum
+     intake-esm version, with a clear message on older ones, since 2025.7.9
+     with polars 2 fails with an obscure `json_decode` error.
+  4. Optional, before the release: pin the build and check environment to
+     the GitHub commit and pilot the list column on a real GLORYS catalog on
+     HPC, without changing what users get.
 - [ ] Vocabulary `nc_check`: optionally treat equivalent unit spellings
   (`psu` = `0.001`, `K` = `degK`) as a match, so only real unit differences
   are reported.

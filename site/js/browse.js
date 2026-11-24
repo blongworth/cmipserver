@@ -436,12 +436,28 @@ async function main() {
       : `\n# Outside VAST: read over HTTPS instead of ${config.vast_prefix}\n` +
         `cat.df["path"] = cat.df["path"].str.replace(\n` +
         `    "${config.vast_prefix}", "${config.https_prefix}", regex=False\n)\n`;
+    // Known issue (docs/todo.md): a dataset of several files that holds
+    // several variables (variable_id "so,thetao,zos") loads them as
+    // coordinates, so turn them back into data variables.
+    const multi = (rs) => rs.filter((d) => d.n_files > 1 && (d.variable_id ?? "").includes(","));
+    const fixMulti = (rs) => {
+      const ms = multi(rs);
+      if (!ms.length) return "";
+      return `
+# datasets with several variables load them as coordinates (catalog page:
+# "Several variables per file"); make them data variables again
+for k, names in {
+${ms.map((d) => `    "${d.dataset_id}": ${JSON.stringify(d.variable_id.split(",")).replace(/,/g, ", ")},`).join("\n")}
+}.items():
+    dsets[k] = dsets[k].reset_coords([n for n in names if n in dsets[k].coords])
+`;
+    };
     const block = (path, rs, load) => `cat = intake.open_esm_datastore("${path}")
 ${swap}
 keys = [
 ${rs.map((d) => `    "${d.dataset_id}",`).join("\n")}
 ]
-${load}`;
+${load}${fixMulti(rs)}`;
     const gs = groups(list.slice(0, MAX_SNIPPET), catalogDescriptor);
     if (gs.length === 1) {
       const [path, rs] = gs[0];

@@ -7,7 +7,9 @@ toc: false
 Every variable in the catalogued products, with its definition. Search by
 description ("surface temperature", "salinity"), CF standard name, or
 variable name. **Datasets** opens the [browser](browse.qmd) filtered to that
-variable.
+variable. Some products store several variables in each file; their rows
+show **+N more** after the name, and hovering over it lists the others
+([why it matters](catalog.qmd#multi-variable)).
 
 Definitions come from the product's official vocabulary where there is one,
 and otherwise from the attributes in the NetCDF files (column *source*):
@@ -40,16 +42,27 @@ Inputs = require.alias({"htl@0.3.1/dist/htl.min.js": vendor("htl/htl.min.js")})(
 )
 variables = FileAttachment("data/variables.json").json()
 config = FileAttachment("data/site_config.json").json()
-rows = variables.map((v) => ({
-  ...v,
-  where: v.collection === "cmip6"
-    ? `CMIP6 ${v.table_id}`
-    : `${v.product}${v.level ? ` (${v.level})` : ""}`,
-  // searched only: "-" and "_" as spaces (see browse.qmd)
-  text: [v.long_name, v.standard_name, v.description]
-    .filter(Boolean).join(" ").replace(/[-_]/g, " "),
-  browse: browseUrl(v)
-}))
+rows = variables.map((v) => {
+  // multi-variable files: variable_id lists all of them ("so,thetao,zos");
+  // show this row's own variable and list the others in a tooltip
+  const multi = (v.variable_id ?? "").includes(",");
+  const variable = multi ? v.nc_name : v.variable_id;
+  return {
+    ...v,
+    variable,
+    in_file: v.nc_name !== variable ? v.nc_name : null,
+    stored_with: multi
+      ? v.variable_id.split(",").filter((n) => n !== v.nc_name)
+      : [],
+    where: v.collection === "cmip6"
+      ? `CMIP6 ${v.table_id}`
+      : `${v.product}${v.level ? ` (${v.level})` : ""}`,
+    // searched only: "-" and "_" as spaces (see browse.qmd)
+    text: [v.long_name, v.standard_name, v.description]
+      .filter(Boolean).join(" ").replace(/[-_]/g, " "),
+    browse: browseUrl(v)
+  };
+})
 browseUrl = (v) => {
   const p = new URLSearchParams();
   for (const k of ["collection", "product", "table_id", "level", "variable_id"]) {
@@ -71,7 +84,7 @@ variables.length === 0
 viewof found = Inputs.search(rows, {
   placeholder: "e.g. surface temperature",
   label: "Search",
-  columns: ["where", "variable_id", "nc_name", "text"],
+  columns: ["where", "variable", "variable_id", "nc_name", "text"],
   width: 380
 })
 ```
@@ -80,14 +93,24 @@ viewof found = Inputs.search(rows, {
 //| echo: false
 Inputs.table(found, {
   columns: [
-    "where", "variable_id", "nc_name", "long_name", "standard_name", "units",
+    "where", "variable", "in_file", "long_name", "standard_name", "units",
     "description", "source", "browse"
   ],
   header: {
-    where: "product / table", variable_id: "variable", nc_name: "in file",
+    where: "product / table", in_file: "in file",
     long_name: "long name", standard_name: "standard name", browse: ""
   },
   format: {
+    // other variables in the same files: a visible "+N more" badge, names
+    // in its tooltip
+    variable: (d, i, data) => {
+      const w = data[i].stored_with;
+      return w.length
+        ? html`${d} <span class="badge rounded-pill text-bg-light border fw-normal"
+            title=${`Same files also hold: ${w.join(", ")}`}>+${w.length} more</span>`
+        : d;
+    },
+    in_file: (d) => d ?? "",
     description: (d) => d == null ? "" : html`<span title=${d}>${d}</span>`,
     source: (d, i, data) => html`<span title=${data[i].source_version ?? ""}>${d ?? "—"}</span>`,
     browse: (d) => html`<a href=${d}>Datasets</a>`

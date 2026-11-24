@@ -70,7 +70,7 @@ end to end.
 | `path` | Full path to the file under `{{< var vast_prefix >}}` |
 | `activity_id` ... `grid_label` | CMIP6 DRS facets (empty for other products) |
 | `product`, `frequency`, `level` | Product (`era5`, `20crv3`, `glorys12v1`, `soda3122`), frequency, and level (`2m`, `sfc`, `plev`, `reg`, ...); empty for CMIP6 |
-| `variable_id` | Variable name; for non-CMIP6 products, the variable's name inside the file (a dataset holding several variables joins them with `-`) |
+| `variable_id` | Variable name; for non-CMIP6 products, the variable's name inside the file. Files holding several variables list them all, sorted and joined with `,` (`so,thetao,zos`; the dataset key joins them with `-`); see [Several variables per file](#multi-variable) |
 | `version` | CMIP6: the version directory as stored here (`1`, `2`; not the ESGF `vYYYYMMDD` dates). Other products: the product version (`v3`, `12v1`, `3_12_2`, ...) |
 | `time_range` | Time range from the file name (often the file's year or date for non-CMIP6 products; empty when a single file covers the whole record) |
 | `size_bytes` | File size |
@@ -103,6 +103,41 @@ hits[["catalog", "table_id", "product", "variable_id", "long_name", "units"]]
 # then, in the catalog that holds them, e.g. CMIP6 Omon tos
 sub = cat.search(table_id="Omon", variable_id="tos")
 ```
+
+For products with several variables per file (GLORYS, SODA, HYCOM, GREP),
+don't search on `variable_id`; see the next section.
+
+## Several variables per file {#multi-variable}
+
+Most ocean reanalyses (GLORYS, GREP, HYCOM, SODA) store several variables in
+each file, and their `variable_id` lists all of them: `so,thetao,zos`. Until
+the catalogs store this as a list (it needs a newer intake-esm), two things
+behave differently from CMIP6:
+
+- `cat.search(variable_id="thetao")` finds nothing, and searching for the
+  whole `so,thetao,zos` or a pattern loads a dataset with **no variables**.
+  Search by `product`, `frequency` and `level` instead, or pick datasets by
+  `master_id`.
+- A dataset made of several files loads with its variables as
+  **coordinates**, not data variables. `ds["thetao"]` still works; to get
+  them back as data variables, use `reset_coords` with their names.
+
+```python
+cat = intake.open_esm_datastore("{{< var catalog_dir >}}whoi_glorys12v1_monthly.json")
+
+# datasets that hold thetao
+has = cat.df["variable_id"].str.split(",").map(lambda v: "thetao" in v)
+sub = cat.search(master_id=cat.df.loc[has, "master_id"].unique().tolist())
+
+dsets = sub.to_dataset_dict()
+for k, ds in dsets.items():
+    names = [n for n in sub[k].df["variable_id"].iloc[0].split(",") if n in ds.coords]
+    dsets[k] = ds.reset_coords(names)
+```
+
+Don't call `reset_coords()` without names: it also turns grid coordinates
+(2-D latitude and longitude) into data variables. The Python snippet on the
+[browser](browse.qmd) adds these lines for you.
 
 ## Using it without VAST access
 

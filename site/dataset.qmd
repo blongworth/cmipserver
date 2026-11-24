@@ -130,6 +130,21 @@ product === null || (!product.caveats && !product.open_kwargs)
 
 ```{ojs}
 //| echo: false
+// Known issue (docs/todo.md): several files x several variables loads the
+// variables as coordinates in intake-esm.
+multiVar = row !== null && row.n_files > 1 && (row.variable_id ?? "").includes(",")
+multiVar
+  ? html`<div class="alert alert-info small">This dataset holds several
+    variables. Loaded with intake-esm, they come back as coordinates:
+    use <code>ds["${row.variable_id.split(",")[0]}"]</code>, or
+    <code>ds.reset_coords([${row.variable_id.split(",").map((v) => `"${v}"`).join(", ")}])</code>.
+    Searching the catalog by <code>variable_id</code> does not work for it; see
+    <a href="catalog.html#multi-variable">Several variables per file</a>.</div>`
+  : html`<span></span>`
+```
+
+```{ojs}
+//| echo: false
 row === null
   ? html`<span></span>`
   : html`<h3>Files</h3>

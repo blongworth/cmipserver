@@ -3,8 +3,9 @@
 Dry run unless --execute. Refuses unless:
 - next holds <name>.csv, <name>_invalid.parquet and <name>.json, and the JSON's
   catalog_file is <name>.csv (relative, so it still works from live);
-- the check_catalog.py report (--report) exists, has every check passing, and
-  is newer than the files in next (so it checked this build);
+- the check_catalog.py report (--report) exists, has every check passing
+  (except checks named with --accept-failed, which are listed in the log),
+  and is newer than the files in next (so it checked this build);
 - the dataset count did not drop more than --max-drop against the catalog
   already in live (--allow-drop overrides, for a planned removal).
 
@@ -66,13 +67,23 @@ def check_next(next_dir: Path, name: str) -> list[Path]:
     return src
 
 
-def check_report(report: Path, src: list[Path]) -> None:
+def check_report(
+    report: Path, src: list[Path], accept_failed: tuple[str, ...] = ()
+) -> list[str]:
+    """Raise Refused unless the report passes; return the failures of
+    ``accept_failed`` checks (known issues, promoted anyway)."""
     if not report.is_file():
         raise Refused(f"no check report: {report}")
     results = json.loads(report.read_text())
     if not isinstance(results, list) or not results:
         raise Refused(f"{report}: not a check_catalog.py report")
-    failed = [f"{r['check']}: {r.get('detail', '')}" for r in results if not r["ok"]]
+
+    def line(r: dict) -> str:
+        return f"{r['check']}: {r.get('detail', '')}"
+
+    bad = [r for r in results if not r["ok"]]
+    failed = [line(r) for r in bad if r["check"] not in accept_failed]
+    accepted = [line(r) for r in bad if r["check"] in accept_failed]
     if failed:
         raise Refused(f"{report}: failed checks:\n  " + "\n  ".join(failed))
     names = {r["check"] for r in results}
@@ -82,6 +93,7 @@ def check_report(report: Path, src: list[Path]) -> None:
     newest = max(p.stat().st_mtime for p in src)
     if report.stat().st_mtime < newest:
         raise Refused(f"{report} is older than the catalog in next: re-run the check")
+    return accepted
 
 
 def compare_live(src: list[Path], dst: list[Path], max_drop: float) -> str:
@@ -112,12 +124,14 @@ def promote(
     live_dir: Path,
     max_drop: float = 0.05,
     execute: bool = False,
+    accept_failed: tuple[str, ...] = (),
 ) -> list[str]:
     """Return the log lines; raise Refused if any gate fails."""
     src = check_next(next_dir, name)
-    check_report(report, src)
+    accepted = check_report(report, src, accept_failed)
     dst = files(live_dir, name)
     log = [f"{name}: {compare_live(src, dst, max_drop)}; check report OK"]
+    log += [f"{name}: accepted failed check {a}" for a in accepted]
     same = [
         s.is_file() and d.is_file() and filecmp.cmp(s, d, shallow=False)
         for s, d in zip(src, dst, strict=True)
@@ -147,6 +161,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--allow-drop", action="store_true", help="skip the dataset-count gate"
     )
+    ap.add_argument(
+        "--accept-failed",
+        action="append",
+        default=[],
+        metavar="CHECK",
+        help="promote even if this check failed (repeat; a known issue, e.g. "
+        "data_vars for multi-variable catalogs until variable_id is a list)",
+    )
     ap.add_argument("--execute", action="store_true", help="copy (default: dry run)")
     args = ap.parse_args(argv)
     try:
@@ -157,6 +179,7 @@ def main(argv: list[str] | None = None) -> int:
             args.live_dir,
             1.0 if args.allow_drop else args.max_drop,
             args.execute,
+            tuple(args.accept_failed),
         )
     except Refused as exc:
         print(f"REFUSED {args.name}: {exc}", file=sys.stderr)
