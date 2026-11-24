@@ -8,6 +8,9 @@ listing:
   feed: true
 page-layout: full
 title-block-banner: false
+# Listing pages load MathJax and a polyfill from CDNs otherwise; the posts
+# have no math, and the CSP would block them anyway.
+html-math-method: plain
 ---
 
 Catalog release notes, maintenance windows, and new data.

@@ -78,12 +78,12 @@ row === null
            : "No dataset given."}
       Find one on the <a href="browse.html">Browse</a> page.</div>`
   : html`<p class="mb-1"><a href="browse.html">← Browse datasets</a></p>
-    <h2 class="mt-2"><code style="white-space: normal; word-break: break-all;">${row.dataset_id}</code></h2>
+    <h2 class="mt-2 dataset-id">${row.dataset_id.split(".").map((s, i) => html`${i ? html`.<wbr>` : ""}${s}`)}</h2>
     <table class="table table-sm w-auto small mb-3"><tbody>
       ${facetLabels.filter(([k]) => row[k] != null).map(([k, label]) =>
         html`<tr><th scope="row" class="pe-4">${label}</th><td>${row[k]}</td></tr>`)}
       <tr><th scope="row" class="pe-4">Time range</th><td>${row.time_start == null && row.time_end == null ? "—" : `${row.time_start ?? "?"} to ${row.time_end ?? "?"}`}</td></tr>
-      <tr><th scope="row" class="pe-4">Size</th><td>${row.n_files.toLocaleString()} files,
+      <tr><th scope="row" class="pe-4">Size</th><td>${row.n_files.toLocaleString()} ${row.n_files === 1 ? "file" : "files"},
         ${row.size_gb.toLocaleString(undefined, {maximumFractionDigits: 1})} GB</td></tr>
       <tr><th scope="row" class="pe-4">Catalog</th><td>${config.catalog_version}</td></tr>
     </tbody></table>
