@@ -89,6 +89,20 @@ def test_refuses_bad_reports(dirs, report_body, match):
     assert "old" in (live / f"{NAME}.json").read_text()
 
 
+def test_accept_failed_check(dirs):
+    nxt, live, report = dirs
+    bad = {"check": "data_vars", "ok": False, "detail": "k: no data variables"}
+    write_report(report, [*OK_REPORT, bad])
+    with pytest.raises(pc.Refused, match="no data variables"):
+        pc.promote(NAME, report, nxt, live)
+    log = pc.promote(NAME, report, nxt, live, accept_failed=("data_vars",))
+    assert "accepted failed check data_vars: k: no data variables" in log[1]
+    # only the named check is accepted
+    write_report(report, [{**OK_REPORT[0], "ok": False}, *OK_REPORT[1:], bad])
+    with pytest.raises(pc.Refused, match="columns"):
+        pc.promote(NAME, report, nxt, live, accept_failed=("data_vars",))
+
+
 def test_refuses_missing_or_stale_report(dirs):
     nxt, live, report = dirs
     with pytest.raises(pc.Refused, match="no check report"):

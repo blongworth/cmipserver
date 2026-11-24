@@ -1,7 +1,9 @@
 #!/bin/bash
 # Build, check and summarize the intake-esm catalog(s). Reads the store, writes
-# only under $OUT. Stops at the first failing step (set -e), so a bad build is
-# not summarized.
+# only under $OUT. Stops if the build fails (set -e). Every catalog is checked
+# even if one fails (multi-variable products always fail data_vars for now;
+# docs/todo.md); the job then exits 1, and whoi_cmip6 is summarized only if its
+# own check passed.
 #
 #   mkdir -p logs
 #   sbatch --export=ALL,OUT=$PWD/runs/$(date +%F)_catalog,NCINFO=$PWD/runs/<date>_L4/ncinfo \
@@ -47,15 +49,20 @@ for d in "${ncinfo_dirs[@]}"; do args+=(--ncinfo "$d"); done
 echo "host=$(hostname) out=${OUT} ncinfo=${NCINFO} product=${PRODUCT:-all} subtree=${SUBTREE:-all}"
 uv run --frozen scripts/build_catalog.py "${args[@]}"
 
+failed=()
 for js in "$OUT"/*.json; do
     name=$(basename "$js" .json)
     echo "== check $name"
     uv run --frozen scripts/check_catalog.py --catalog "$js" --products "$MANIFEST" \
-        --report "$OUT/checks/${name}.json"
+        --report "$OUT/checks/${name}.json" || failed+=("$name")
 done
 
-if [[ -f "$OUT/whoi_cmip6.csv" ]]; then
+if [[ -f "$OUT/whoi_cmip6.csv" && " ${failed[*]} " != *" whoi_cmip6 "* ]]; then
     echo "== summarize whoi_cmip6"
     uv run --frozen scripts/summarize_catalog.py --catalog "$OUT/whoi_cmip6.csv" --out "$OUT/summary"
+fi
+if (( ${#failed[@]} )); then
+    echo "checks failed: ${failed[*]} (see $OUT/checks/)" >&2
+    exit 1
 fi
 echo done

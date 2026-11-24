@@ -541,7 +541,14 @@ def test_generic_cli_check_and_summary(other, ncinfo, tmp_path):
 
     for name in ("whoi_glorys12v1", "whoi_bran2020", "whoi_prism"):
         res = check_catalog.run_checks(out / f"{name}.json", sample_datasets=5)
-        assert all(r["ok"] for r in res), (name, res)
+        bad = [r for r in res if not r["ok"]]
+        if name != "whoi_glorys12v1":
+            assert not bad, (name, bad)
+            continue
+        # known: a multi-variable, multi-file dataset (variable_id
+        # "so,thetao,zos") loads with its variables as coordinates
+        assert [r["check"] for r in bad] == ["data_vars"], bad
+        assert "coordinates: ['so', 'thetao', 'zos']" in bad[0]["detail"]
 
     site = tmp_path / "site"
     assert (

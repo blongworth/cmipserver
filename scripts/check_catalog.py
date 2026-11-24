@@ -3,7 +3,10 @@
 Checks: columns/types match CATALOG_SCHEMA, paths unique, key columns not
 null, a sample of paths exists, intake-esm opens the catalog and
 to_dataset_dict() loads a few sample datasets (a dataset that opens only
-with ``normalize_cds`` passes, and the detail says so), and the dataset count did not
+with ``normalize_cds`` passes, and the detail says so), each loaded dataset
+has data variables (``data_vars``: a comma-joined ``variable_id`` such as
+``so,thetao,zos`` makes intake-esm load a multi-file dataset with every
+variable as a coordinate; docs/todo.md), and the dataset count did not
 drop more than --max-drop vs the last good catalog (--previous). With
 --vocabulary, every variable key of the catalog has a row in the store
 vocabulary (whoi_cmip_vocabulary.csv, scripts/build_vocab.py).
@@ -127,6 +130,19 @@ def run_checks(
     def add(name: str, ok: bool, detail: str = "") -> None:
         results.append({"check": name, "ok": bool(ok), "detail": detail})
 
+    def add_data_vars(key: str, ds) -> None:
+        # intake-esm keeps as data only the names in variable_id; anything
+        # else becomes a coordinate (or is dropped)
+        names = sorted(map(str, ds.data_vars))
+        coords = sorted(str(c) for c in ds.coords if c not in ds.dims)
+        add(
+            "data_vars",
+            bool(names),
+            f"{key}: {names}"
+            if names
+            else f"{key}: no data variables; non-index coordinates: {coords}",
+        )
+
     raw = _read(catalog)
     cols = list(raw.columns)
     add("columns", cols == list(CATALOG_SCHEMA), f"got {cols}")
@@ -200,8 +216,9 @@ def run_checks(
             try:
                 # long runs (piControl past year 2262) mix pandas and cftime
                 # time types unless cftime is forced; users need this too
-                cat[key](xarray_open_kwargs=xr_kw).to_dask()
+                ds = cat[key](xarray_open_kwargs=xr_kw).to_dask()
                 add("to_dataset_dict", True, key + note)
+                add_data_vars(key, ds)
                 continue
             except INTAKE_ERRORS as exc:
                 msg = str(exc).strip().splitlines()[0]
@@ -211,8 +228,11 @@ def run_checks(
             # known case: files in two time formats; passes only with the
             # documented preprocess, which the detail records
             try:
-                cat[key](xarray_open_kwargs=xr_kw, preprocess=normalize_cds).to_dask()
+                ds = cat[key](
+                    xarray_open_kwargs=xr_kw, preprocess=normalize_cds
+                ).to_dask()
                 add("to_dataset_dict", True, f"{key} (only with preprocess)")
+                add_data_vars(key, ds)
             except INTAKE_ERRORS:
                 add("to_dataset_dict", False, plain)
     return results
