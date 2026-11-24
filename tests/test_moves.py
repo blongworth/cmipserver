@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -400,3 +401,27 @@ def test_foreign_file_after_src_gone_is_refused(tree, tmp_path, monkeypatch):
     p = apply(m, log, execute=False)
     assert any("not the moved file" in x for x in p.problems)
     assert not rollback(log).unmoves
+
+
+def test_reused_inode_is_not_taken_as_moved_file(tree, tmp_path, monkeypatch):
+    """A foreign dst that got the moved file's inode number (Linux reuses
+    freed inodes) must still be refused: size and mtime differ."""
+    log = MoveLog(tmp_path / "log.jsonl")
+    m = manifest(_moves(tree))
+    real = _fail_once(monkeypatch, "link", OSError(18, "cross-device"))
+    with pytest.raises(MoveError):
+        apply(m, log, execute=True)
+    monkeypatch.setattr(os, "link", real)
+    (tree / "a/f0.nc").unlink()
+    dst = tree / "b/c/f0.nc"
+    dst.write_bytes(b"other")
+    st = os.lstat(dst)
+    entries = [json.loads(x) for x in log.path.read_text().splitlines()]
+    for e in entries:
+        if e["op"] == "move" and e["phase"] == "start":
+            e["dev"], e["ino"] = st.st_dev, st.st_ino
+    log.path.write_text("".join(json.dumps(e) + "\n" for e in entries))
+    p = apply(m, log, execute=False)
+    assert any("not the moved file" in x for x in p.problems)
+    assert not rollback(log).unmoves
+    assert dst.read_bytes() == b"other"
