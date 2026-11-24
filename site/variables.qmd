@@ -7,7 +7,9 @@ toc: false
 Every variable in the catalogued products, with its definition. Search by
 description ("surface temperature", "salinity"), CF standard name, or
 variable name. **Datasets** opens the [browser](browse.qmd) filtered to that
-variable.
+variable. Some products store several variables in each file; their rows
+show **+N more** after the name, and hovering over it lists the others
+([why it matters](catalog.qmd#multi-variable)).
 
 Definitions come from the product's official vocabulary where there is one,
 and otherwise from the attributes in the NetCDF files (column *source*):
@@ -50,8 +52,8 @@ rows = variables.map((v) => {
     variable,
     in_file: v.nc_name !== variable ? v.nc_name : null,
     stored_with: multi
-      ? v.variable_id.split(",").filter((n) => n !== v.nc_name).join(", ")
-      : null,
+      ? v.variable_id.split(",").filter((n) => n !== v.nc_name)
+      : [],
     where: v.collection === "cmip6"
       ? `CMIP6 ${v.table_id}`
       : `${v.product}${v.level ? ` (${v.level})` : ""}`,
@@ -99,10 +101,15 @@ Inputs.table(found, {
     long_name: "long name", standard_name: "standard name", browse: ""
   },
   format: {
-    variable: (d, i, data) => data[i].stored_with
-      ? html`<span title=${`Stored with: ${data[i].stored_with}`}
-          style="text-decoration: underline dotted">${d}</span>`
-      : d,
+    // other variables in the same files: a visible "+N more" badge, names
+    // in its tooltip
+    variable: (d, i, data) => {
+      const w = data[i].stored_with;
+      return w.length
+        ? html`${d} <span class="badge rounded-pill text-bg-light border fw-normal"
+            title=${`Same files also hold: ${w.join(", ")}`}>+${w.length} more</span>`
+        : d;
+    },
     in_file: (d) => d ?? "",
     description: (d) => d == null ? "" : html`<span title=${d}>${d}</span>`,
     source: (d, i, data) => html`<span title=${data[i].source_version ?? ""}>${d ?? "—"}</span>`,
