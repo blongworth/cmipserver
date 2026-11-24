@@ -143,6 +143,29 @@ Open: `site/catalog.qmd`, `site/browse.qmd` and `quickstart.ipynb` show
 `to_dataset_dict()`/`to_dask()` with the default scheduler. Document the
 workaround on the site.
 
+Engine and worker tests (2026-11-23, Slurm jobs on hydra, 8 cpus, 1,000-file
+EC-Earth3-Veg piControl Amon datasets, locking off; ad hoc scripts, not in
+the repo):
+- Benchmark (job 411810; each method run twice; total = open + full ~6 GB
+  read): `netcdf4` synchronous 96 s; `h5netcdf` with 8 worker processes × 1
+  thread 98 s (slower opens, faster reads); `h5netcdf` synchronous 136 s;
+  `h5netcdf` threaded 171 s. Failed: `netcdf4` threaded (exit 135, 139) and
+  `netcdf4` with worker processes (`NetCDF: HDF error`). All passing methods
+  agree on the mean. Job 411788 had already shown `h5netcdf` (h5py 3.16.0,
+  its own HDF5 2.0.0; h5py must be installed explicitly) does not crash
+  threaded.
+- Worker check (job 411843): every worker had `HDF5_USE_FILE_LOCKING=FALSE`,
+  so locking is not the cause. Single opens in workers pass; the intake-esm
+  open crashes a worker even with `threads_per_worker=1`. The trace shows a
+  task thread in `nc_open` while xarray's `CachingFileManager.__del__` closes
+  another file from a different thread; the crash is in HDF5's shared API
+  context (`H5CX_pop`), which this non-thread-safe build does not protect.
+  A dask worker is never single-threaded for netCDF calls.
+- Conclusion: with `netcdf4`, only the synchronous scheduler is safe (no
+  threads, no workers); it is also the fastest here. For heavy parallel work,
+  `h5netcdf` (h5py serializes all HDF5 calls) with process workers. A
+  thread-safe HDF5 alone would not fix `netcdf4`: netCDF-C is not thread-safe.
+
 Test (by hand on a hydra login node; repeat after any change to Python,
 `netcdf4`, dask or xarray, or on a module build):
 1. Build a catalog with a many-file dataset (`build_catalog.py --root
